@@ -14,6 +14,7 @@
 #define MAX_SIGNED_INT		0x7FFFFFFF
 #define MAX_DSP_BLOCK_SIZE	2048
 #define MAX_VST_FOLDERS		4
+#define MAX_CLAP_FOLDERS	4
 #define MAX_VST_LIB_ENTRIES	1024
 #define NUM_RECENT_FILES	4
 #define NUM_DSP_INPUTS		32
@@ -115,6 +116,9 @@ struct ADX_CONFIG
 
 	// open in fullscreen mode
 	int fullscreen;
+
+	// linux port: clap plugin paths (appended to the original structure; older files simply end before)
+	char clap_path[MAX_CLAP_FOLDERS][_MAX_PATH];
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -364,7 +368,7 @@ public:
 	void gui_scroll_iterate(HWND const hwnd,int const ym,int const seq_area_y,int const h);
 
 public:
-	int gui_vst_search(HMENU const pa_hmenu,char* pfolder,bool ladspa=false);
+	int gui_vst_search(HMENU const pa_hmenu,char* pfolder,int mode=0);	// mode: 0 = vst3, 1 = ladspa, 2 = clap
 	int	gui_get_event_height(ADX_EVENT* pe);
 
 public:

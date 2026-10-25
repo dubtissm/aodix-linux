@@ -482,7 +482,25 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 	{
 		// check that is not empty path
 		if(cfg.vst_path[pi][0]!=0)
-			import_search_file(cfg.vst_path[pi],filetitle,matchfile);
+		{
+			char folder[_MAX_PATH];
+			adx_expand_path(cfg.vst_path[pi],folder,_MAX_PATH);
+			import_search_file(folder,filetitle,matchfile);
+		}
+	}
+
+	// linux port: clap plugins are searched in the clap folders
+	if(matchfile[0]==0 && adx_plugin_is_clap(filetitle))
+	{
+		for(int pi=0;pi<MAX_CLAP_FOLDERS && matchfile[0]==0;pi++)
+		{
+			if(cfg.clap_path[pi][0]!=0)
+			{
+				char folder[_MAX_PATH];
+				adx_expand_path(cfg.clap_path[pi],folder,_MAX_PATH);
+				import_search_file(folder,filetitle,matchfile);
+			}
+		}
 	}
 
 	// linux port: ladspa libraries are searched in the ladspa folders
@@ -516,6 +534,16 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 		// verbose failed relocation
 		if(MessageBox(hwnd,buf,"Aodix - VST Host",MB_YESNO | MB_ICONWARNING)==IDYES)
 		{
+			// linux port: a clap plugin is a single file
+			if(adx_plugin_is_clap(filetitle))
+			{
+				char clap_dir[_MAX_PATH];
+				adx_expand_path(cfg.clap_path[0],clap_dir,_MAX_PATH);
+				if(arg_file_dialog_open(hinstance_app,hwnd,"Choose CLAP Plugin",pfilename,"CLAP Plugins (*.clap)\0*.clap\0\0","clap",clap_dir,1,0))
+					return access(pfilename,R_OK)==0;
+				return 0;
+			}
+
 			// linux port: a ladspa plugin is a shared library file
 			if(adx_plugin_is_ladspa(filetitle))
 			{

@@ -50,6 +50,14 @@
 #define IDC_FULLSCREEN_CHECK            1032
 #define IDC_UI_SCALE_COMBO              1033
 #define IDC_DSP_THREADS_COMBO           1034
+#define IDC_CLAP_PATH_EDIT1             1035
+#define IDC_CLAP_PATH_BUTTON1           1036
+#define IDC_CLAP_PATH_EDIT2             1037
+#define IDC_CLAP_PATH_BUTTON2           1038
+#define IDC_CLAP_PATH_EDIT3             1039
+#define IDC_CLAP_PATH_BUTTON3           1040
+#define IDC_CLAP_PATH_EDIT4             1041
+#define IDC_CLAP_PATH_BUTTON4           1042
 #define ID_FILE_NEW40001                40001
 #define ID_FILE_OPEN40002               40002
 #define ID_FILE_SAVEAS                  40003
@@ -87,7 +95,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        121
 #define _APS_NEXT_COMMAND_VALUE         40046
-#define _APS_NEXT_CONTROL_VALUE         1035
+#define _APS_NEXT_CONTROL_VALUE         1043
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

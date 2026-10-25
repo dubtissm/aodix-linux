@@ -59,13 +59,15 @@ target_compile_definitions(vst3hosting PUBLIC RELEASE=1)
 target_compile_options(vst3hosting PRIVATE -w)
 target_link_libraries(vst3hosting PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
 
-# plugin hosting (VST3, LADSPA)
+# plugin hosting (VST3, CLAP, LADSPA)
 add_library(adxplugin STATIC
 	src/plugin/plugin_vst3.cpp
 	src/plugin/plugin_ladspa.cpp
+	src/plugin/plugin_clap.cpp
 	src/plugin/plugin_registry.cpp
 )
 target_include_directories(adxplugin PUBLIC src/plugin)
+target_include_directories(adxplugin PRIVATE third_party/clap/include)
 target_link_libraries(adxplugin PUBLIC vst3hosting adxplatform)
 
 # aodix

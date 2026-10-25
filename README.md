@@ -8,7 +8,7 @@ Ziele der Portierung:
 
 - natives 64-bit-Linux-Programm (X11, unter Wayland über XWayland)
 - **JACK** statt ASIO für Audio und MIDI
-- **VST3**-Plugins (64-bit Linux) und **LADSPA**-Effekte, später eventuell CLAP
+- **VST3**- und **CLAP**-Plugins (64-bit Linux) sowie **LADSPA**-Effekte
 - alte `.adx`-Projekte bleiben lesbar und werden im selben Format gespeichert
 
 ![Aodix unter Linux](docs/screenshot-stage1.png)
@@ -46,7 +46,8 @@ Laufzeit geladen.
 
 ## VST3-Plugins
 
-- **Suchpfade:** Voreingestellt sind die Standardorte `~/.vst3`, `/usr/lib/vst3` und `/usr/local/lib/vst3`.
+- **Suchpfade:** Voreingestellt sind die Standardorte `~/.vst3`, `/usr/lib/vst3` und `/usr/local/lib/vst3`
+  (`~` steht für den eigenen Home-Ordner).
   Weitere Ordner lassen sich unter *File → Configuration → VST Plugins* eintragen (Unterordner werden
   durchsucht). Ein Bundle mit mehreren Plugins (z. B. mda-vst3) erscheint in der Bibliothek als Untermenü.
 - **Laden:** wie im Original per Doppelklick auf einen leeren Instanz-Platz; Doppelklick auf eine geladene
@@ -96,6 +97,17 @@ Aodix systemweit installiert (Programm, Skins, Hilfe, Desktop-Eintrag).
 
 Optional für native Dateidialoge: `zenity` (GNOME/GTK) oder `kdialog` (KDE). Ohne diese Programme
 verwendet Aodix einen eingebauten Dateidialog.
+
+## CLAP-Plugins
+
+CLAP-Plugins (`*.clap`, z. B. die CLAP-Versionen von u-he Bazille oder Surge XT) erscheinen in der
+Plugin-Bibliothek im Untermenü **CLAP**. Gesucht wird in den vier Ordnern unter
+*File → Configuration → CLAP Plugins* – voreingestellt `~/.clap`, `/usr/lib/clap` und `/usr/local/lib/clap`.
+
+- Instrumente und Effekte, Noten und MIDI, Parameter (mit der Werteanzeige des Plugins), Automation,
+  Plugin-Oberfläche (eingebettet, mit Größenänderung), Zustand im Projekt, Mehrkern-Verarbeitung – wie bei VST3.
+- Eine Datei mit mehreren Plugins bekommt ein eigenes Untermenü. Im Projekt wird das Plugin über seine
+  CLAP-ID wiedergefunden.
 
 ## LADSPA-Plugins
 
@@ -159,10 +171,10 @@ Größeneinstellung. Zum Ausprobieren ohne Konfiguration: `AODIX_UI_SCALE=150 ./
 src/aodix/      Original-Programmcode von Aodix (nur dort geändert, wo die Portierung es erfordert)
 src/argulib/    Arguru-Hilfsbibliothek (Original)
 src/platform/   Win32-Kompatibilitätsschicht auf X11 (Zeichnen, Fenster, Menüs, Dialoge)
-src/plugin/     Plugin-Schnittstelle (AdxPlugin), VST3-Host (plugin_vst3.cpp), LADSPA-Host (plugin_ladspa.cpp)
+src/plugin/     Plugin-Schnittstelle (AdxPlugin), Hosts für VST3, CLAP und LADSPA (plugin_*.cpp)
                 (Mehrkern-Verarbeitung: src/aodix/AodixCoreDspGraph.cpp, AodixDspPool.cpp)
-third_party/    benötigter Teil des VST3-SDK 3.8 (MIT-Lizenz)
-tests/          Test-Plugin für den VST3-Host
+third_party/    benötigter Teil des VST3-SDK 3.8 und die CLAP-Header 1.2.2 (beide MIT-Lizenz)
+tests/          Test-Plugins für den VST3- und den CLAP-Host
 resources/      Skins, Hilfe, Icon, Desktop-Eintrag
 docs/           Dateiformat, Portierungsnotizen
 ```

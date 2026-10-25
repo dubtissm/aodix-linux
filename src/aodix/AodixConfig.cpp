@@ -8,8 +8,11 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void conf_browse_folder(HWND const hwnd,char* buf)
 {
-	// linux port: native folder chooser (zenity / kdialog) or the built-in one
-	adxplat::choose_folder(hwnd,"Select Directory",buf,_MAX_PATH);
+	// linux port: native folder chooser (zenity / kdialog) or the built-in one; paths in the home folder are shown as ~/...
+	char path[_MAX_PATH];
+	adx_expand_path(buf,path,_MAX_PATH);
+	if(adxplat::choose_folder(hwnd,"Select Directory",path,_MAX_PATH))
+		adx_compact_path(path,buf,_MAX_PATH);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -90,6 +93,12 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		SetDlgItemText(hdlg,IDC_VST_PATH_EDIT2,gl_padx->cfg.vst_path[1]);
 		SetDlgItemText(hdlg,IDC_VST_PATH_EDIT3,gl_padx->cfg.vst_path[2]);
 		SetDlgItemText(hdlg,IDC_VST_PATH_EDIT4,gl_padx->cfg.vst_path[3]);
+
+		// linux port: clap paths
+		SetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT1,gl_padx->cfg.clap_path[0]);
+		SetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT2,gl_padx->cfg.clap_path[1]);
+		SetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT3,gl_padx->cfg.clap_path[2]);
+		SetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT4,gl_padx->cfg.clap_path[3]);
 
 		// set skin path
 		SetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,gl_padx->cfg.skin_path);
@@ -174,6 +183,22 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		{
 			gl_padx->audio_control_panel();
 			return TRUE;
+		}
+
+		// linux port: clap folder browsers
+		{
+			static int const clap_edits[MAX_CLAP_FOLDERS]={IDC_CLAP_PATH_EDIT1,IDC_CLAP_PATH_EDIT2,IDC_CLAP_PATH_EDIT3,IDC_CLAP_PATH_EDIT4};
+			static int const clap_buttons[MAX_CLAP_FOLDERS]={IDC_CLAP_PATH_BUTTON1,IDC_CLAP_PATH_BUTTON2,IDC_CLAP_PATH_BUTTON3,IDC_CLAP_PATH_BUTTON4};
+			for(int c=0;c<MAX_CLAP_FOLDERS;c++)
+			{
+				if(lw_par==clap_buttons[c])
+				{
+					GetDlgItemText(hdlg,clap_edits[c],buf,_MAX_PATH);
+					conf_browse_folder(hdlg,buf);
+					SetDlgItemText(hdlg,clap_edits[c],buf);
+					return TRUE;
+				}
+			}
 		}
 
 		// vst folder browser 1
@@ -262,6 +287,12 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			GetDlgItemText(hdlg,IDC_VST_PATH_EDIT2,gl_padx->cfg.vst_path[1],_MAX_PATH);
 			GetDlgItemText(hdlg,IDC_VST_PATH_EDIT3,gl_padx->cfg.vst_path[2],_MAX_PATH);
 			GetDlgItemText(hdlg,IDC_VST_PATH_EDIT4,gl_padx->cfg.vst_path[3],_MAX_PATH);
+
+			// linux port: set new clap paths
+			GetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT1,gl_padx->cfg.clap_path[0],_MAX_PATH);
+			GetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT2,gl_padx->cfg.clap_path[1],_MAX_PATH);
+			GetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT3,gl_padx->cfg.clap_path[2],_MAX_PATH);
+			GetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT4,gl_padx->cfg.clap_path[3],_MAX_PATH);
 
 			// set new skin path
 			GetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,gl_padx->cfg.skin_path,_MAX_PATH);

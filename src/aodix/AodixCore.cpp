@@ -4,6 +4,7 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "AodixCore.h"
+#include <cstddef>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CAodixCore::CAodixCore(HINSTANCE const hinstance)
@@ -488,12 +489,15 @@ void CAodixCore::config_read(void)
 	for(int pi=0;pi<MAX_VST_FOLDERS;pi++)
 		cfg.vst_path[pi][0]=0;
 
-	// linux port: default to the standard vst3 locations
-	char const* home=getenv("HOME");
-	if(home!=NULL && home[0]!=0)
-		snprintf(cfg.vst_path[0],_MAX_PATH,"%s/.vst3",home);
+	// linux port: default to the standard vst3 and clap locations
+	strcpy(cfg.vst_path[0],"~/.vst3");
 	strcpy(cfg.vst_path[1],"/usr/lib/vst3");
 	strcpy(cfg.vst_path[2],"/usr/local/lib/vst3");
+	for(int pi=0;pi<MAX_CLAP_FOLDERS;pi++)
+		cfg.clap_path[pi][0]=0;
+	strcpy(cfg.clap_path[0],"~/.clap");
+	strcpy(cfg.clap_path[1],"/usr/lib/clap");
+	strcpy(cfg.clap_path[2],"/usr/local/lib/clap");
 
 	// init recent file paths
 	for(int rf=0;rf<NUM_RECENT_FILES;rf++)
@@ -549,8 +553,28 @@ void CAodixCore::config_read(void)
 	// read config file if opened
 	if(pfile!=NULL)
 	{
-		if(fread(&cfg,1,sizeof(ADX_CONFIG),pfile)!=sizeof(ADX_CONFIG))
+		// configuration files of older versions end before the clap paths: those keep their defaults
+		size_t const got=fread(&cfg,1,sizeof(ADX_CONFIG),pfile);
+		if(got<offsetof(ADX_CONFIG,clap_path))
 			fprintf(stderr,"aodix: configuration file '%s' is incomplete\n",cfg_fil);
+
+		// file of an older version (it may even contain the structure padding that now overlaps the first clap path)
+		if(got<sizeof(ADX_CONFIG))
+		{
+			for(int pi=0;pi<MAX_CLAP_FOLDERS;pi++)
+				cfg.clap_path[pi][0]=0;
+			strcpy(cfg.clap_path[0],"~/.clap");
+			strcpy(cfg.clap_path[1],"/usr/lib/clap");
+			strcpy(cfg.clap_path[2],"/usr/local/lib/clap");
+
+			// vst paths in the home folder are shown as ~/... from now on
+			for(int pi=0;pi<MAX_VST_FOLDERS;pi++)
+			{
+				char compact[_MAX_PATH];
+				adx_compact_path(cfg.vst_path[pi],compact,_MAX_PATH);
+				strcpy(cfg.vst_path[pi],compact);
+			}
+		}
 		fclose(pfile);
 
 		// linux port: windows style skin path from an older config

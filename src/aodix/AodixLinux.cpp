@@ -36,3 +36,23 @@ void adx_resolve_resource_path(const char* rel,char* out)
 	// default: next to the executable
 	snprintf(out,_MAX_PATH,"%s",candidates[0]);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void adx_expand_path(const char* in,char* out,int out_size)
+{
+	const char* home=getenv("HOME");
+	if(in[0]=='~' && (in[1]=='/' || in[1]==0) && home!=NULL)
+		snprintf(out,out_size,"%s%s",home,in+1);
+	else
+		snprintf(out,out_size,"%s",in);
+}
+
+void adx_compact_path(const char* in,char* out,int out_size)
+{
+	const char* home=getenv("HOME");
+	size_t const n=home?strlen(home):0;
+	if(n>1 && strncmp(in,home,n)==0 && (in[n]=='/' || in[n]==0))
+		snprintf(out,out_size,"~%s",in+n);
+	else
+		snprintf(out,out_size,"%s",in);
+}

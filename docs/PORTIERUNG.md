@@ -74,6 +74,31 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   des Plugins (`resizeView`) und Größenänderungen durch den Benutzer (bei skalierbaren Editoren) werden
   weitergereicht; nicht skalierbare Editorfenster haben eine feste Größe.
 
+**CLAP-Host** (`plugin_clap.cpp`, Header in `third_party/clap`, MIT-Lizenz)
+- `clap_entry` → Plugin-Factory; Bibliotheken werden einmal initialisiert und nie entladen. Im Projekt steht
+  ein 32-bit-FNV-Hash der CLAP-ID (wie bei den VST3-Klassen-IDs).
+- Threads: „Main-Thread“ ist der Aodix-GUI-Thread, „Audio-Thread“ der DSP-Thread, der die Instanz gerade
+  rechnet (`thread-check`-Erweiterung). `start_processing`/`stop_processing` laufen im Audio-Thread;
+  beim Deaktivieren ohne laufendes Audio übernimmt der Main-Thread das Stoppen.
+- Audio-Ports werden zu Aodix' flachen Kanallisten zusammengefasst. Noten gehen als CLAP-Noten-Ereignisse
+  an das Plugin, übrige MIDI-Nachrichten als `CLAP_EVENT_MIDI` (falls der Notenport MIDI unterstützt);
+  „All Notes Off“ als Note-Off mit Platzhalter-Taste. Noten- und MIDI-Ausgaben des Plugins → Aodix-MIDI-Kabel.
+- Parameter: normalisiert ↔ Wertebereich des Plugins (gestufte Parameter gerundet), Anzeige über
+  `value_to_text`. Änderungen aus Aodix werden als Ereignisse im nächsten `process()` zugestellt (ohne
+  laufendes Audio über `params.flush`); Änderungen im Plugin-Editor kommen als Ausgabe-Ereignisse und werden
+  im GUI-Thread an Aodix (Automation) weitergegeben.
+- Transport (`clap_event_transport`) aus Aodix' Zeitinformation. Zustand: Chunk `"ADXCLAP1"` + `state.save`.
+- Editor: X11-API, eingebettet ins Instanzfenster; `timer-support` und `posix-fd-support` laufen in der
+  Aodix-Nachrichtenschleife; `request_resize` und Größenänderungen durch den Benutzer werden weitergereicht.
+- Host-Anfragen (`request_restart`, `request_callback`, Parameter-Rescan) werden im Leerlauf des GUI-Threads
+  erledigt.
+- Konfiguration: vier CLAP-Ordner (`clap_path` am Ende von `Aodix.cfg`; ältere Dateien enden davor und
+  bekommen die Standardpfade). Pfade dürfen mit `~` beginnen; der Ordner-Dialog schreibt Pfade im
+  Home-Ordner in dieser Form.
+- Geprüft mit einem eigenen Test-Instrument (`tests/clap_test_synth`, Xlib-Editor mit Timer und
+  Datei-Deskriptor): Laden, Noten, Parameter in beide Richtungen, Editor mit Größenänderung, Zustand
+  speichern/laden, Reihenfolge beim Beenden, AddressSanitizer.
+
 **LADSPA-Host** (`plugin_ladspa.cpp`)
 - Eigene Schnittstellendefinitionen nach der öffentlichen LADSPA-1.1-Spezifikation (ABI-kompatibel zu
   `ladspa.h`, damit das Projekt vollständig MIT-lizenziert bleibt). `plugin_registry.cpp` verteilt `scan`/`load`
@@ -159,7 +184,8 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 ## Bekannte Einschränkungen
 
-- VST3 und LADSPA (64-bit Linux). Windows-Plugins, VST 2, LV2, DSSI und 32-bit-Plugins werden nicht geladen.
+- VST3, CLAP und LADSPA (64-bit Linux). Windows-Plugins, VST 2, LV2, DSSI und 32-bit-Plugins werden nicht geladen.
+- CLAP: keine Preset-Browser-, MPE- oder Note-Expression-Unterstützung; Plugin-Presets über die Plugin-Oberfläche.
 - Alte Windows-Projekte mit VST-2-Plugins: Ein VST3-Nachfolger desselben Plugins hat eine andere ID und ein
   anderes Zustandsformat; solche Instanzen müssen neu geladen und eingestellt werden.
 - Plugin-Editoren, die nur Wayland oder kein X11-Einbetten können, öffnen sich nicht (unter XWayland läuft X11).
@@ -193,4 +219,4 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
 3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ und ~~Tastatur-Layouts (QWERTY/QWERTZ/AZERTY)~~ erledigt und getestet; offen: Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
-5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`, optional CLAP (LADSPA ist bereits erledigt).
+5. **Paketierung**: Installationspaket, MIME-Typ für `.adx` (CLAP und LADSPA sind bereits erledigt).
