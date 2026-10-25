@@ -277,6 +277,9 @@ private:
 	// editor
 	bool							gui_created;
 	std::atomic<uint64_t>			pending_resize;			// width<<32 | height requested from another thread
+	uint32_t						host_w,host_h;			// size aodix gave the editor window itself (not a user resize)
+	int								gui_resizable;			// -1 = unknown, cached after the editor was opened
+	bool							gui_open;				// set_parent / show done
 	std::atomic<bool>				gui_destroy_requested;	// the plugin lost its gui (closed with was_destroyed)
 
 	// activation changes requested outside the main thread (e.g. jack sample rate callback), done in idle()
@@ -328,7 +331,11 @@ struct ClapHostExt
 		if(w==0 || hh==0)
 			return false;
 		if(std::this_thread::get_id()==g_main_thread)
+		{
+			cp->host_w=w;
+			cp->host_h=hh;
 			cp->host->plugin_resize_editor(cp,(int)w,(int)hh);
+		}
 		else
 		{
 			cp->pending_resize.store(((uint64_t)w<<32)|hh);
@@ -460,6 +467,9 @@ ClapPlugin::ClapPlugin(const ClapModule* m,const clap_plugin_descriptor_t* d,Adx
 	rescan_params=false;
 	gui_created=false;
 	pending_resize=0;
+	host_w=host_h=0;
+	gui_resizable=-1;
+	gui_open=false;
 	gui_destroy_requested=false;
 	deferred_rate=0.0;
 	deferred_active=-1;
@@ -1098,11 +1108,16 @@ void ClapPlugin::idle(void)
 	// editor requests made from other threads
 	uint64_t const rs=pending_resize.exchange(0);
 	if(rs && gui_created)
-		host->plugin_resize_editor(this,(int)(rs>>32),(int)(rs&0xFFFFFFFFu));
+	{
+		host_w=(uint32_t)(rs>>32);
+		host_h=(uint32_t)(rs&0xFFFFFFFFu);
+		host->plugin_resize_editor(this,(int)host_w,(int)host_h);
+	}
 	if(gui_destroy_requested.exchange(false) && gui_created)
 	{
 		ext_gui->destroy(plugin);
 		gui_created=false;
+		gui_open=false;
 	}
 
 	if(rescan_params.exchange(false))
@@ -1167,10 +1182,20 @@ bool ClapPlugin::editorGetSize(int* width,int* height)
 		if(!ext_gui->create(plugin,CLAP_WINDOW_API_X11,false))
 			return false;
 		gui_created=true;
+		gui_resizable=-1;
 	}
 	uint32_t w=0,h=0;
 	if(!ext_gui->get_size(plugin,&w,&h) || w==0 || h==0)
 		return false;
+
+	// before the editor is opened aodix sizes its window to this: the resulting size message is no user resize.
+	// once it is open only the plugin's own requests and real user resizes count (some plugins report a
+	// different, unscaled size here than the size they asked for)
+	if(!gui_open)
+	{
+		host_w=w;
+		host_h=h;
+	}
 	*width=(int)w;
 	*height=(int)h;
 	return true;
@@ -1199,6 +1224,12 @@ bool ClapPlugin::editorOpen(unsigned long parent)
 		return false;
 	}
 	ext_gui->show(plugin);
+	gui_open=true;
+
+	gui_resizable=-1;
+	uint32_t w=0,h=0;
+	ext_gui->get_size(plugin,&w,&h);
+	fprintf(stderr,"aodix: clap: %s: editor %ux%u, %s\n",desc->name,w,h,editorCanResize()?"resizable":"fixed size");
 	return true;
 }
 
@@ -1209,23 +1240,54 @@ void ClapPlugin::editorClose(void)
 	ext_gui->hide(plugin);
 	ext_gui->destroy(plugin);
 	gui_created=false;
+	gui_open=false;
+	gui_resizable=-1;
 }
 
 bool ClapPlugin::editorCanResize(void)
 {
-	return gui_created && ext_gui->can_resize && ext_gui->can_resize(plugin);
+	if(!gui_created)
+		return false;
+	if(gui_resizable<0)
+	{
+		// resizable only if the plugin says so and its resize hints (if any) allow at least one direction
+		bool r=ext_gui->can_resize && ext_gui->can_resize(plugin);
+		if(r && ext_gui->get_resize_hints)
+		{
+			clap_gui_resize_hints_t hints;
+			memset(&hints,0,sizeof(hints));
+			if(ext_gui->get_resize_hints(plugin,&hints) && !hints.can_resize_horizontally && !hints.can_resize_vertically)
+				r=false;
+		}
+		gui_resizable=r?1:0;
+	}
+	return gui_resizable==1;
 }
 
 void ClapPlugin::editorResized(int width,int height)
 {
-	if(!editorCanResize() || width<=0 || height<=0)
+	if(width<=0 || height<=0)
 		return;
+
+	// size changes made by aodix itself (editor opened, plugin asked for a size) are no user resize
+	if((uint32_t)width==host_w && (uint32_t)height==host_h)
+		return;
+	if(!editorCanResize())
+		return;
+
 	uint32_t cw=0,ch=0;
 	if(ext_gui->get_size(plugin,&cw,&ch) && (int)cw==width && (int)ch==height)
 		return;
+
+	// the plugin has to accept the size (adjust_size); set_size is only allowed with an adjusted size
 	uint32_t w=(uint32_t)width,h=(uint32_t)height;
-	if(ext_gui->adjust_size)
-		ext_gui->adjust_size(plugin,&w,&h);
+	if(!ext_gui->adjust_size || !ext_gui->adjust_size(plugin,&w,&h))
+		return;
+	if(w==0 || h==0)
+		return;
+
+	host_w=w;
+	host_h=h;
 	ext_gui->set_size(plugin,w,h);
 	if((int)w!=width || (int)h!=height)
 		host->plugin_resize_editor(this,(int)w,(int)h);

@@ -96,8 +96,18 @@ public:
 		timer=CLAP_INVALID_ID;
 		if(dpy) { _host.posixFdSupportUnregister(ConnectionNumber(dpy)); XDestroyWindow(dpy,win); XCloseDisplay(dpy); dpy=nullptr; }
 	}
-	bool guiGetSize(uint32_t* w,uint32_t* h) noexcept override { *w=width; *h=height; return true; }
-	bool guiCanResize() const noexcept override { return false; }
+	// STRICT_UHE=1 imitates the behaviour seen with u-he Bazille: claims to be resizable, terminates on set_size,
+	// reports its unscaled size via get_size while it asks the host for the scaled size
+	static bool uhe() { return getenv("STRICT_UHE")!=nullptr; }
+	bool guiGetSize(uint32_t* w,uint32_t* h) noexcept override { if(uhe()) { *w=300; *h=200; } else { *w=width; *h=height; } return true; }
+	bool guiCanResize() const noexcept override { return uhe(); }
+	bool guiAdjustSize(uint32_t*,uint32_t*) noexcept override { return uhe(); }
+	bool guiSetSize(uint32_t w,uint32_t h) noexcept override
+	{
+		tlog("set_size %ux%u",w,h);
+		if(uhe()) { fprintf(stderr,"[CLAP] clap_plugin_gui.set_size() was called but the gui is not resizable\n"); std::terminate(); }
+		return false;
+	}
 	bool guiSetParent(const clap_window* w) noexcept override
 	{
 		dpy=XOpenDisplay(nullptr); if(!dpy) return false;
@@ -106,7 +116,8 @@ public:
 		_host.posixFdSupportRegister(ConnectionNumber(dpy),CLAP_POSIX_FD_READ);
 		_host.timerSupportRegister(40,&timer);
 		// like u-he: after attaching, the editor wants a different size (its own gui scale)
-		width=360; height=240; XResizeWindow(dpy,win,width,height);
+		if(uhe()) { width=540; height=360; } else { width=360; height=240; }
+		XResizeWindow(dpy,win,width,height);
 		bool ok=_host.guiRequestResize(width,height); tlog("request_resize after set_parent -> %d",ok);
 		return true;
 	}

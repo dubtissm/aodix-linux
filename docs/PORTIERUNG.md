@@ -97,6 +97,9 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   Home-Ordner in dieser Form.
 - Regeln, die Plugins (z. B. von u-he über clap-helpers) streng prüfen und bei Verstoß das Programm beenden:
   nach `request_resize` ruft der Host kein `set_size()` auf (bei nicht skalierbaren Editoren verboten);
+  `set_size()` gibt es nur bei echter Größenänderung durch den Benutzer – nicht als Folge von Fenstergrößen,
+  die Aodix selbst gesetzt hat (manche Plugins melden per `get_size` eine andere, unskalierte Größe als die
+  angeforderte) – und nur, wenn das Plugin die Größe per `adjust_size` akzeptiert;
   `request_resize` und `closed` dürfen aus jedem Thread kommen und werden ggf. im GUI-Thread erledigt
   (bei `closed` ruft der Host `destroy()` auf); `params.flush` läuft bei aktivem Plugin als „Audio-Thread“;
   `activate`/`deactivate` nur im Main-Thread (Aufrufe z. B. aus dem JACK-Samplerate-Callback werden in den
