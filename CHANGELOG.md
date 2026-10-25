@@ -1,0 +1,15 @@
+# Changelog
+
+## 4.2.1.1 (2026-10-25)
+
+- PipeWire without `pw-jack`: if no JACK server is reachable, Aodix loads PipeWire's JACK library itself, so
+  starting Aodix from the application menu works on Debian, MX Linux and similar systems.
+- New settings *Buffer Size* and *Sample Rate* (File → Configuration, default 256 samples / 48000 Hz), passed to
+  PipeWire like `PIPEWIRE_LATENCY` / `PIPEWIRE_RATE`. Values set on the command line take precedence.
+- The driver name shows whether PipeWire is used, e.g. "PipeWire (48 kHz, 256 Samples)".
+
+## 4.2.1.0 (2026-10-25)
+
+First release of Aodix for Linux: 64-bit X11 port of Aodix 4.2.0.3 with JACK audio and MIDI, VST3, CLAP, LV2
+and LADSPA plugins, multi-core processing, UI scaling, keyboard layouts, clipboard, compressed `.adxl`
+projects and a Debian package.

@@ -1,6 +1,6 @@
 # Aodix für Linux (64-bit)
 
-**Aodix 4.2.1.0 (Linux)** – der Musik-Sequencer Aodix von Arguru Software für Linux. Arguru hinterließ die
+**Aodix 4.2.1.1 (Linux)** – der Musik-Sequencer Aodix von Arguru Software für Linux. Arguru hinterließ die
 Version 4.2.0.1; J. van't Hoog hat Fehler behoben und sie als
 [Aodix Enhanced](https://github.com/vanjac/aodix-enhanced) (4.2.0.3) weitergeführt. Darauf baut diese
 Linux-Version auf. Das Programm soll so originalgetreu wie
@@ -135,8 +135,8 @@ Für Debian, Ubuntu, Linux Mint, Xubuntu und Verwandte lässt sich ein Paket bau
 ```bash
 cmake -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 cmake --build build-release -j
-cd build-release && cpack -G DEB          # -> aodix_4.2.1.0_amd64.deb
-sudo apt install ./aodix_4.2.1.0_amd64.deb
+cd build-release && cpack -G DEB          # -> aodix_4.2.1.1_amd64.deb
+sudo apt install ./aodix_4.2.1.1_amd64.deb
 ```
 
 Das Paket installiert Programm, Skins, Hilfe, Desktop-Eintrag, Icons und die Dateitypen `.adx`/`.adxl`; die
@@ -148,8 +148,8 @@ auf Ubuntu/Mint/Xubuntu ab 22.04 und Debian ab 12), sobald ein Versions-Tag hoch
 an das Release:
 
 ```bash
-git tag v4.2.1.0
-git push origin v4.2.1.0
+git tag v4.2.1.1
+git push origin v4.2.1.1
 ```
 
 `.github/workflows/build.yml` prüft bei jedem Push, ob sich das Projekt bauen lässt.

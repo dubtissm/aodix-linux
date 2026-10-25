@@ -216,8 +216,8 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   `.adxl`, direkt gespeicherte und neu gespeicherte `.adx` sind byte-identisch (2,9 MB → 10 KB).
 
 **Version und Credits**
-- Programmversion 4.2.1.0 (`project()` in `CMakeLists.txt`, als `AODIX_VERSION_STRING` im Code), Fenstertitel
-  „Aodix 4.2.1.0 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
+- Programmversion 4.2.1.x (`project()` in `CMakeLists.txt`, als `AODIX_VERSION_STRING` im Code), Fenstertitel
+  „Aodix 4.2.1.1 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
   denn das Format ist unverändert und Aodix 4.2.0.3 unter Windows lehnt Dateien ab 4300 ab.
 - About-Dialog (breiter, eine Zeile mehr): Arguelles Rius & Kantar (bis 4.2.0.1), J. van't Hoog (bis 4.2.0.3),
   Linux-Version und Weiterentwicklung: Marcus Honnacker via Claude Opus 5.5.
