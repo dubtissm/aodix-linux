@@ -480,7 +480,7 @@ ClapPlugin::ClapPlugin(const ClapModule* m,const clap_plugin_descriptor_t* d,Adx
 	host_struct.host_data=this;
 	host_struct.name="Aodix";
 	host_struct.vendor="Arguru Software / Aodix Linux";
-	host_struct.url="https://github.com/vanjac/aodix-enhanced";
+	host_struct.url="https://github.com/dubtissm/aodix-linux";
 	host_struct.version=AODIX_VERSION_STRING;
 	host_struct.get_extension=host_get_extension;
 	host_struct.request_restart=host_request_restart;

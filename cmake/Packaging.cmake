@@ -19,7 +19,7 @@ set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)						# aodix_<version>_amd64.deb
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "${AODIX_PACKAGE_MAINTAINER}")
 set(CPACK_DEBIAN_PACKAGE_SECTION "sound")
 set(CPACK_DEBIAN_PACKAGE_PRIORITY "optional")
-set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/vanjac/aodix-enhanced")
+set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/dubtissm/aodix-linux")
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)						# libc, libstdc++, libx11, libxext, zlib from the binary
 # loaded at runtime (dlopen), so not found by shlibdeps: jack (or pipewire-jack) is needed for audio, lilv for LV2
 set(CPACK_DEBIAN_PACKAGE_RECOMMENDS "libjack-jackd2-0 | libjack0 | pipewire-jack, liblilv-0-0")

@@ -405,7 +405,7 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 	if(id==ID_HELP_ABOUT)
 		DialogBox(hinstance_app,(LPCTSTR)IDD_ABOUTBOX,hwnd,(DLGPROC)abou_dlg_proc);
 
-	// visit aodix enhanced website
+	// linux port: "Development..." opens the github page of aodix for linux (was the aodix enhanced website)
 	if(id==ID_HELP_WEBSITE)
-		adxplat::open_url("https://chroma.zone/aodix-enhanced/");
+		adxplat::open_url("https://github.com/dubtissm/aodix-linux");
 }

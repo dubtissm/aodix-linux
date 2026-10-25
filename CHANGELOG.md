@@ -7,6 +7,7 @@
 - New settings *Buffer Size* and *Sample Rate* (File → Configuration, default 256 samples / 48000 Hz), passed to
   PipeWire like `PIPEWIRE_LATENCY` / `PIPEWIRE_RATE`. Values set on the command line take precedence.
 - The driver name shows whether PipeWire is used, e.g. "PipeWire (48 kHz, 256 Samples)".
+- Help menu: "Website..." is now "Development..." and opens the GitHub page https://github.com/dubtissm/aodix-linux.
 
 ## 4.2.1.0 (2026-10-25)
 
