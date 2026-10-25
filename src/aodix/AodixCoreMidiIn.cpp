@@ -6,8 +6,9 @@
 #include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// linux port: midi input arrives through the audio driver (jack midi, stage 2 of the port). The driver
-// calls midi_in_receive() for every short message, exactly like the windows multimedia midi callback did.
+// linux port: midi input arrives through the audio driver (jack midi, see AodixCoreAudio.cpp, which also
+// implements midi_in_init / midi_in_close). The driver's midi thread calls midi_in_receive() for every
+// short message, exactly like the windows multimedia midi callback did.
 void midi_in_receive(unsigned char mi_data0,unsigned char mi_data1,unsigned char mi_data2)
 {
 	// extern aodix core pointer and handlers
@@ -23,33 +24,6 @@ void midi_in_receive(unsigned char mi_data0,unsigned char mi_data1,unsigned char
 
 	// call host midi-in process
 	gl_padx->midi_in_process(mi_data0,mi_data1,mi_data2);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int CAodixCore::midi_in_get_num_devices(void)
-{
-	// stage 1 of the port: no midi input devices yet
-	return 0;
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CAodixCore::midi_in_get_device_name(int const index,char* buf,int const num_chars)
-{
-	snprintf(buf,num_chars,"MIDI Input %d",index);
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CAodixCore::midi_in_init(void)
-{
-	// set midi handler(s) pointer to null
-	p_hmidi_in=NULL;
-
-	// get midi input devices present in system
-	int const num_midi_in_devices=midi_in_get_num_devices();
-
-	// check config (devices are opened by the audio driver)
-	if(cfg.midi_in_dv_open && num_midi_in_devices>0)
-		p_hmidi_in=(void*)this;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -169,9 +143,3 @@ void CAodixCore::midi_in_process(BYTE const data0,BYTE const data1,BYTE const da
 	}
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CAodixCore::midi_in_close(void)
-{
-	// set null midi handler(s) pointer
-	p_hmidi_in=NULL;
-}

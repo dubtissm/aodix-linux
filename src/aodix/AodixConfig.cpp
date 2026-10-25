@@ -67,29 +67,22 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// get asio sample rate combo pointer
 		HWND const hwnd_rate_comb=GetDlgItem(hdlg,IDC_ASIO_RATE_COMBO);
 
-		// add rate options
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"8000 Hz");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"11025 Hz (Low CPU)");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"22050 Hz");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"32000 Hz");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"44100 Hz (CD Audio, MP3)");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"48000 Hz (DAT)");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"88200 Hz");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"96000 Hz (Production)");
-		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"192000 Hz");
+		// linux port: the sample rate is given by the jack server; this combo selects the number of
+		// jack audio ports (in and out) instead
+		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"2 In / 2 Out");
+		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"4 In / 4 Out");
+		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"8 In / 8 Out");
+		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"16 In / 16 Out");
+		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"32 In / 32 Out");
 
-		// set asio sample rate combo selected index
-		switch(int(gl_padx->cfg.audio_driver_sample_rate))
+		// set channel combo selected index
+		switch(gl_padx->cfg.audio_num_ports)
 		{
-		case 8000:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,0,0);	break;
-		case 11025:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,1,0);	break;
-		case 22050:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,2,0);	break;
-		case 32000:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,3,0);	break;
-		case 44100:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,4,0);	break;
-		case 48000:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,5,0);	break;
-		case 88200:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,6,0);	break;
-		case 96000:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,7,0);	break;
-		case 192000:	SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,8,0);	break;
+		case 4:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,1,0);	break;
+		case 8:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,2,0);	break;
+		case 16:	SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,3,0);	break;
+		case 32:	SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,4,0);	break;
+		default:	SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,0,0);	break;
 		}
 
 		// set vst path routes
@@ -230,18 +223,14 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 				// select new driver
 				gl_padx->cfg.audio_driver_id=SendMessage(hwnd_asio_comb,(UINT)CB_GETCURSEL,0,0);
 
-				// select sample rate option index
+				// select number of jack ports (takes effect after restarting aodix)
 				switch(SendMessage(hwnd_rate_comb,(UINT)CB_GETCURSEL,0,0))
 				{
-				case 0:	gl_padx->cfg.audio_driver_sample_rate=8000.0;	break;
-				case 1:	gl_padx->cfg.audio_driver_sample_rate=11025.0;	break;
-				case 2:	gl_padx->cfg.audio_driver_sample_rate=22050.0;	break;
-				case 3:	gl_padx->cfg.audio_driver_sample_rate=32000.0;	break;
-				case 4:	gl_padx->cfg.audio_driver_sample_rate=44100.0;	break;
-				case 5:	gl_padx->cfg.audio_driver_sample_rate=48000.0;	break;
-				case 6:	gl_padx->cfg.audio_driver_sample_rate=88200.0;	break;
-				case 7:	gl_padx->cfg.audio_driver_sample_rate=96000.0;	break;
-				case 8:	gl_padx->cfg.audio_driver_sample_rate=192000.0;	break;
+				case 1:	gl_padx->cfg.audio_num_ports=4;		break;
+				case 2:	gl_padx->cfg.audio_num_ports=8;		break;
+				case 3:	gl_padx->cfg.audio_num_ports=16;	break;
+				case 4:	gl_padx->cfg.audio_num_ports=32;	break;
+				default:gl_padx->cfg.audio_num_ports=2;		break;
 				}
 
 				// re-launch asio

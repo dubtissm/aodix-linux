@@ -255,6 +255,9 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CAodixCore::~CAodixCore(void)
 {
+	// linux port: stop audio processing and close the jack client before anything is freed
+	audio_shutdown();
+
 	// destroy brush
 	DeleteObject(hbrush_edit);
 
@@ -492,6 +495,9 @@ void CAodixCore::config_read(void)
 
 	// init display settings
 	cfg.note_colors=0;
+
+	// linux port: jack ports (in and out)
+	cfg.audio_num_ports=2;
 
 	// init reserved fields 2
 	for(int r=0;r<_countof(cfg.reserved2);r++)

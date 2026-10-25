@@ -3,6 +3,8 @@
 import struct, sys
 
 out = sys.argv[1] if len(sys.argv) > 1 else 'test.adx'
+# --thru: wire master input 1/2 to master output 1/2 (audio pass-through test)
+thru = '--thru' in sys.argv
 ppqn = 192
 
 def cstr(s, n):
@@ -51,7 +53,11 @@ data += struct.pack('<i', len(events))
 for e in events:
     data += struct.pack('<iiBBBBBBBB', *e)
 data += b'\0' * 256                  # instance table: no instances
-data += struct.pack('<i', 0) * 32     # master input pins: no wires
+for pin in range(32):                 # master input pins
+    if thru and pin < 2:
+        data += struct.pack('<i', 1) + struct.pack('<hhf', 256, pin, 1.0)
+    else:
+        data += struct.pack('<i', 0)
 data += struct.pack('<6i', 0, 0, 0, 256, -256, -128)
 ext = len(data)
 data += b'\0' * 0x400                 # instance fallback table

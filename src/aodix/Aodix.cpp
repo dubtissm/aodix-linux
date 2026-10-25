@@ -151,11 +151,11 @@ int main(int argc,char** argv)
 	ShowWindow(gl_hwnd_main,SW_MAXIMIZE);
 	UpdateWindow(gl_hwnd_main);
 
+	// init audio (linux port: jack is initialized first, the midi input is a port of the jack client)
+	gl_padx->audio_init(gl_hwnd_main);
+
 	// init midi input
 	gl_padx->midi_in_init();
-
-	// init asio
-	gl_padx->audio_init(gl_hwnd_main);
 
 	// post refresh
 	gl_padx->gui_is_dirty=1;

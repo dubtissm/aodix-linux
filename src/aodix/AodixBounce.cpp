@@ -219,7 +219,8 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			// rendering cue range
 			if(check_cue_range==1)
 			{
-				int end = min(pp->cue_end,pp->cue_stp);
+				// (fix: without stop marker (cue_stp==0) the range was empty)
+				int end = (pp->cue_stp>0)?min(pp->cue_end,pp->cue_stp):pp->cue_end;
 				SendMessage(hwnd_prog1,PBM_SETRANGE32,pp->cue_sta,end);
 				num_samples=gl_padx->seq_pos_to_sample(end - pp->cue_sta);
 				pp->usr_pos=pp->cue_sta;

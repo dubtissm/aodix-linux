@@ -18,14 +18,31 @@ Ziele der Portierung:
 | Etappe | Inhalt | Status |
 |---|---|---|
 | 1 | 64-bit-Linux-Build, X11-Oberfläche, Projekte laden/speichern | ✅ fertig |
-| 2 | JACK-Audio und JACK-MIDI | offen |
+| 2 | JACK-Audio und JACK-MIDI | ✅ fertig |
 | 3 | Feinschliff der Oberfläche (Zwischenablage, Tastatur-Layouts, HiDPI) | offen |
 | 4 | VST3-Hosting inklusive Plugin-Editoren | offen |
 | 5 | Installation, Paketierung, CLAP (optional) | offen |
 
-In Etappe 1 läuft die komplette Oberfläche (Sequencer, Routing, Menüs, Dialoge), Projekte werden geladen
-und gespeichert. Es gibt noch **keinen Ton** (JACK folgt in Etappe 2) und es können noch **keine Plugins**
-geladen werden (VST3 folgt in Etappe 4).
+Die komplette Oberfläche läuft (Sequencer, Routing, Menüs, Dialoge), Projekte werden geladen und
+gespeichert, Audio und MIDI laufen über JACK, Bounce schreibt WAV-Dateien. Es können noch **keine Plugins**
+geladen werden (VST3 folgt in Etappe 4) – bis dahin ist nur der Master-Eingang als Klangquelle verfügbar.
+
+## Audio und MIDI (JACK)
+
+Aodix verbindet sich beim Start mit einem laufenden JACK-Server. Das funktioniert mit jack2 (z. B. über
+QjackCtl gestartet) und mit PipeWire. Falls Aodix unter PipeWire keine Verbindung bekommt, mit
+`pw-jack ./build/aodix` starten. Zum Bauen wird JACK nicht benötigt, die Bibliothek wird erst zur
+Laufzeit geladen.
+
+- **Ports:** `Aodix:out_1 …` und `Aodix:in_1 …` werden beim Start mit den Hardware-Ports verbunden.
+  Die Anzahl (2/4/8/16/32) stellt man unter *File → Configuration → Channels* ein (wirkt nach Neustart).
+  Welche JACK-Ports zu welchem Master-Pin gehören, wählt man wie im Original per Klick auf die Pins der
+  Master-Input/Output-Module in der Routing-Ansicht.
+- **Samplerate und Puffergröße** gibt der JACK-Server vor (Anzeige *block size* im Audio-Master).
+- **MIDI:** Eingang `Aodix:midi_in`. Ist *Open MIDI In Devices* aktiv, verbindet Aodix alle Hardware-MIDI-
+  Quellen automatisch (unter jack2 ggf. `a2jmidid -e` für ALSA-MIDI-Geräte starten).
+- Wird der JACK-Server beendet, meldet Aodix das; nach dem Neustart von JACK den Treiber unter
+  *File → Configuration* erneut übernehmen.
 
 ## Bauen
 

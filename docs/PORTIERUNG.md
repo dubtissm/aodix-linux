@@ -52,11 +52,21 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   Die Plugin-Klasse wird über die im Projekt gespeicherte 32-bit-ID ausgewählt.
 - MIDI-Warteschlangen-Überlauf erzeugt keine MessageBox mehr aus dem Audio-Thread (Absturzgefahr).
 
-**Audio / MIDI**
-- `AodixCoreAsio.cpp` → `AodixCoreAudio.cpp`: gleiche Struktur (Audio-Callback füllt die Eingänge,
-  ruft `dsp_work()` in der Critical Section, kopiert die Ausgänge), Treiber wird JACK (Etappe 2).
-- MIDI-Eingang über den Audiotreiber (JACK-MIDI) statt Windows-Multimedia.
-- Im Konfigurationsdialog heißt die Gruppe „ASIO“ jetzt „Audio (JACK)“; Funktionen und IDs sind gleich.
+**Audio / MIDI (JACK)**
+- `AodixCoreAsio.cpp` → `AodixCoreAudio.cpp`: gleiche Struktur wie das Original (Audio-Callback füllt die
+  Eingänge, ruft `dsp_work()` in der Critical Section, kopiert die Ausgänge mit Begrenzung auf ±1).
+- libjack wird per `dlopen` geladen: keine Build-Abhängigkeit, funktioniert mit jack2 und PipeWire-JACK.
+- Der JACK-Client bleibt während der ganzen Sitzung offen. `audio_close()`/`audio_init()` (Konfiguration,
+  Bounce) pausieren nur die Verarbeitung – so bleiben Verbindungen im Patchbay erhalten. Die Portanzahl wird
+  nur beim Öffnen des Clients festgelegt (Ports werden nie entfernt, während der Callback läuft).
+- JACK-Puffer größer als 2048 Samples werden in Teilblöcken verarbeitet.
+- MIDI-Eingang über einen JACK-MIDI-Port. Der Audio-Thread legt die Nachrichten in eine lock-freie Queue,
+  ein eigener Thread ruft `midi_in_process()` auf – wie der Windows-MIDI-Callback-Thread im Original
+  (Aufnahme mit Undo-Kopie u. Ä. läuft so nicht im Echtzeit-Thread).
+- Server-Shutdown wird erkannt und im GUI-Thread gemeldet.
+- Im Konfigurationsdialog heißt die Gruppe „ASIO“ jetzt „Audio (JACK)“, die Samplerate-Auswahl ist zur
+  Kanalanzahl geworden (die Samplerate bestimmt der JACK-Server).
+- Fehlerkorrektur aus dem Original: „Render Cue Range“ im Bounce-Dialog erzeugte ohne Stop-Marker eine leere Datei.
 
 **System**
 - Konfiguration in `~/.config/aodix/Aodix.cfg`, Skins/Hilfe relativ zum Programm oder in `share/aodix`.
@@ -64,9 +74,8 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - Pfadtrenner `\` → `/`; Dateiendungen werden nicht mehr in Kleinbuchstaben umgeschrieben (Linux-Dateisysteme
   unterscheiden Groß-/Kleinschreibung).
 
-## Bekannte Einschränkungen in Etappe 1
+## Bekannte Einschränkungen
 
-- Kein Ton und keine Wiedergabe-Animation (die Transportsteuerung läuft im Audio-Callback → Etappe 2).
 - Keine Plugins ladbar (→ Etappe 4).
 - Alte Projekte mit **Windows**-Plugins: Patterns, Events, Spuren und Marker werden geladen. Ältere Dateien
   (vor Version 4.2.0.3) enthalten keine Ersatzinformationen für fehlende Plugins; dort bricht Aodix – wie
@@ -82,12 +91,14 @@ python3 tools/make_test_adx.py /tmp/test.adx
 ./build/aodix /tmp/test.adx
 ```
 
+Mit `--thru` sind Master-Eingang 1/2 direkt mit Master-Ausgang 1/2 verbunden – ein Signal an
+`Aodix:in_1` muss dann an `Aodix:out_1` herauskommen (Audio-Test ohne Plugins).
+
 ## Nächste Etappen
 
-2. **JACK**: Client mit bis zu 32 Ein-/Ausgangsports (entspricht den 32 Master-Pins), JACK-MIDI-Eingang,
-   Samplerate/Puffergröße vom Server, Wiederverbinden nach Serverneustart, Bounce ohne JACK-Unterbrechung.
-3. **Oberfläche**: Zwischenablage, Tastatur-Layouts prüfen (QWERTZ/AZERTY), optionale Integer-Skalierung
-   für HiDPI-Bildschirme.
+2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
+3. **Oberfläche**: Zwischenablage, Tastatur-Layouts prüfen (QWERTZ/AZERTY), Skalierung 1,5× und 2× für
+   HiDPI-Bildschirme.
 4. **VST3**: Laden der Bundles (MIT-lizenziertes VST3-SDK 3.8), Prozessor/Controller, Parameter-Queues,
    Noten- und MIDI-CC-Abbildung, Zustand als Chunk im Projekt, Editor über X11-Einbettung mit `IRunLoop`.
 5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`, optional CLAP.

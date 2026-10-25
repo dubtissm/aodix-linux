@@ -82,8 +82,11 @@ struct ADX_CONFIG
 	// display settings
 	unsigned char note_colors;
 
+	// linux port: number of jack audio ports (in and out), 0 = default (2)
+	unsigned char audio_num_ports;
+
 	// reserved fields
-	char reserved2[55];
+	char reserved2[54];
 
 	// registration info
 	char user_name[32];
@@ -467,6 +470,8 @@ public:
 	int32_t audio_init_list(void);
 	void audio_fill_pin_menu(HMENU const hmenu,int const fill_inputs,int const init_id);
 	void audio_control_panel(void);
+	void audio_shutdown(void);
+	void audio_idle(HWND const hwnd);
 
 public:
 	// application instance handler

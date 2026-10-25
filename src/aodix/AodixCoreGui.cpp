@@ -303,6 +303,9 @@ void CAodixCore::gui_timer(HWND const hwnd)
 		InvalidateRect(hwnd,NULL,FALSE);
 	}
 
+	// linux port: audio driver housekeeping (jack server shutdown)
+	audio_idle(hwnd);
+
 	// host idle
 	host_idle();
 }
