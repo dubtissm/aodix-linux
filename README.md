@@ -72,8 +72,21 @@ resources/      Skins, Hilfe, Icon, Desktop-Eintrag
 docs/           Dateiformat, Portierungsnotizen
 ```
 
-Die Details zur Portierung stehen in [docs/PORTIERUNG.md](docs/PORTIERUNG.md). Die Git-Historie beginnt
-mit dem unveränderten Original-Quellcode, sodass jede Änderung nachvollziehbar ist (`git log`, `git diff`).
+Die Details zur Portierung stehen in [docs/PORTIERUNG.md](docs/PORTIERUNG.md).
+
+## Git-Historie
+
+Die Versionsgeschichte beginnt mit dem unveränderten Original-Quellcode, sodass jede Änderung der
+Portierung nachvollziehbar ist. Sie liegt als Datei `aodix-git-history.bundle` bei. Einmalig einrichten:
+
+```bash
+cd aodix_linux
+git init -b main
+git fetch ./aodix-git-history.bundle main
+git reset FETCH_HEAD
+git log --oneline          # zeigt die Etappen
+git diff 77e4cf3 -- src/aodix   # alle Änderungen am Original-Aodix-Code
+```
 
 ## Lizenz
 
