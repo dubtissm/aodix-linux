@@ -199,6 +199,18 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - Einstellung `ui_scale` in `Aodix.cfg` (aus einem reservierten Byte, Format bleibt kompatibel), neue Auswahl
   „UI Scaling *“ im Konfigurationsdialog; die MIDI-Geräteliste darunter ist dafür etwas kürzer.
 
+**Komprimierte Projektdateien (`.adxl`)**
+- `.adxl` = gzip-komprimierte `.adx`-Datei (zlib, Stufe 6), Inhalt byte-identisch. Der Originalcode liest und
+  schreibt weiter über `FILE*` mit `fseek`/`ftell`: Beim Laden wird eine gzip-Datei (erkannt an den Magic-Bytes
+  `1F 8B`, nicht an der Endung) in eine anonyme temporäre Datei (`tmpfile()`) entpackt; beim Speichern einer
+  `.adxl` schreibt Aodix in eine temporäre Datei und komprimiert sie am Ende nach `<name>.tmp`, das dann die
+  Zieldatei ersetzt (ein vorhandenes Projekt geht bei einem Schreibfehler nicht verloren). Funktionen in
+  `AodixLinux.cpp` (`adx_project_open_read/open_write/close_write`).
+- „Save As“ schlägt `.adxl` vor, `.adx` bleibt wählbar; „Save“ behält die Endung der geöffneten Datei.
+  Ein fehlgeschlagenes Speichern wird jetzt gemeldet (das Original speicherte stumm).
+- Geprüft: `.adx` laden → als `.adxl` und `.adx` speichern → `.adxl` laden → als `.adx` speichern; entpackte
+  `.adxl`, direkt gespeicherte und neu gespeicherte `.adx` sind byte-identisch (2,9 MB → 10 KB).
+
 **Kleinere Korrekturen**
 - Die Konfiguration wird beim Übernehmen sofort gespeichert (nicht erst beim Beenden) – sie überlebt so
   einen abstürzenden Plugin oder eine beendete Sitzung.
@@ -266,4 +278,4 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
 3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ und ~~Tastatur-Layouts (QWERTY/QWERTZ/AZERTY)~~ erledigt und getestet; offen: Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
-5. **Paketierung**: Installationspaket, MIME-Typ für `.adx` (CLAP, LV2 und LADSPA sind bereits erledigt).
+5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`/`.adxl` (CLAP, LV2 und LADSPA sind bereits erledigt).

@@ -13,7 +13,8 @@ void CAodixCore::export_adx_file_dlg(HWND const hwnd)
 	strcpy(filename,project.name);
 
 	// open file dialog
-	if(arg_file_dialog_save(hinstance_app,hwnd,"Save Aodix Project File",filename,"Aodix Project File (*.adx)\0*.adx\0\0","adx",""))
+	// linux port: projects are saved compressed (".adxl") unless the name ends with ".adx"
+	if(arg_file_dialog_save(hinstance_app,hwnd,"Save Aodix Project File",filename,"Aodix Project File (*.adxl)\0*.adxl\0Aodix Project File, uncompressed (*.adx)\0*.adx\0\0","adxl",""))
 		export_adx_file(hwnd,filename);
 }
 
@@ -62,8 +63,9 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 	// set wait cursor
 	SetCursor(hcursor_wait);
 
-	// open file
-	FILE* pfile=fopen(filename,"wb");
+	// open file (linux port: ".adxl" is written compressed)
+	FILE* pfile=adx_project_open_write(filename);
+	bool write_ok=(pfile!=NULL);
 
 	if(pfile!=NULL)
 	{
@@ -274,7 +276,7 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 		fwrite(&ext_offset,sizeof(int),1,pfile);
 
 		// close file
-		fclose(pfile);
+		write_ok=adx_project_close_write(pfile,filename);
 
 		// leave critical section
 		audio_leave_cs();
@@ -282,6 +284,14 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 
 	// set arrow cursor
 	SetCursor(hcursor_arro);
+
+	// linux port: report a failed save (the original saved silently)
+	if(!write_ok)
+	{
+		char buf[_MAX_PATH+64];
+		snprintf(buf,sizeof(buf),"Error: Project Could Not Be Saved\n\n%s",filename);
+		MessageBox(hwnd,buf,"Aodix",MB_OK | MB_ICONERROR);
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

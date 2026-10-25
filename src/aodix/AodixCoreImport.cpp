@@ -20,10 +20,10 @@ void CAodixCore::import_adx_file_dlg(HWND const hwnd)
 {
 	// filename holder
 	char filename[_MAX_PATH];
-	sprintf(filename,"*.adx");
+	sprintf(filename,"*.adxl");
 
-	// open file dialog
-	if(arg_file_dialog_open(hinstance_app,hwnd,"Open Aodix Project File",filename,"Aodix Project File (*.adx)\0*.adx\0\0","adx","",1,0))
+	// open file dialog (linux port: compressed ".adxl" and original ".adx" projects)
+	if(arg_file_dialog_open(hinstance_app,hwnd,"Open Aodix Project File",filename,"Aodix Project File (*.adxl;*.adx)\0*.adxl;*.adx\0All Files (*.*)\0*\0\0","adxl","",1,0))
 	{
 		// set wait cursor
 		SetCursor(hcursor_wait);
@@ -98,8 +98,8 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 	reset_user();
 	reset_project();
 
-	// open file
-	FILE* pfile=fopen(filename,"rb");
+	// open file (linux port: compressed projects are unpacked transparently)
+	FILE* pfile=adx_project_open_read(filename);
 
 	if(pfile!=NULL)
 	{

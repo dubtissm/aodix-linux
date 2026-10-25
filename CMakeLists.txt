@@ -15,6 +15,7 @@ endif()
 
 find_package(X11 REQUIRED)
 find_package(Threads REQUIRED)
+find_package(ZLIB REQUIRED)
 
 if(NOT X11_XShm_FOUND)
 	message(FATAL_ERROR "the X11 shared memory extension (libXext) is required")
@@ -111,7 +112,7 @@ add_executable(aodix
 # the original code base relies on a few msvc leniencies (string literals passed as char*, multi-char
 # constants for file ids); keep the warnings quiet instead of touching every line of the original code
 target_compile_options(aodix PRIVATE -Wno-write-strings -Wno-multichar -Wno-unused-parameter -Wno-int-to-pointer-cast -Wno-unused-result -Wno-format-truncation -Wno-format-overflow -Wno-conversion-null)
-target_link_libraries(aodix PRIVATE adxplatform adxplugin)
+target_link_libraries(aodix PRIVATE adxplatform adxplugin ZLIB::ZLIB)
 
 # run from the build directory: copy the skins next to the executable
 add_custom_command(TARGET aodix POST_BUILD

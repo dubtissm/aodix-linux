@@ -9,7 +9,7 @@ Ziele der Portierung:
 - natives 64-bit-Linux-Programm (X11, unter Wayland über XWayland)
 - **JACK** statt ASIO für Audio und MIDI
 - **VST3**-, **CLAP**- und **LV2**-Plugins (64-bit Linux) sowie **LADSPA**-Effekte
-- alte `.adx`-Projekte bleiben lesbar und werden im selben Format gespeichert
+- alte `.adx`-Projekte bleiben lesbar; neue Projekte werden komprimiert als `.adxl` gespeichert (siehe unten)
 
 ![Aodix unter Linux](docs/screenshot-stage1.png)
 
@@ -26,6 +26,21 @@ Ziele der Portierung:
 Die komplette Oberfläche läuft (Sequencer, Routing, Menüs, Dialoge), Projekte werden geladen und
 gespeichert, Audio und MIDI laufen über JACK, Bounce schreibt WAV-Dateien, und 64-bit-**VST3**-Plugins
 werden geladen – mit Parametern, Programmen, MIDI, Zustand im Projekt und eingebettetem Plugin-Editor.
+
+## Projektdateien (.adx / .adxl)
+
+Eine `.adx`-Datei ist ein Speicherabzug von Aodix' Projektstruktur: alle 256 Patterns mit je 256 Spuren und
+256 Markern, auch die leeren. Deshalb ist schon ein leeres Projekt rund 2,9 MB groß, fast nur Nullen.
+
+Die Linux-Version speichert Projekte deshalb standardmäßig als **`.adxl`**: exakt derselbe Inhalt, nur
+gzip-komprimiert (ein leeres Projekt hat etwa 10 KB). Mit `gunzip -c projekt.adxl > projekt.adx` entsteht
+daraus wieder eine originale `.adx`-Datei.
+
+- **Speichern unter:** ohne Endung oder mit `.adxl` → komprimiert; mit der Endung `.adx` → unkomprimiert im
+  Originalformat (z. B. für Aodix unter Windows).
+- **Speichern** behält das Format der geöffneten Datei bei: Ein geöffnetes `.adx` bleibt ein `.adx`.
+- **Öffnen** erkennt komprimierte Dateien am Inhalt, unabhängig von der Endung; `.adx` und `.adxl` werden
+  beide angeboten.
 
 ## Audio und MIDI (JACK)
 
@@ -72,24 +87,24 @@ Getestet mit u-he **Bazille** (Vollversion, VST3 Linux x64) inklusive Editor, de
 
 ## Bauen
 
-Benötigt: C++17-Compiler, CMake ≥ 3.16, X11- und Xext-Entwicklungspakete.
+Benötigt: C++17-Compiler, CMake ≥ 3.16, X11-, Xext- und zlib-Entwicklungspakete.
 
 ```bash
 # Debian / Ubuntu / Mint
-sudo apt install build-essential cmake libx11-dev libxext-dev
+sudo apt install build-essential cmake libx11-dev libxext-dev zlib1g-dev
 
 # Fedora
-sudo dnf install gcc-c++ cmake libX11-devel libXext-devel
+sudo dnf install gcc-c++ cmake libX11-devel libXext-devel zlib-devel
 
 # Arch / Manjaro
-sudo pacman -S base-devel cmake libx11 libxext
+sudo pacman -S base-devel cmake libx11 libxext zlib
 ```
 
 ```bash
 cd aodix_linux
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
-./build/aodix                  # oder: ./build/aodix projekt.adx
+./build/aodix                  # oder: ./build/aodix projekt.adxl
 ```
 
 Die Skins und die Hilfe werden beim Bauen neben das Programm kopiert. Mit `cmake --install build` wird
