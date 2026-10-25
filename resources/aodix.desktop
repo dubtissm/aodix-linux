@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Aodix
+GenericName=Music Sequencer
+Comment=Tracker/sequencer hybrid with modular VST3 routing
+Exec=aodix %f
+Icon=aodix
+Terminal=false
+Categories=AudioVideo;Audio;Sequencer;Midi;
+MimeType=application/x-aodix-project;

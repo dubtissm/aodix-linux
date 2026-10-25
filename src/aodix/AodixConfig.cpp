@@ -3,35 +3,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void conf_browse_folder(HWND const hwnd,char* buf)
 {
-	// init browse info struct
-	BROWSEINFO BrowseInfo;
-	memset(&BrowseInfo,0,sizeof(BrowseInfo));
-	BrowseInfo.hwndOwner=hwnd;
-	BrowseInfo.pszDisplayName=buf;
-	BrowseInfo.lpszTitle="Select Directory";
-	BrowseInfo.ulFlags=BIF_RETURNONLYFSDIRS;
-
-	// throw display dialog
-	LPITEMIDLIST pList=SHBrowseForFolder(&BrowseInfo);
-
-	if(pList!=NULL)
-	{
-		// convert from MIDLISt to real string path
-		SHGetPathFromIDList(pList,buf);
-
-		// global pointer to the shell's IMalloc interface.
-		LPMALLOC pMalloc;
-
-		// Get the shell's allocator and free the PIDL returned by
-		// SHBrowseForFolder.
-		if (SUCCEEDED(SHGetMalloc(&pMalloc)))
-			pMalloc->Free(pList);
-	}
+	// linux port: native folder chooser (zenity / kdialog) or the built-in one
+	adxplat::choose_folder(hwnd,"Select Directory",buf,_MAX_PATH);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -60,22 +38,22 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		HWND const hwnd_asio_comb=GetDlgItem(hdlg,IDC_ASIO_DRIVER_COMBO);
 
 		// fill asio menu with ASIO drivers
-		if(gl_padx->asio_num_drivers>0)
+		if(gl_padx->audio_num_drivers>0)
 		{
 			// check if current device is in asio list range, else default null driver
-			if(gl_padx->cfg.asio_driver_id>=gl_padx->asio_num_drivers)
-				gl_padx->cfg.asio_driver_id=-1;
+			if(gl_padx->cfg.audio_driver_id>=gl_padx->audio_num_drivers)
+				gl_padx->cfg.audio_driver_id=-1;
 
 			// fill asio menu with asio driver names
-			for(long asio_di=0;asio_di<gl_padx->asio_num_drivers;asio_di++)
+			for(int32_t audio_di=0;audio_di<gl_padx->audio_num_drivers;audio_di++)
 			{
 				// add driver option
-				gl_padx->asio_get_driver_name(asio_di,buf,32);
+				gl_padx->audio_get_driver_name(audio_di,buf,32);
 				SendMessage(hwnd_asio_comb,(UINT)CB_ADDSTRING,0,(LPARAM)buf);
 			}
 
 			// set asio driver combo selected index
-			SendMessage(hwnd_asio_comb,(UINT)CB_SETCURSEL,gl_padx->cfg.asio_driver_id,0);
+			SendMessage(hwnd_asio_comb,(UINT)CB_SETCURSEL,gl_padx->cfg.audio_driver_id,0);
 		}
 		else
 		{
@@ -83,7 +61,7 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			EnableWindow(hwnd_asio_comb,FALSE);
 
 			// set null driver
-			gl_padx->cfg.asio_driver_id=-1;
+			gl_padx->cfg.audio_driver_id=-1;
 		}
 
 		// get asio sample rate combo pointer
@@ -101,7 +79,7 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		SendMessage(hwnd_rate_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"192000 Hz");
 
 		// set asio sample rate combo selected index
-		switch(int(gl_padx->cfg.asio_driver_sample_rate))
+		switch(int(gl_padx->cfg.audio_driver_sample_rate))
 		{
 		case 8000:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,0,0);	break;
 		case 11025:		SendMessage(hwnd_rate_comb,(UINT)CB_SETCURSEL,1,0);	break;
@@ -138,16 +116,16 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		HWND const hwnd_midi_in_list=GetDlgItem(hdlg,IDC_MIDI_IN_LIST);
 
 		// get midi input devices
-		int const num_midi_in_devices=midiInGetNumDevs();
+		int const num_midi_in_devices=gl_padx->midi_in_get_num_devices();
 
 		// init midi in list
 		if(num_midi_in_devices>0)
 		{
 			for(int mid=0;mid<num_midi_in_devices;mid++)
 			{
-				MIDIINCAPS mic;
-				midiInGetDevCaps(mid,&mic,sizeof(MIDIINCAPS));
-				sprintf(buf,"%.3d: %s (Vers. %d)",mid,mic.szPname,mic.vDriverVersion);
+				char name[200];
+				gl_padx->midi_in_get_device_name(mid,name,sizeof(name));
+				snprintf(buf,sizeof(buf),"%.3d: %s",mid,name);
 				SendMessage(hwnd_midi_in_list,(UINT)LB_ADDSTRING,0,(LPARAM)buf);
 			}
 		}
@@ -181,7 +159,7 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// asio control pannel
 		if(lw_par==IDC_ASIO_CONTROL_PANEL)
 		{
-			gl_padx->asio_control_panel();
+			gl_padx->audio_control_panel();
 			return TRUE;
 		}
 
@@ -244,30 +222,30 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			HWND const hwnd_rate_comb=GetDlgItem(hdlg,IDC_ASIO_RATE_COMBO);
 
 			// check if there's available asio drivers
-			if(gl_padx->asio_num_drivers>0)
+			if(gl_padx->audio_num_drivers>0)
 			{
 				// shutdown asio driver
-				gl_padx->asio_close(hdlg);
+				gl_padx->audio_close(hdlg);
 
 				// select new driver
-				gl_padx->cfg.asio_driver_id=SendMessage(hwnd_asio_comb,(UINT)CB_GETCURSEL,0,0);
+				gl_padx->cfg.audio_driver_id=SendMessage(hwnd_asio_comb,(UINT)CB_GETCURSEL,0,0);
 
 				// select sample rate option index
 				switch(SendMessage(hwnd_rate_comb,(UINT)CB_GETCURSEL,0,0))
 				{
-				case 0:	gl_padx->cfg.asio_driver_sample_rate=8000.0;	break;
-				case 1:	gl_padx->cfg.asio_driver_sample_rate=11025.0;	break;
-				case 2:	gl_padx->cfg.asio_driver_sample_rate=22050.0;	break;
-				case 3:	gl_padx->cfg.asio_driver_sample_rate=32000.0;	break;
-				case 4:	gl_padx->cfg.asio_driver_sample_rate=44100.0;	break;
-				case 5:	gl_padx->cfg.asio_driver_sample_rate=48000.0;	break;
-				case 6:	gl_padx->cfg.asio_driver_sample_rate=88200.0;	break;
-				case 7:	gl_padx->cfg.asio_driver_sample_rate=96000.0;	break;
-				case 8:	gl_padx->cfg.asio_driver_sample_rate=192000.0;	break;
+				case 0:	gl_padx->cfg.audio_driver_sample_rate=8000.0;	break;
+				case 1:	gl_padx->cfg.audio_driver_sample_rate=11025.0;	break;
+				case 2:	gl_padx->cfg.audio_driver_sample_rate=22050.0;	break;
+				case 3:	gl_padx->cfg.audio_driver_sample_rate=32000.0;	break;
+				case 4:	gl_padx->cfg.audio_driver_sample_rate=44100.0;	break;
+				case 5:	gl_padx->cfg.audio_driver_sample_rate=48000.0;	break;
+				case 6:	gl_padx->cfg.audio_driver_sample_rate=88200.0;	break;
+				case 7:	gl_padx->cfg.audio_driver_sample_rate=96000.0;	break;
+				case 8:	gl_padx->cfg.audio_driver_sample_rate=192000.0;	break;
 				}
 
 				// re-launch asio
-				gl_padx->asio_init(hdlg);
+				gl_padx->audio_init(hdlg);
 			}
 
 			// set new vst paths

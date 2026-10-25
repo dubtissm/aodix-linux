@@ -3,33 +3,39 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CALLBACK midi_callback(HMIDIIN hMidiIn,UINT wMsg,DWORD dwInstance,DWORD dwParam1,DWORD dwParam2)
+// linux port: midi input arrives through the audio driver (jack midi, stage 2 of the port). The driver
+// calls midi_in_receive() for every short message, exactly like the windows multimedia midi callback did.
+void midi_in_receive(unsigned char mi_data0,unsigned char mi_data1,unsigned char mi_data2)
 {
 	// extern aodix core pointer and handlers
 	extern CAodixCore* gl_padx;
 
-	// midi in data message
-	if(wMsg==MIM_DATA)
-	{
-		// get midi message information
-		unsigned char mi_data0=(dwParam1)&0x000000FF;
-		unsigned char mi_data1=(dwParam1>>8)&0x000000FF;
-		unsigned char mi_data2=(dwParam1>>16)&0x000000FF;
+	// override midi-in channel
+	if(gl_padx->cfg.midi_in_ch_rout)
+		mi_data0=(mi_data0&0xF0)+gl_padx->user_midi_ch;
 
-		// override midi-in channel
-		if(gl_padx->cfg.midi_in_ch_rout)
-			mi_data0=(mi_data0&0xF0)+gl_padx->user_midi_ch;
+	// override midi-in velocity (only on note-on message with velo higher than 0)
+	if(gl_padx->cfg.midi_in_vl_rout && (mi_data0&0xF0)==0x90 && mi_data2>0)
+		mi_data2=gl_padx->user_kbd_velo;
 
-		// override midi-in velocity (only on note-on message with velo higher than 0)
-		if(gl_padx->cfg.midi_in_vl_rout && (mi_data0&0xF0)==0x90 && mi_data2>0)
-			mi_data2=gl_padx->user_kbd_velo;
+	// call host midi-in process
+	gl_padx->midi_in_process(mi_data0,mi_data1,mi_data2);
+}
 
-		// call host midi-in process
-		gl_padx->midi_in_process(mi_data0,mi_data1,mi_data2);
-	}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int CAodixCore::midi_in_get_num_devices(void)
+{
+	// stage 1 of the port: no midi input devices yet
+	return 0;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void CAodixCore::midi_in_get_device_name(int const index,char* buf,int const num_chars)
+{
+	snprintf(buf,num_chars,"MIDI Input %d",index);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,28 +45,11 @@ void CAodixCore::midi_in_init(void)
 	p_hmidi_in=NULL;
 
 	// get midi input devices present in system
-	int const num_midi_in_devices=midiInGetNumDevs();
+	int const num_midi_in_devices=midi_in_get_num_devices();
 
-	// check config
+	// check config (devices are opened by the audio driver)
 	if(cfg.midi_in_dv_open && num_midi_in_devices>0)
-	{
-		// create midi handlers
-		p_hmidi_in=new HMIDIIN[num_midi_in_devices];
-
-		// open all midi input devices
-		for(int mid=0;mid<num_midi_in_devices;mid++)
-		{
-			// set midi in handler to null
-			p_hmidi_in[mid]=NULL;
-
-			// open and get return value
-			HRESULT hresult=midiInOpen(&p_hmidi_in[mid],mid,(DWORD)midi_callback,0,CALLBACK_FUNCTION);
-
-			// midi in success, start midi
-			if(hresult==MMSYSERR_NOERROR)
-				midiInStart(p_hmidi_in[mid]);
-		}
-	}
+		p_hmidi_in=(void*)this;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -79,13 +68,13 @@ void CAodixCore::midi_in_process(BYTE const data0,BYTE const data1,BYTE const da
 		if(pi->peffect!=NULL)
 		{
 			// enter critical section
-			asio_enter_cs();
+			audio_enter_cs();
 
 			// add event
 			instance_add_midi_event(pi,user_trk,data0,data1,data2,0,0);
 
 			// leave critical section
-			asio_leave_cs();
+			audio_leave_cs();
 		}
 
 		// sequencer record instance midi events
@@ -95,7 +84,7 @@ void CAodixCore::midi_in_process(BYTE const data0,BYTE const data1,BYTE const da
 			edit_undo_snapshot(true);
 
 			// write midi event with transport playing and live
-			if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+			if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 			{
 				// add midi event and refresh
 				seq_add_evmid(seq_sample_to_pos(master_transport_sampleframe),user_pat,user_trk,user_instance,data0,data1,data2,user_edit_overwrite);
@@ -145,16 +134,16 @@ void CAodixCore::midi_in_process(BYTE const data0,BYTE const data1,BYTE const da
 					if(pi->pmidi_cc[p]==midi_cc)
 					{
 						// change vst parameter
-						pi->peffect->setParameter(pi->peffect,p,f_midi_cc_value);
+						pi->peffect->setParameter(p,f_midi_cc_value);
 
 						// recording automation event
-						if(master_time_info.flags & kVstAutomationWriting)
+						if(master_time_info.flags & ADX_AUTOMATION_WRITING)
 						{
 							// midi wrapped automation event position
 							int new_event_pos=pp->usr_pos;
 
 							// write midi wrapped automation event (live else offline)
-							if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+							if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 								new_event_pos=seq_sample_to_pos(master_transport_sampleframe);
 
 							// update undo (combining)
@@ -183,23 +172,6 @@ void CAodixCore::midi_in_process(BYTE const data0,BYTE const data1,BYTE const da
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::midi_in_close(void)
 {
-	// check that midi input handler(s) pointer is valid
-	if(p_hmidi_in!=NULL)
-	{
-		// get midi input devices
-		int const num_midi_in_devices=midiInGetNumDevs();
-
-		// close all midi input devices
-		for(int mid=0;mid<num_midi_in_devices;mid++)
-		{
-			midiInStop(p_hmidi_in[mid]);
-			midiInClose(p_hmidi_in[mid]);
-		}
-
-		// delete midi handlers
-		delete[] p_hmidi_in;
-	}
-
 	// set null midi handler(s) pointer
 	p_hmidi_in=NULL;
 }

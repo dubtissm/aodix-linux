@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
@@ -298,7 +298,7 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 			{
 				char buf_prg[80];
 				sprintf(buf_prg,"%.2X:\t",p);
-				pi->peffect->dispatcher(pi->peffect,effGetProgramNameIndexed,p,0,buf_prg+4,0.0f);
+				pi->peffect->getProgramNameIndexed(p,buf_prg+4);
 				arg_menu_add_item(hmenu_program,buf_prg,16474+p);
 
 				// modify separator flags
@@ -307,7 +307,7 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 			}
 
 			// check current selected program
-			int const cp=pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f);
+			int const cp=pi->peffect->getProgram();
 			CheckMenuRadioItem(hmenu_program,0,(pi->peffect->numPrograms-1),cp,MF_BYPOSITION);
 
 			// show program menu
@@ -326,7 +326,7 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 		{
 			char buf_prg[_MAX_PATH];
 			buf_prg[0]=0;
-			pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,buf_prg,0.0f);
+			pi->peffect->getProgramName(buf_prg);
 			gui_create_edit(hwnd,349,213,124,16,buf_prg,1);
 		}
 	}
@@ -344,10 +344,10 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 		if(pi->peffect!=NULL && pi->peffect->numPrograms>1)
 		{
 			// get new program index
-			int const new_prg_index=arg_tool_clipped_assign(pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f)+(spin_index*2)-1,0,pi->peffect->numPrograms-1);
+			int const new_prg_index=arg_tool_clipped_assign(pi->peffect->getProgram()+(spin_index*2)-1,0,pi->peffect->numPrograms-1);
 
 			// set new program
-			pi->peffect->dispatcher(pi->peffect,effSetProgram,0,new_prg_index,NULL,0.0f);
+			pi->peffect->setProgram(new_prg_index);
 
 			// update vst editor window caption
 			host_update_window_caption(pi->peffect);
@@ -456,7 +456,7 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 
 			// set new index and retrieve current vst parameter value
 			user_parameter=temp_parameter;
-			user_parameter_val=pi->peffect->getParameter(pi->peffect,temp_parameter);
+			user_parameter_val=pi->peffect->getParameter(temp_parameter);
 
 			// process learn
 			if(is_double_click)
@@ -1009,12 +1009,12 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 			gui_is_dirty=1;
 
 			// destroy and create menu
-			DestroyMenu(hmenu_asio_input);
-			hmenu_asio_input=CreatePopupMenu();
+			DestroyMenu(hmenu_audio_input);
+			hmenu_audio_input=CreatePopupMenu();
 
 			// show asio input assignment menu
-			asio_fill_pin_menu(hmenu_asio_input,1,17754);
-			arg_menu_track(hmenu_asio_input,hwnd,m_i_x+user_input_pin*8,m_i_y+24);
+			audio_fill_pin_menu(hmenu_audio_input,1,17754);
+			arg_menu_track(hmenu_audio_input,hwnd,m_i_x+user_input_pin*8,m_i_y+24);
 
 			// post refresh and return
 			gui_is_dirty=1;
@@ -1062,12 +1062,12 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 			gui_is_dirty=1;
 
 			// destroy and create menu
-			DestroyMenu(hmenu_asio_output);
-			hmenu_asio_output=CreatePopupMenu();
+			DestroyMenu(hmenu_audio_output);
+			hmenu_audio_output=CreatePopupMenu();
 
 			// show asio output assignment menu
-			asio_fill_pin_menu(hmenu_asio_output,0,17786);
-			arg_menu_track(hmenu_asio_output,hwnd,m_o_x+user_output_pin*8,m_o_y+16);
+			audio_fill_pin_menu(hmenu_audio_output,0,17786);
+			arg_menu_track(hmenu_audio_output,hwnd,m_o_x+user_output_pin*8,m_o_y+16);
 			return;
 		}
 

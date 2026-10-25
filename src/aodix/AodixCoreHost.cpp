@@ -3,261 +3,53 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-long VSTCALLBACK host_audiomaster(AEffect *effect, long opcode, long index, long value, void *ptr, float opt)
+// linux port: the VST 2 audiomaster callback is replaced by the AdxPluginHost interface. Plugin formats
+// (vst3 / clap) translate their host callbacks to these methods.
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void CAodixCore::plugin_automate(AdxPlugin* plugin,int param,float value)
 {
-	// extern aodix core pointer
-	extern CAodixCore* gl_padx;
+	// instance wants to automate a parameter (was audioMasterAutomate)
+	host_on_automation(plugin,param,value);
+}
 
-	// instance wants host vst sdk implemented version
-	if(opcode==audioMasterVersion)
-		return 2300;
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void CAodixCore::plugin_midi_out(AdxPlugin* plugin,const ADX_MIDI_EVENT* events,int num_events)
+{
+	// instance wants host to process events (was audioMasterProcessEvents)
+	host_on_events(plugin,events,num_events);
+}
 
-	// instance wants to automate a parameter
-	if(opcode==audioMasterAutomate)
-	{
-		gl_padx->host_on_automation(effect,index,opt);
-		return 0;
-	}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void CAodixCore::plugin_update_display(AdxPlugin* plugin)
+{
+	// instance wants host to update its display (was audioMasterUpdateDisplay)
+	host_update_window_caption(plugin);
 
-	// instance wants id of the effect currently loading from project import
-	if(opcode==audioMasterCurrentId)
-		return gl_padx->instance_eff_id_currently_loading;
+	// something has changed, post gui update
+	gui_is_dirty=1;
+}
 
-	// instance calls host idle procedure
-	if(opcode==audioMasterIdle)
-	{
-		gl_padx->host_idle();
-		return 0;
-	}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void CAodixCore::plugin_resize_editor(AdxPlugin* plugin,int width,int height)
+{
+	// instance notifies change in editor's size (was audioMasterSizeWindow, unsupported in the original)
+	int index=0;
+	ADX_INSTANCE* pi=instance_get_from_effect(plugin,&index);
 
-	// instance looking for connected pin (!!! remember: here 0 is true!!!)
-	if(opcode==audioMasterPinConnected)
-		return 0;
+	if(pi!=NULL && pi->hwnd!=NULL && IsWindow(pi->hwnd))
+		SetWindowPos(pi->hwnd,NULL,0,0,width,height,SWP_NOMOVE | SWP_NOZORDER);
+}
 
-	// instance wants midi
-	if(opcode==audioMasterWantMidi)
-		return 0;
-
-	// instance wants timeinfo
-	if(opcode==audioMasterGetTime)
-		return long(&gl_padx->master_time_info);
-
-	// instance wants host to process events
-	if(opcode==audioMasterProcessEvents)
-	{
-		gl_padx->host_on_events(effect,(VstEvents*)ptr);
-		return 0;
-	}
-
-	// instance wants to set host time
-	if(opcode==audioMasterSetTime)
-		return 0;
-
-	// instance wants tempo at sample position
-	if(opcode==audioMasterTempoAt)
-		return long(gl_padx->master_time_info.tempo*10000.0);
-
-	// instance wants number of host automatable parameters
-	if(opcode==audioMasterGetNumAutomatableParameters)
-	{
-		if(effect)
-			return effect->numParams;
-		return 0;
-	}
-
-	// instance wants host parameter quantization
-	if(opcode==audioMasterGetParameterQuantization)
-		return 0;
-
-	// instance notifies that its IO status changed (crap)
-	if(opcode==audioMasterIOChanged)
-		return 0;
-
-	// instance notifies host that it needs idle calls
-	if(opcode==audioMasterNeedIdle)
-		return 0;
-
-	// instance notifies change in editor's size
-	if(opcode==audioMasterSizeWindow)
-		return 0;
-
-	// instance wants to know host sample rate
-	if(opcode==audioMasterGetSampleRate)
-	{
-		// set dsp sample rate
-		effect->dispatcher(effect,effSetSampleRate,0,0,NULL,(float)gl_padx->cfg.asio_driver_sample_rate);
-
-		// return host sample rate
-		return (long)gl_padx->cfg.asio_driver_sample_rate;
-	}
-
-	// instance wants to know host block size
-	if(opcode==audioMasterGetBlockSize)
-	{
-		// set dsp blocksize
-		effect->dispatcher(effect,effSetBlockSize,0,gl_padx->dsp_block_size,NULL,0.0f);
-
-		// return host block size
-		return gl_padx->dsp_block_size;
-	}
-
-	// instance wants host input latency (we return 0 cos we're faster than light)
-	if(opcode==audioMasterGetInputLatency)
-		return 0;
-
-	// instance wants host output latency (we return 0 cos we're faster than light)
-	if(opcode==audioMasterGetOutputLatency)
-		return 0;
-
-	// instance wants host previous effect
-	if(opcode==audioMasterGetPreviousPlug)
-		return 0;
-
-	// instance wants host next effect
-	if(opcode==audioMasterGetNextPlug)
-		return 0;
-
-	// instance wants the following
-	if(opcode==audioMasterWillReplaceOrAccumulate)
-		return 0;
-
-	// instance wants host current process level
-	if(opcode==audioMasterGetCurrentProcessLevel)
-		return 0;
-
-	// instance wants host automation state
-	if(opcode==audioMasterGetAutomationState)
-		return 0;
-
-	// instance wants host vendor string in ptr
-	if(opcode==audioMasterGetVendorString)
-	{
-		sprintf((char*)ptr,"Arguru Software");
-		return 0;
-	}
-
-	// instance wants host product string in ptr
-	if(opcode==audioMasterGetProductString)
-	{
-		sprintf((char*)ptr,"Aodix");
-		return 0;
-	}
-
-	// instance wants host version
-	if(opcode==audioMasterGetVendorVersion)
-		return gl_padx->aodix_version;
-
-	// instance wants specific opcode
-	if(opcode==audioMasterVendorSpecific)
-		return 0;
-
-	// instance wants to set icon (in editor window?)
-	if(opcode==audioMasterSetIcon)
-		return 0;
-
-	// instance wants host capabilities
-	if(opcode==audioMasterCanDo)
-	{
-		// host can send vst events
-		if(strcmp((char*)ptr,"sendVstEvents")==0)
-			return 1;
-
-		// host can send vst midi events
-		if(strcmp((char*)ptr,"sendVstMidiEvent")==0)
-			return 1;
-
-		// host can send vst time info
-		if(strcmp((char*)ptr,"sendVstTimeInfo")==0)
-			return 1;
-
-		// host can receive vst events
-		if(strcmp((char*)ptr,"receiveVstEvents")==0)
-			return 1;
-
-		// host can receive vst midi events
-		if(strcmp((char*)ptr,"receiveVstMidiEvent")==0)
-			return 1;
-
-		// host can receive vst time info
-		if(strcmp((char*)ptr,"receiveVstTimeInfo")==0)
-			return 1;
-
-		// host can supply idle
-		if(strcmp((char*)ptr,"supplyIdle")==0)
-			return 1;
-
-		// host cannot accept IO changes
-		if(strcmp((char*)ptr,"acceptIOChanges")==0)
-			return 0;
-
-		// host cannot report connection changes
-		if(strcmp((char*)ptr,"reportConnectionChanges")==0)
-			return 0;
-
-		// host cannot size window
-		if(strcmp((char*)ptr,"sizeWindow")==0)
-			return 0;
-
-		// host doesnt support async processing
-		if(strcmp((char*)ptr,"asyncProcessing")==0)
-			return 0;
-
-		// host doesnt support offline processing
-		if(strcmp((char*)ptr,"offline")==0)
-			return 0;
-
-		// host doesnt support shell
-		if(strcmp((char*)ptr,"supportShell")==0)
-			return 0;
-
-		// host doesnt support openfileselector
-		if(strcmp((char*)ptr,"openFileSelector")==0)
-			return 0;
-
-		// host doesnt support editfile
-		if(strcmp((char*)ptr,"editFile")==0)
-			return 0;
-
-		// host doesnt support close file selector
-		if(strcmp((char*)ptr,"closeFileSelector")==0)
-			return 0;
-
-		// host doesnt support shell categories
-		if(strcmp((char*)ptr,"shellCategory")==0)
-			return 0;
-
-		// host doesnt support start/stop processing
-		if(strcmp((char*)ptr,"startStopProcess")==0)
-			return 0;
-
-		// else
-		return 0;
-	}
-
-	// instance wants host language
-	if(opcode==audioMasterGetLanguage)
-		return kVstLangEnglish;
-
-	// instance wants host plugins directory
-	if(opcode==audioMasterGetDirectory)
-		return long(gl_padx->cfg.vst_path[0]);
-
-	// instance wants host to update its display (editors, etc)
-	if(opcode==audioMasterUpdateDisplay)
-	{
-		// update vst editor window caption
-		gl_padx->host_update_window_caption(effect);
-
-		// something has changed, post gui update
-		gl_padx->gui_is_dirty=1;
-		return 0;
-	}
-
-	// else
-	return 0;
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+const ADX_TIME_INFO* CAodixCore::plugin_time_info(void)
+{
+	// instance wants timeinfo (was audioMasterGetTime)
+	return &master_time_info;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -272,18 +64,14 @@ void CAodixCore::host_idle(void)
 		// instance is allocated?
 		if(pi->peffect!=NULL)
 		{
-			// call plugin's idle
-			pi->peffect->dispatcher(pi->peffect,effIdle,0,0,NULL,0.0f);
-
-			// call also plugin's effidle if editor opened
-			if(pi->hwnd!=NULL && IsWindow(pi->hwnd) && (pi->peffect->flags & effFlagsHasEditor))
-				pi->peffect->dispatcher(pi->peffect,effEditIdle,0,0,NULL,0.0f);
+			// call plugin's idle (linux port: also drives the editor)
+			pi->peffect->idle();
 		}
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CAodixCore::host_update_window_caption(AEffect* peffect)
+void CAodixCore::host_update_window_caption(AdxPlugin* peffect)
 {
 	// instance index
 	int i_index=0;
@@ -295,7 +83,7 @@ void CAodixCore::host_update_window_caption(AEffect* peffect)
 	if(pi!=NULL && pi->peffect!=NULL && pi->hwnd!=NULL && IsWindow(pi->hwnd))
 	{
 		// get selected program
-		int const p_index=pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f);
+		int const p_index=pi->peffect->getProgram();
 
 		// set plugin window caption
 		char buf[128];
@@ -303,7 +91,7 @@ void CAodixCore::host_update_window_caption(AEffect* peffect)
 		prg_buf[0]=0;
 
 		// get program name
-		peffect->dispatcher(peffect,effGetProgramName,0,0,prg_buf,0.0f);
+		peffect->getProgramName(prg_buf);
 
 		// format string
 		sprintf(buf,"%.2X: %s - %.2X: %s",i_index,pi->alias,p_index,prg_buf);
@@ -314,7 +102,7 @@ void CAodixCore::host_update_window_caption(AEffect* peffect)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CAodixCore::host_on_automation(AEffect* peffect,int const param,float const value)
+void CAodixCore::host_on_automation(AdxPlugin* peffect,int const param,float const value)
 {
 	extern HWND gl_hwnd_main;
 
@@ -322,7 +110,7 @@ void CAodixCore::host_on_automation(AEffect* peffect,int const param,float const
 	if(peffect!=NULL && param>=0 && param<peffect->numParams)
 	{
 		// automation enabled and effect is not null
-		if((master_time_info.flags & kVstAutomationWriting) && peffect!=NULL)
+		if((master_time_info.flags & ADX_AUTOMATION_WRITING) && peffect!=NULL)
 		{
 			// instance index and next event position
 			int instance_index=0;
@@ -332,7 +120,7 @@ void CAodixCore::host_on_automation(AEffect* peffect,int const param,float const
 			ADX_INSTANCE* pi=instance_get_from_effect(peffect,&instance_index);
 
 			// write automation event (live else offline)
-			if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+			if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 				new_event_pos=seq_sample_to_pos(master_transport_sampleframe);
 
 			// update undo (combining)
@@ -366,7 +154,7 @@ void CAodixCore::host_on_automation(AEffect* peffect,int const param,float const
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CAodixCore::host_on_events(AEffect* peffect,VstEvents* pevents)
+void CAodixCore::host_on_events(AdxPlugin* peffect,const ADX_MIDI_EVENT* pevents,int const num_events)
 {
 	// instance index
 	int i_index=0;
@@ -390,16 +178,16 @@ void CAodixCore::host_on_events(AEffect* peffect,VstEvents* pevents)
 			if(pi_mol!=NULL)
 			{
 				// scan incoming event stream
-				for(int e=0;e<pevents->numEvents;e++)
+				for(int e=0;e<num_events;e++)
 				{
 					// get event pointer
-					VstMidiEvent* pmi=(VstMidiEvent*)pevents->events[e];
+					const ADX_MIDI_EVENT* pmi=&pevents[e];
 
 					// check destinator queue
 					if(pi_mol->midi_queue_size<MAX_BLOCK_EVENTS)
 					{
 						// get instance event pointer
-						VstMidiEvent* ptr_routed_event=&pi_mol->midi_event[pi_mol->midi_queue_size];
+						ADX_MIDI_EVENT* ptr_routed_event=&pi_mol->midi_event[pi_mol->midi_queue_size];
 
 						// copy event from vst host audio master
 						*ptr_routed_event=*pmi;

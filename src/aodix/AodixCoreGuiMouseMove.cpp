@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_mouse_move(HWND const hwnd)
@@ -63,7 +63,7 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 		project.master_tempo=d_tempo;
 
 		// automation enabled and effect is not null
-		if(master_time_info.flags & kVstAutomationWriting)
+		if(master_time_info.flags & ADX_AUTOMATION_WRITING)
 		{
 			// get integral tempo
 			int const int_tempo=int(d_tempo*256.0);
@@ -72,7 +72,7 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 			edit_undo_snapshot(true);
 
 			// write automation tempo (live else offline)
-			if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+			if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 				seq_add_event(play_pos,user_pat,user_trk,EVT_TMP,(int_tempo>>8)&0xFF,(int_tempo&0xFF),0,0,user_edit_overwrite);
 			else
 				seq_add_event(pp->usr_pos,user_pat,user_trk,EVT_TMP,(int_tempo>>8)&0xFF,(int_tempo&0xFF),0,0,user_edit_overwrite);
@@ -158,7 +158,7 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 				user_parameter_val=1.0f;
 
 			// set new value
-			pi->peffect->setParameter(pi->peffect,user_parameter,user_parameter_val);
+			pi->peffect->setParameter(user_parameter,user_parameter_val);
 
 			// send automation
 			host_on_automation(pi->peffect,user_parameter,user_parameter_val);

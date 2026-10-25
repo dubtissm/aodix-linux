@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LRESULT CALLBACK main_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam)
@@ -92,7 +92,7 @@ LRESULT CALLBACK main_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 	}
 
 	// mouse wheel
-	if(message==0x20A)
+	if(message==WM_MOUSEWHEEL)
 	{
 		gl_padx->gui_mouse_wheel(hwnd,short(HIWORD(wparam)));
 		return 0;
@@ -131,7 +131,7 @@ LRESULT CALLBACK main_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 		if(MessageBox(hwnd,"Are You Sure?","Aodix - Close",MB_YESNO | MB_ICONQUESTION)==IDYES)
 		{
 			// close asio
-			gl_padx->asio_close(hwnd);
+			gl_padx->audio_close(hwnd);
 
 			// kill main timer
 			KillTimer(hwnd,1);

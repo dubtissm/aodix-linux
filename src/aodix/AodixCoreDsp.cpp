@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::dsp_work(void)
@@ -84,7 +84,7 @@ void CAodixCore::dsp_work(void)
 
 	// sequencer position to sample conversion constants
 	double const d_points_per_second=project.master_tempo*double(project.master_ppqn)/60.0;
-	double const d_samples_per_point=cfg.asio_driver_sample_rate/d_points_per_second;
+	double const d_samples_per_point=cfg.audio_driver_sample_rate/d_points_per_second;
 
 	// get samples per point integer
 	int const i_samples_per_point=int(d_samples_per_point*16.0);
@@ -96,10 +96,10 @@ void CAodixCore::dsp_work(void)
 
 	// fill audio master time info structure
 	master_time_info.samplePos=double(master_transport_sampleframe);
-	master_time_info.sampleRate=cfg.asio_driver_sample_rate;
+	master_time_info.sampleRate=cfg.audio_driver_sample_rate;
 	master_time_info.nanoSeconds=0.0;
 	master_time_info.ppqPos=double(master_transport_sampleframe)/d_samples_per_point/double(project.master_ppqn);
-	master_time_info.tempo=(cfg.asio_driver_sample_rate*60.0)/(double(int(i_samples_per_point*project.master_ppqn))/16.0);
+	master_time_info.tempo=(cfg.audio_driver_sample_rate*60.0)/(double(int(i_samples_per_point*project.master_ppqn))/16.0);
 	master_time_info.barStartPos=(int(master_time_info.ppqPos)/project.master_numerator)*project.master_numerator;
 	master_time_info.cycleStartPos=double(pp->cue_sta)/double(project.master_ppqn);
 	master_time_info.cycleEndPos=double(pp->cue_end)/double(project.master_ppqn);
@@ -110,20 +110,20 @@ void CAodixCore::dsp_work(void)
 	master_time_info.samplesToNextClock=0;
 
 	// update record state
-	if (user_record && (master_time_info.flags & kVstTransportPlaying))
-		master_time_info.flags|=kVstTransportRecording;
+	if (user_record && (master_time_info.flags & ADX_TRANSPORT_PLAYING))
+		master_time_info.flags|=ADX_TRANSPORT_RECORDING;
 	else
-		master_time_info.flags&=~kVstTransportRecording;
+		master_time_info.flags&=~ADX_TRANSPORT_RECORDING;
 
 	// transport process
-	if(master_time_info.flags & kVstTransportPlaying)
+	if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
 	{
 		// get start and end sample indexes of this dsp block
 		int const block_sample_sta=master_transport_sampleframe;
 		int const block_sample_end=master_transport_sampleframe+dsp_block_size;
 
 		// check cycle wrap
-		cycle_wrap=(master_time_info.flags & kVstTransportCycleActive) && block_sample_sta<=cue_end_sample && block_sample_end>cue_end_sample;
+		cycle_wrap=(master_time_info.flags & ADX_TRANSPORT_CYCLE_ACTIVE) && block_sample_sta<=cue_end_sample && block_sample_end>cue_end_sample;
 		if(cycle_wrap)
 		{
 			// play events before cycle wrap
@@ -262,7 +262,7 @@ void CAodixCore::dsp_work(void)
 								// check event pair
 								if(pi->midi_event[ev].deltaFrames>pi->midi_event[ev+1].deltaFrames)
 								{
-									VstMidiEvent tev=pi->midi_event[ev];
+									ADX_MIDI_EVENT tev=pi->midi_event[ev];
 									pi->midi_event[ev]=pi->midi_event[ev+1];
 									pi->midi_event[ev+1]=tev;
 									all_sorted=false;
@@ -271,26 +271,14 @@ void CAodixCore::dsp_work(void)
 						}
 					}
 
-					// prepare event group
-					VstEvents event_group;
-					event_group.numEvents=pi->midi_queue_size;
-					event_group.reserved=0;
-
-					// place event(s)
-					for(int eq=0;eq<pi->midi_queue_size;eq++)
-						event_group.events[eq]=(VstEvent*)&pi->midi_event[eq];
+					// linux port: the queued events are passed together with the audio buffers
+					int const num_block_events=pi->midi_queue_size;
 
 					// empty list
 					pi->midi_queue_size=0;
 
-					// vst processing, send the events
-					pi->peffect->dispatcher(pi->peffect,effProcessEvents,0,0,&event_group,0.0f);
-
-					// plugin process
-					if(pi->peffect->flags & effFlagsCanReplacing)
-						pi->peffect->processReplacing(pi->peffect,pi->pins,pi->pous,dsp_block_size);
-					else
-						pi->peffect->process(pi->peffect,pi->pins,pi->pous,dsp_block_size);
+					// plugin process (events + audio)
+					pi->peffect->process(pi->pins,pi->pous,dsp_block_size,pi->midi_event,num_block_events);
 
 					// output rout
 					for(int o=0;o<pi->peffect->numOutputs;o++)
@@ -350,10 +338,10 @@ void CAodixCore::dsp_work(void)
 		dsp_vumeter_drive(dsp_output_buffer[mo],dsp_output_vumeter[mo],dsp_block_size);
 
 	// clear changed flag
-	master_time_info.flags&=~kVstTransportChanged;
+	master_time_info.flags&=~ADX_TRANSPORT_CHANGED;
 
 	// transport advance
-	if(master_time_info.flags & kVstTransportPlaying)
+	if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
 	{
 		// transport increment (and jump command dispatch)
 		if(jump && !cycle_wrap)
@@ -383,8 +371,8 @@ void CAodixCore::dsp_work(void)
 				pp->usr_pos=pp->cue_stp;
 
 			// stop transport
-			master_time_info.flags&=~kVstTransportPlaying;
-			master_time_info.flags|=kVstTransportChanged;
+			master_time_info.flags&=~ADX_TRANSPORT_PLAYING;
+			master_time_info.flags|=ADX_TRANSPORT_CHANGED;
 
 			// post refresh
 			gui_is_dirty=1;
@@ -419,7 +407,7 @@ void CAodixCore::dsp_clear_input_buffers()
 void CAodixCore::dsp_transport_play(void)
 {
 	// enter critical section
-	asio_enter_cs();
+	audio_enter_cs();
 
 	// sort events
 	seq_sort();
@@ -432,7 +420,7 @@ void CAodixCore::dsp_transport_play(void)
 	ADX_PATTERN* pp=&project.pattern[user_pat];
 
 	// send all notes off/all sounds off if transport were playing
-	if(master_time_info.flags & kVstTransportPlaying)
+	if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
 	{
 		// scan all instances
 		for(int i=0;i<MAX_INSTANCES;i++)
@@ -443,19 +431,19 @@ void CAodixCore::dsp_transport_play(void)
 	master_transport_sampleframe=seq_pos_to_sample(pp->usr_pos);
 
 	// launch transport
-	master_time_info.flags|=kVstTransportPlaying|kVstTransportChanged;
+	master_time_info.flags|=ADX_TRANSPORT_PLAYING|ADX_TRANSPORT_CHANGED;
 	if(user_record)
-		master_time_info.flags|=kVstTransportRecording;
+		master_time_info.flags|=ADX_TRANSPORT_RECORDING;
 
 	// leave critical section
-	asio_leave_cs();
+	audio_leave_cs();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::dsp_transport_stop(void)
 {
 	// enter critical section
-	asio_enter_cs();
+	audio_enter_cs();
 
 	// get current pattern pointer
 	ADX_PATTERN* pp=&project.pattern[user_pat];
@@ -465,8 +453,8 @@ void CAodixCore::dsp_transport_stop(void)
 		pp->usr_pos=edit_quantize(seq_sample_to_pos(master_transport_sampleframe));
 
 	// stop transport
-	master_time_info.flags&=~(kVstTransportPlaying|kVstTransportRecording);
-	master_time_info.flags|=kVstTransportChanged;
+	master_time_info.flags&=~(ADX_TRANSPORT_PLAYING|ADX_TRANSPORT_RECORDING);
+	master_time_info.flags|=ADX_TRANSPORT_CHANGED;
 
 	// send all notes off (all sounds off too if transport is stopped)
 	for(int i=0;i<MAX_INSTANCES;i++)
@@ -476,7 +464,7 @@ void CAodixCore::dsp_transport_stop(void)
 	seq_sort();
 
 	// leave critical section
-	asio_leave_cs();
+	audio_leave_cs();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -607,10 +595,10 @@ int CAodixCore::dsp_play_events(int const i_samples_per_point,int const block_sa
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::dsp_stop_playing_notes(int const pos,int const pat,int const trk,bool const check_muted,int const deltaframe)
 {
-	if(master_time_info.flags & kVstTransportPlaying)
+	if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
 	{
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// get pattern pointer
 		ADX_PATTERN* pp=&project.pattern[pat];
@@ -668,7 +656,7 @@ void CAodixCore::dsp_stop_playing_notes(int const pos,int const pat,int const tr
 		}
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 	}
 }
 

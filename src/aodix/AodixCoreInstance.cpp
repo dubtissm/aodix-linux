@@ -3,36 +3,24 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-typedef AEffect* (*PVSTMAIN)(audioMasterCallback audioMaster);
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,int const param_x,int const param_y)
 {
-	// load dll file
-	pi->h_dll=LoadLibrary(filename);
+	// linux port: load the plugin through the format independent plugin loader (vst3 bundle).
+	// when loading a project, the stored unique id selects the plugin class inside the bundle.
+	char error[512];
+	error[0]=0;
 
-	if(pi->h_dll==NULL)
+	pi->peffect=adx_plugin_load(filename,instance_eff_id_currently_loading,this,error,sizeof(error));
+
+	// no effect created
+	if(pi->peffect==NULL)
 	{
-		MessageBox(hwnd,"Error: LoadLibrary() Failed","Aodix - VST Host",MB_OK | MB_ICONERROR);
-		return;
-	}
-
-	// get proc main address
-	PVSTMAIN _pMain = NULL;
-	_pMain=(PVSTMAIN)GetProcAddress(pi->h_dll,"main");
-
-	// VST 2.4 SDK adds "VSTPluginMain"
-	if (!_pMain)
-		_pMain=(PVSTMAIN)GetProcAddress(pi->h_dll,"VSTPluginMain");
-
-	// no plug's main entry function?
-	if(!_pMain)
-	{
-		MessageBox(hwnd,"Error: GetProcAddress() Failed","Aodix - VST Host",MB_OK | MB_ICONERROR);
-		pi->h_dll = NULL;
+		char buf[1024];
+		snprintf(buf,sizeof(buf),"Error: Plugin Could Not Be Loaded\n\n%s\n\n%s",filename,error);
+		MessageBox(hwnd,buf,"Aodix - VST Host",MB_OK | MB_ICONERROR);
 		return;
 	}
 
@@ -52,17 +40,7 @@ void CAodixCore::instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,in
 	pi->mout_pin.num_wires=0;
 
 	// set dll path
-	sprintf(pi->dll_path,filename);
-
-	//obtain AEffect structure, create effect
-	pi->peffect=_pMain(host_audiomaster);
-
-	// no effect created by plug's main
-	if(pi->peffect==NULL)
-	{
-		MessageBox(hwnd,"Error: Plugin's Main() Function Returned NULL Effect Address","Aodix - VST Host",MB_OK | MB_ICONERROR);
-		return;
-	}
+	snprintf(pi->dll_path,sizeof(pi->dll_path),"%s",filename);
 
 	int const pre_i=pi->peffect->numInputs;
 	int const pre_o=pi->peffect->numOutputs;
@@ -92,7 +70,7 @@ void CAodixCore::instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,in
 		// maximum assigned master output pin (at least 1)
 		int num_master_output_pins=1;
 		for(int oo=0;oo<NUM_DSP_OUTPUTS;oo++)
-			if(cfg.asio_output_pin[oo]<asio_num_outputs)
+			if(cfg.audio_output_pin[oo]<audio_num_outputs)
 				num_master_output_pins=oo+1;
 
 		// create audio output pin(s) array
@@ -126,9 +104,9 @@ void CAodixCore::instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,in
 	}
 
 	// init effect name
-	char effect_name[65]; // in VST 2.3 the limit was 32 bytes, in 2.4 it was raised to 64 bytes
+	char effect_name[65];
 	memset(effect_name,0,sizeof(effect_name));
-	pi->peffect->dispatcher(pi->peffect,effGetEffectName,0,0,effect_name,0.0f);
+	pi->peffect->getEffectName(effect_name);
 
 	// check if plugin effect name was set
 	if(effect_name[0]!=0)
@@ -143,14 +121,15 @@ void CAodixCore::instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,in
 		GetFileTitle(pi->dll_path,pi->alias,24);
 
 		// kick away extension
-		pi->alias[strlen(pi->alias)-4]=0;
+		char* const pdot=strrchr(pi->alias,'.');
+		if(pdot!=NULL)
+			*pdot=0;
 	}
 
 	// success instance, init plugin
-	pi->peffect->dispatcher(pi->peffect,effOpen,0,0,NULL,0.0f);
-	pi->peffect->dispatcher(pi->peffect,effSetSampleRate,0,0,NULL,(float)cfg.asio_driver_sample_rate);
-	pi->peffect->dispatcher(pi->peffect,effSetBlockSize,0,dsp_block_size,NULL,0.0f);
-	pi->peffect->dispatcher(pi->peffect,effMainsChanged,0,1,NULL,0.0f);
+	pi->peffect->setSampleRate(cfg.audio_driver_sample_rate);
+	pi->peffect->setBlockSize(dsp_block_size);
+	pi->peffect->setActive(1!=0);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -206,12 +185,11 @@ void CAodixCore::instance_free(ADX_INSTANCE* pi)
 		// close plugin's editor
 		instance_close_editor(pi);
 
-		// close plugin's instance
-		pi->peffect->dispatcher(pi->peffect,effMainsChanged,0,0,0,0.0f);
-		pi->peffect->dispatcher(pi->peffect,effClose,0,0,0,0.0f);
-
-		// set null vst aeffect plug
+		// close plugin's instance (deleting the plugin object also unloads its library)
+		AdxPlugin* const pplug=pi->peffect;
 		pi->peffect=NULL;
+		pplug->setActive(false);
+		delete pplug;
 
 		// reset instance struct members
 		pi->hwnd=NULL;
@@ -227,14 +205,11 @@ void CAodixCore::instance_free(ADX_INSTANCE* pi)
 		// resest alias
 		memset(pi->alias,0,32);
 		sprintf(pi->alias,"---");
-
-		// decrement reference count
-		FreeLibrary(pi->h_dll);
 	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-ADX_INSTANCE* CAodixCore::instance_get_from_effect(AEffect* peffect,int* pindex)
+ADX_INSTANCE* CAodixCore::instance_get_from_effect(AdxPlugin* peffect,int* pindex)
 {
 	// scan all instances
 	for(int i=0;i<MAX_INSTANCES;i++)
@@ -264,12 +239,8 @@ void CAodixCore::instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd)
 	instance_close_editor(pi);
 
 	// open vst gui
-	if(hwnd!=NULL && pi->peffect && (pi->peffect->flags & effFlagsHasEditor))
+	if(hwnd!=NULL && pi->peffect && (pi->peffect->hasEditor))
 	{
-		// window frames
-		int const frame_w=6;
-		int const frame_h=22;
-
 		// get parent window area size
 		RECT r;
 		GetClientRect(hwnd,&r);
@@ -277,14 +248,17 @@ void CAodixCore::instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd)
 		int const h=r.bottom-r.top;
 
 		// get plugin editor window size
-		ERect * er;
-		pi->peffect->dispatcher(pi->peffect,effEditGetRect,0,0,&er,0.0f);
+		int win_w=0;
+		int win_h=0;
+		if(!pi->peffect->editorGetSize(&win_w,&win_h) || win_w<=0 || win_h<=0)
+		{
+			win_w=400;
+			win_h=300;
+		}
 
-		// position window
-		int const win_w=er->right-er->left;
-		int const win_h=er->bottom-er->top;
-		int const win_x=w/2-(win_w+frame_w)/2;
-		int const win_y=h/2-(win_h+frame_h)/2;
+		// position window (linux port: the window manager adds the frame, so no frame size correction)
+		int const win_x=w/2-win_w/2;
+		int const win_y=h/2-win_h/2;
 
 		// pass screen coords
 		POINT p;
@@ -293,34 +267,39 @@ void CAodixCore::instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd)
 		ClientToScreen(hwnd,&p);
 
 		// create plugin parent window
-		pi->hwnd=CreateWindowEx(WS_EX_TOOLWINDOW,"VSTAodixHost","Aodix - VST Instance Window",WS_SYSMENU | WS_CAPTION,p.x,p.y,win_w+frame_w,win_h+frame_h,hwnd,NULL,hinstance_app,NULL);
+		pi->hwnd=CreateWindowEx(WS_EX_TOOLWINDOW,"VSTAodixHost","Aodix - VST Instance Window",WS_SYSMENU | WS_CAPTION,p.x,p.y,win_w,win_h,hwnd,NULL,hinstance_app,NULL);
 
 		// set window effect parameter
-		SetWindowLong(pi->hwnd,GWL_USERDATA,(long)pi->peffect);
-
-		// open editor window
-		pi->peffect->dispatcher(pi->peffect,effEditOpen,0,0,pi->hwnd,0.0f);
-		pi->peffect->dispatcher(pi->peffect,effEditTop,0,0,NULL,0.0f);
-
-		// check for new size
-		pi->peffect->dispatcher(pi->peffect,effEditGetRect,0,0,&er,0.0f);
-		int const nw=er->right-er->left;
-		int const nh=er->bottom-er->top;
-
-		// misteriously resized(!)
-		if(nw!=win_w || nh!=win_h)
-		{
-			p.x=w/2-(nw+frame_w)/2;
-			p.y=h/2-(nh+frame_h)/2;
-			ClientToScreen(hwnd,&p);
-			SetWindowPos(pi->hwnd,NULL,p.x,p.y,nw+frame_w,nh+frame_h,SWP_NOZORDER);
-		}
+		SetWindowLongPtr(pi->hwnd,GWLP_USERDATA,(LONG_PTR)pi->peffect);
 
 		// update caption
 		host_update_window_caption(pi->peffect);
 
-		// show window
+		// show window (the x11 window must exist and be mapped before the plugin view is attached)
 		ShowWindow(pi->hwnd,SW_SHOWNORMAL);
+
+		// open editor window (embedded into the native x11 window of the frame)
+		if(!pi->peffect->editorOpen(adxplat::x11_window(pi->hwnd)))
+		{
+			DestroyWindow(pi->hwnd);
+			pi->hwnd=NULL;
+			MessageBox(hwnd,"Error: Plugin Editor Could Not Be Opened","Aodix - VST Host",MB_OK | MB_ICONERROR);
+			return;
+		}
+
+		// check for new size
+		int nw=win_w;
+		int nh=win_h;
+		pi->peffect->editorGetSize(&nw,&nh);
+
+		// misteriously resized(!)
+		if(nw>0 && nh>0 && (nw!=win_w || nh!=win_h))
+		{
+			p.x=w/2-nw/2;
+			p.y=h/2-nh/2;
+			ClientToScreen(hwnd,&p);
+			SetWindowPos(pi->hwnd,NULL,p.x,p.y,nw,nh,SWP_NOZORDER);
+		}
 	}
 }
 
@@ -331,8 +310,8 @@ void CAodixCore::instance_close_editor(ADX_INSTANCE* pi)
 	if(pi->peffect!=NULL && pi->hwnd!=NULL && IsWindow(pi->hwnd))
 	{
 		// kill child plugin editor window
-		if(pi->peffect->flags & effFlagsHasEditor)
-			pi->peffect->dispatcher(pi->peffect,effEditClose,0,0,NULL,0.f);
+		if(pi->peffect->hasEditor)
+			pi->peffect->editorClose();
 
 		// close window
 		DestroyWindow(pi->hwnd);
@@ -356,23 +335,14 @@ void CAodixCore::instance_add_midi_event(ADX_INSTANCE* pi,int const track,unsign
 				master_midi_vumeter[track]=md2;
 
 			// get new event pointer
-			VstMidiEvent* pe=&pi->midi_event[pi->midi_queue_size];
+			ADX_MIDI_EVENT* pe=&pi->midi_event[pi->midi_queue_size];
 
 			// prepare event
-			pe->byteSize=24;
 			pe->deltaFrames=deltaframe;
-			pe->detune=0;
-			pe->flags=0;
 			pe->midiData[0]=md0;
 			pe->midiData[1]=md1;
 			pe->midiData[2]=md2;
 			pe->midiData[3]=md3;
-			pe->noteLength=0;
-			pe->noteOffset=0;
-			pe->noteOffVelocity=0;
-			pe->reserved1=0;
-			pe->reserved2=0;
-			pe->type=kVstMidiType;
 
 			// increment queue
 			pi->midi_queue_size++;
@@ -380,7 +350,8 @@ void CAodixCore::instance_add_midi_event(ADX_INSTANCE* pi,int const track,unsign
 		else
 		{
 			// alert of instance process midi buffer overflow
-			MessageBox(NULL,"Overflood","Aodix - MIDI Process",MB_OK | MB_ICONERROR);
+			// (linux port: this can run in the audio thread, so no message box - just log it)
+			fprintf(stderr,"aodix: midi event queue overflow (instance midi process)\n");
 		}
 	}
 }
@@ -414,5 +385,5 @@ void CAodixCore::instance_set_param(ADX_INSTANCE* pi,int const param_index,float
 {
 	// check if effect is instanced and alter parameter
 	if(pi->peffect!=NULL)
-		pi->peffect->setParameter(pi->peffect,param_index,param_value);
+		pi->peffect->setParameter(param_index,param_value);
 }

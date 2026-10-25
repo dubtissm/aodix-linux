@@ -3,79 +3,29 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "argulib.h"
+#include "Argulib.h"
 
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#pragma warning(push)
-#pragma warning(disable: 4091)
-#include "shlobj.h"
-#pragma warning(pop)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // System Functions
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: the original measured the cpu clock with rdtsc (32-bit inline assembler). The cpu meter only
+// needs "ticks per second" and a tick counter, so a monotonic nanosecond clock is used instead (robust on
+// cpus with variable clock rates).
 double arg_sys_get_cpu_speed(void)
 {
-	LARGE_INTEGER ulFreq,ulTicks,ulValue,ulStartCounter,ulEAX_EDX;
-
-	// query for high-resolution counter frequency (this is not the CPU frequency)
-	if (QueryPerformanceFrequency(&ulFreq))
-	{
-		// Query current value:
-		QueryPerformanceCounter(&ulTicks);
-
-		// Calculate end value (one second interval); this is (current + frequency)
-		ulValue.QuadPart = ulTicks.QuadPart + ulFreq.QuadPart;
-
-		// Read CPU time-stamp counter:
-		__asm rdtsc;
-
-		// And save in ulEAX_EDX:
-		__asm mov ulEAX_EDX.LowPart,eax;
-		__asm mov ulEAX_EDX.HighPart,edx;
-
-		// Store starting counter value:
-		ulStartCounter.QuadPart = ulEAX_EDX.QuadPart;
-
-		// Loop for one second (measured with the high-resolution counter):
-		do
-		{
-			QueryPerformanceCounter(&ulTicks);
-		}
-		while(ulTicks.QuadPart<=ulValue.QuadPart);
-
-		__asm rdtsc;						// mow again read CPU time-stamp counter:
-		__asm mov ulEAX_EDX.LowPart,eax;	// save low
-		__asm mov ulEAX_EDX.HighPart,edx;	// save high
-
-		// calculate number of cycles done in interval; 1000000 Hz = 1 MHz
-		return double(ulEAX_EDX.QuadPart-ulStartCounter.QuadPart);
-	}
-	else
-	{
-		// no high-resolution counter present:
-		return 1000.0;
-	}
+	// ticks per second of arg_sys_rdtsc()
+	return 1.0e9;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 double arg_sys_rdtsc(void)
 {
-	// cycle counter register
-	LARGE_INTEGER ulEAX_EDX;
-
-	// cpu performance measure
-	__asm
-	{
-		rdtsc;						// now read again CPU time-stamp counter:
-		mov ulEAX_EDX.LowPart,eax;	// save counter
-		mov ulEAX_EDX.HighPart,edx;
-	}
-
-	// calculate number of cycles done in interval; 1000000 hz = 1 mhz
-	return double(ulEAX_EDX.QuadPart);
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC,&ts);
+	return double(ts.tv_sec)*1.0e9+double(ts.tv_nsec);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -285,29 +235,8 @@ void arg_menu_track(HMENU const hmenu,HWND const hwnd,int const x,int const y)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void arg_browse_folder(HWND const hwnd,char* buf)
 {
-	// init browse info struct
-	BROWSEINFO BrowseInfo;
-	memset(&BrowseInfo,0,sizeof(BrowseInfo));
-	BrowseInfo.hwndOwner=hwnd;
-	BrowseInfo.pszDisplayName=buf;
-	BrowseInfo.lpszTitle="Select Directory";
-	BrowseInfo.ulFlags=BIF_NEWDIALOGSTYLE | BIF_RETURNONLYFSDIRS;
-
-	// throw display dialog
-	LPITEMIDLIST pList=SHBrowseForFolder(&BrowseInfo);
-
-	if(pList!=NULL)
-	{
-		// convert from MIDLISt to real string path
-		SHGetPathFromIDList(pList,buf);
-
-		// global pointer to the shell's IMalloc interface.  
-		LPMALLOC pMalloc; 
-
-		// Get the shell's allocator and free the PIDL returned by SHBrowseForFolder
-		if (SUCCEEDED(SHGetMalloc(&pMalloc))) 
-			pMalloc->Free(pList);
-	}
+	// linux port: native folder chooser (zenity / kdialog) or the built-in one
+	adxplat::choose_folder(hwnd,"Select Directory",buf,_MAX_PATH);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -317,63 +246,15 @@ void arg_browse_folder(HWND const hwnd,char* buf)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int arg_file_dialog_open(HINSTANCE const hinstance,HWND const hwnd,char* title,char* filename,char* filter,char* default_extension,char* initial_dir,int const filter_index,int const allow_multi)
 {
-	// filename struct holder
-	OPENFILENAME OFN;
-	memset(&OFN,0,sizeof(OPENFILENAME));
-
-	// setup structure
-	OFN.lpstrTitle=title;
-	OFN.lStructSize=sizeof(OPENFILENAME);
-	OFN.hwndOwner=hwnd;
-	OFN.lpstrFilter=filter;
-	OFN.lpstrFile=filename;
-	OFN.nFilterIndex=0;
-	OFN.nMaxFile=_MAX_PATH;
-	OFN.lpstrInitialDir=initial_dir;
-	OFN.nFilterIndex=filter_index;
-	OFN.hInstance=hinstance;
-	OFN.Flags=OFN_EXPLORER | OFN_HIDEREADONLY | OFN_ENABLESIZING;
-
-	// multiselection flag
-	if(allow_multi)
-	{
-		OFN.Flags|=OFN_ALLOWMULTISELECT;
-		OFN.nMaxFile=_MAX_PATH*ARG_FD_MAX_MS_FILES;
-	}
-
-	// open file accepted
-	if(GetOpenFileName(&OFN)!=0)
-		return 1;
-
-	// canceled
-	return 0;
+	// linux port: native file chooser (zenity / kdialog) or the built-in one
+	return adxplat::choose_file(hwnd,title,filename,_MAX_PATH,filter,false,default_extension,initial_dir)?1:0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int arg_file_dialog_save(HINSTANCE const hinstance,HWND const hwnd,char* title,char* filename,char* filter,char* default_extension,char* initial_dir)
 {
-	// filename struct holder
-	OPENFILENAME OFN;
-	memset(&OFN,0,sizeof(OPENFILENAME));
-
-	// fill structure
-	OFN.lpstrTitle=title;
-	OFN.lStructSize=sizeof(OPENFILENAME);
-	OFN.hwndOwner=hwnd;
-	OFN.lpstrFilter=filter;
-	OFN.lpstrFile=filename;
-	OFN.nMaxFile=_MAX_PATH;
-	OFN.Flags=OFN_EXPLORER | OFN_HIDEREADONLY | OFN_ENABLESIZING | OFN_OVERWRITEPROMPT;
-	OFN.lpstrInitialDir=initial_dir;
-	OFN.lpstrDefExt=default_extension;
-	OFN.hInstance=hinstance;
-
-	// save program accepted
-	if(GetSaveFileName(&OFN)!=0)
-		return 1;
-
-	// canceled
-	return 0;
+	// linux port: native file chooser (zenity / kdialog) or the built-in one
+	return adxplat::choose_file(hwnd,title,filename,_MAX_PATH,filter,true,default_extension,initial_dir)?1:0;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

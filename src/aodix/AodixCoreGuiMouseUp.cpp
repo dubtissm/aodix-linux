@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_mouse_up(HWND const hwnd)
@@ -30,7 +30,7 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 
 	// master transport cycle switch button released
 	if(user_pressed==PRESS_CYCLE)
-		master_time_info.flags^=kVstTransportCycleActive;
+		master_time_info.flags^=ADX_TRANSPORT_CYCLE_ACTIVE;
 
 	// master live-rec switch button released
 	if(user_pressed==PRESS_LIVE)
@@ -54,7 +54,7 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 
 	// master transport rec-automation button released
 	if(user_pressed==PRESS_AUTO)
-		master_time_info.flags^=kVstAutomationWriting;
+		master_time_info.flags^=ADX_AUTOMATION_WRITING;
 
 	// edit rec-step button released
 	if(user_pressed==PRESS_STEP)
@@ -148,7 +148,7 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 		for(int oo=0;oo<NUM_DSP_OUTPUTS;oo++)
 		{
 			// check master input module pin assignment
-			if(cfg.asio_output_pin[oo]<asio_num_outputs)
+			if(cfg.audio_output_pin[oo]<audio_num_outputs)
 				num_master_output_pins=oo;
 		}
 
@@ -182,7 +182,7 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 			for(int ii=0;ii<NUM_DSP_INPUTS;ii++)
 			{
 				// check master input module pin assignment
-				if(cfg.asio_input_pin[ii]<asio_num_inputs)
+				if(cfg.audio_input_pin[ii]<audio_num_inputs)
 					num_src_pins=ii;
 			}
 

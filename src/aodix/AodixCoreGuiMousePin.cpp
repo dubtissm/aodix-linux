@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_mouse_scan_pin(HWND const hwnd,int const xm,int const ym,ADX_PIN* ppins,int const num_pins,int const pin_x,int const pin_y,int const is_double_click,int const is_midi_pin)
@@ -129,7 +129,7 @@ void CAodixCore::gui_mouse_scan_pin(HWND const hwnd,int const xm,int const ym,AD
 							if(GetKeyState(VK_CONTROL)<0)
 							{
 								// enter critical section
-								asio_enter_cs();
+								audio_enter_cs();
 
 								// delete all wires going to the same destination in instance
 								for(int ps=0;ps<num_pins;ps++)
@@ -147,7 +147,7 @@ void CAodixCore::gui_mouse_scan_pin(HWND const hwnd,int const xm,int const ym,AD
 								}
 
 								// leave critical section
-								asio_leave_cs();
+								audio_leave_cs();
 							}
 							else
 							{

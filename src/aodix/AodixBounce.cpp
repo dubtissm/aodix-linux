@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void write_int32(int value,FILE* pfile)
@@ -20,7 +20,7 @@ void write_int16(short value,FILE* pfile)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void write_wav_header(FILE* pfile,int num_samples,int num_channels,int sample_rate)
 {
-	long const fmt_chunk_size=16;
+	int32_t const fmt_chunk_size=16;
 	int const data_chunk_size = num_samples * num_channels * sizeof(float);
 	int const riff_size = 4 + (8 + fmt_chunk_size) + (8 + data_chunk_size);
 
@@ -201,7 +201,7 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			}
 
 			// store current pattern cycle state
-			int const curr_cycle_state=gl_padx->master_time_info.flags & kVstTransportCycleActive;
+			int const curr_cycle_state=gl_padx->master_time_info.flags & ADX_TRANSPORT_CYCLE_ACTIVE;
 
 			// number of samples to write
 			int num_samples=0;
@@ -242,7 +242,7 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 						// open file(s)
 						pfiles[fi]=fopen(track_file,"wb");
-						write_wav_header(pfiles[fi], num_samples, 1, (int)gl_padx->cfg.asio_driver_sample_rate);
+						write_wav_header(pfiles[fi], num_samples, 1, (int)gl_padx->cfg.audio_driver_sample_rate);
 					}
 				}
 			}
@@ -255,12 +255,12 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 				// single interleaved file
 				pfiles[0]=fopen(buf,"wb");
-				write_wav_header(pfiles[0], num_samples, num_channels, (int)gl_padx->cfg.asio_driver_sample_rate);
+				write_wav_header(pfiles[0], num_samples, num_channels, (int)gl_padx->cfg.audio_driver_sample_rate);
 			}
 
 			// disable transport cycle, launch transport
-			gl_padx->master_time_info.flags&=~kVstTransportCycleActive;
-			gl_padx->master_time_info.flags|=kVstTransportPlaying;
+			gl_padx->master_time_info.flags&=~ADX_TRANSPORT_CYCLE_ACTIVE;
+			gl_padx->master_time_info.flags|=ADX_TRANSPORT_PLAYING;
 
 			int cur_sample=0;
 
@@ -297,7 +297,7 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			}
 
 			// stop transport
-			gl_padx->master_time_info.flags&=~kVstTransportPlaying;
+			gl_padx->master_time_info.flags&=~ADX_TRANSPORT_PLAYING;
 
 			// finalize file(s)
 			if(check_multifile==1)
@@ -317,11 +317,11 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			}
 
 			// stop transport
-			gl_padx->master_time_info.flags&=~kVstTransportPlaying;
+			gl_padx->master_time_info.flags&=~ADX_TRANSPORT_PLAYING;
 
 			// restore transport cycle status
 			if(curr_cycle_state)
-				gl_padx->master_time_info.flags|=kVstTransportCycleActive;
+				gl_padx->master_time_info.flags|=ADX_TRANSPORT_CYCLE_ACTIVE;
 
 			// send all notes off/all sounds off
 			for(int i=0;i<MAX_INSTANCES;i++)
@@ -350,7 +350,7 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// stop transport
 		if(command_id==IDC_BOUNCE_BUTTON2)
 		{
-			gl_padx->master_time_info.flags&=~kVstTransportPlaying;
+			gl_padx->master_time_info.flags&=~ADX_TRANSPORT_PLAYING;
 
 			return TRUE;
 		}
@@ -359,8 +359,8 @@ LRESULT CALLBACK boun_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		if(command_id==IDOK || command_id==IDCANCEL)
 		{
 			// if player is running, stop else end dialog
-			if(gl_padx->master_time_info.flags & kVstTransportPlaying)
-				gl_padx->master_time_info.flags&=~kVstTransportPlaying;
+			if(gl_padx->master_time_info.flags & ADX_TRANSPORT_PLAYING)
+				gl_padx->master_time_info.flags&=~ADX_TRANSPORT_PLAYING;
 			else
 				EndDialog(hdlg,LOWORD(wparam));
 

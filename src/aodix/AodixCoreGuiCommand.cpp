@@ -3,10 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include <htmlhelp.h>
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_command(HWND const hwnd,int const id)
@@ -139,7 +136,7 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 	if(pi->peffect!=NULL && id>=16474 && id<(16474+pi->peffect->numPrograms))
 	{
 		// set current selected program
-		pi->peffect->dispatcher(pi->peffect,effSetProgram,0,id-16474,NULL,0.0f);
+		pi->peffect->setProgram(id-16474);
 
 		// update vst editor window caption
 		host_update_window_caption(pi->peffect);
@@ -168,7 +165,7 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 		int const mo_index=id-IDM_VST_LIB;
 
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// get instance pointer
 		ADX_INSTANCE* pi=&instance[user_instance];
@@ -184,12 +181,14 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 			instance_y=user_rout_offset_y+(user_lym-256);
 		}
 
-		// free and instance
+		// free and instance (linux port: the library entry also selects the plugin class inside the bundle)
 		instance_free(pi);
+		instance_eff_id_currently_loading=vst_lib.dll_id[mo_index];
 		instance_dll(hwnd,pi,vst_lib.dll_path[mo_index],instance_x,instance_y);
+		instance_eff_id_currently_loading=0;
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 
 		// post refresh
 		gui_is_dirty=1;
@@ -202,7 +201,7 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 	if(id>=17756 && id<=17785)
 	{
 		// assign new asio input pin
-		cfg.asio_input_pin[user_input_pin]=id-17756;
+		cfg.audio_input_pin[user_input_pin]=id-17756;
 
 		// post refresh
 		gui_is_dirty=1;
@@ -212,7 +211,7 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 	if(id>=17788 && id<=17817)
 	{
 		// assign new asio output pin
-		cfg.asio_output_pin[user_output_pin]=id-17788;
+		cfg.audio_output_pin[user_output_pin]=id-17788;
 
 		// post refresh
 		gui_is_dirty=1;
@@ -225,14 +224,14 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 		dsp_transport_stop();
 
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// reset user and project
 		reset_user();
 		reset_project();
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 
 		// post refresh
 		gui_is_dirty=1;
@@ -270,10 +269,10 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 		midi_in_close();
 
 		// shutdown asio
-		asio_close(hwnd);
+		audio_close(hwnd);
 
 		// stop transport
-		master_time_info.flags&=~kVstTransportPlaying;
+		master_time_info.flags&=~ADX_TRANSPORT_PLAYING;
 
 		// refresh (show asio close info/status)
 		gui_is_dirty=1;
@@ -282,7 +281,7 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 		DialogBox(hinstance_app,(LPCTSTR)IDD_BOUNCE,hwnd,(DLGPROC)boun_dlg_proc);
 
 		// re-init asio
-		asio_init(hwnd);
+		audio_init(hwnd);
 
 		// restart midi
 		midi_in_init();
@@ -326,13 +325,13 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 			SetCursor(hcursor_wait);
 
 			// enter critical section
-			asio_enter_cs();
+			audio_enter_cs();
 
 			// load file
 			import_adx_file(hwnd,prf_slot_buf);
 
 			// leave critical section
-			asio_leave_cs();
+			audio_leave_cs();
 
 			// post refresh
 			gui_is_dirty=1;
@@ -398,9 +397,9 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 		gui_is_dirty=1;
 	}
 
-	// show compiled html help
+	// show html help (linux port: the html pages of the help are opened in the default browser)
 	if(id==ID_HELP_CONTENT)
-		HtmlHelp(hwnd,hlp_fil,HH_DISPLAY_TOPIC,0);
+		adxplat::open_url(hlp_fil);
 
 	// about dialog
 	if(id==ID_HELP_ABOUT)
@@ -408,5 +407,5 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 
 	// visit aodix enhanced website
 	if(id==ID_HELP_WEBSITE)
-		WinExec("explorer https://chroma.zone/aodix-enhanced/",SW_SHOWNORMAL);
+		adxplat::open_url("https://chroma.zone/aodix-enhanced/");
 }

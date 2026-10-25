@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // instance fallback data struct definition
@@ -28,13 +28,13 @@ void CAodixCore::import_adx_file_dlg(HWND const hwnd)
 		SetCursor(hcursor_wait);
 
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// import adx file
 		import_adx_file(hwnd,filename);
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 
 		// post refresh
 		gui_is_dirty=1;
@@ -76,14 +76,14 @@ void CAodixCore::import_adx_program(ADX_INSTANCE* pi,FILE* pfile)
 	fread(buf_prg,sizeof(char),32,pfile);
 
 	// set program name
-	pi->peffect->dispatcher(pi->peffect,effSetProgramName,0,0,buf_prg,0.0f);
+	pi->peffect->setProgramName(buf_prg);
 
 	// read all parameters
 	for(int pa=0;pa<pi->peffect->numParams;pa++)
 	{
 		float pa_value=0.0f;
 		fread(&pa_value,sizeof(float),1,pfile);
-		pi->peffect->setParameter(pi->peffect,pa,pa_value);
+		pi->peffect->setParameter(pa,pa_value);
 	}
 }
 
@@ -103,8 +103,8 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 	if(pfile!=NULL)
 	{
 		// read header id
-		long header_id=0;
-		fread(&header_id,sizeof(long),1,pfile);
+		int32_t header_id=0;
+		fread(&header_id,sizeof(int32_t),1,pfile);
 
 		// compare header id
 		if(header_id!='ADX4')
@@ -116,10 +116,10 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 		}
 
 		// update last file opened
-		sprintf(user_last_file,filename);
+		strcpy(user_last_file,filename);
 
 		// read version
-		long project_version=0;
+		int32_t project_version=0;
 		fread(&project_version,sizeof(int),1,pfile);
 		bool extended = project_version>=4203;
 
@@ -205,7 +205,7 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 				fread(pi->dll_path,sizeof(char),_MAX_PATH,pfile);
 
 				// read effect id
-				fread(&instance_eff_id_currently_loading,sizeof(long),1,pfile);
+				fread(&instance_eff_id_currently_loading,sizeof(int32_t),1,pfile);
 
 				// check if corrupted path saved with Aodix v4.2.0.1 or earlier
 				if(pi->dll_path[0]==0)
@@ -257,7 +257,7 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 					fread(&curr_prg_index,sizeof(int),1,pfile);
 
 					// read instance chunk
-					if(fmt==2 || (fmt==1 && (pi->peffect->flags & effFlagsProgramChunks)))
+					if(fmt==2 || (fmt==1 && (pi->peffect->programChunks)))
 					{
 						// read chunk bytesize
 						int chk_byte_size=0;
@@ -270,7 +270,7 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 						fread(pchkdata,chk_byte_size,1,pfile);
 
 						// dispatch
-						pi->peffect->dispatcher(pi->peffect,effSetChunk,0,chk_byte_size,pchkdata,0.0f);
+						pi->peffect->setChunk(pchkdata,chk_byte_size,0!=0);
 
 						// free
 						free(pchkdata);
@@ -278,7 +278,7 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 					else if(fmt==4 || (fmt==1 && pi->peffect->numPrograms > 0))
 					{
 						// set program zero
-						pi->peffect->dispatcher(pi->peffect,effSetProgram,0,0,NULL,0.0f);
+						pi->peffect->setProgram(0);
 
 						// read single program
 						import_adx_program(pi,pfile);
@@ -290,7 +290,7 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 						fread(pi->pmidi_cc,sizeof(unsigned char),pi->peffect->numParams,pfile);
 
 					// set current program
-					pi->peffect->dispatcher(pi->peffect,effSetProgram,0,curr_prg_index,NULL,0.0f);
+					pi->peffect->setProgram(curr_prg_index);
 				}
 				else // pi->peffect==NULL
 				{
@@ -384,20 +384,20 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 				else if(inst_fmt[i]==4)
 				{
 					// get current instance program index
-					int const curr_prg_index=pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f);
+					int const curr_prg_index=pi->peffect->getProgram();
 
 					// read all programs after 0
 					for(int p=1;p<pi->peffect->numPrograms;p++)
 					{
 						// set program
-						pi->peffect->dispatcher(pi->peffect,effSetProgram,0,p,NULL,0.0f);
+						pi->peffect->setProgram(p);
 
 						// read program
 						import_adx_program(pi,pfile);
 					}
 
 					// set current program
-					pi->peffect->dispatcher(pi->peffect,effSetProgram,0,curr_prg_index,NULL,0.0f);
+					pi->peffect->setProgram(curr_prg_index);
 				}
 			}
 		}
@@ -415,7 +415,7 @@ void CAodixCore::import_search_file(char* pfolder,char* pfilename,char* pmatchfi
 {
 	// set find path
 	char findpath[_MAX_PATH];
-	sprintf(findpath,"%s\\*.*",pfolder);
+	sprintf(findpath,"%s/*.*",pfolder);
 
 	// data variables
 	WIN32_FIND_DATA ffd;
@@ -435,7 +435,7 @@ void CAodixCore::import_search_file(char* pfolder,char* pfilename,char* pmatchfi
 			{
 				// configure subpath string
 				char subfindpath[_MAX_PATH];
-				sprintf(subfindpath,"%s\\%s",pfolder,ffd.cFileName);
+				sprintf(subfindpath,"%s/%s",pfolder,ffd.cFileName);
 
 				// subsearch file folder (recursive call)
 				import_search_file(subfindpath,pfilename,pmatchfile);
@@ -444,7 +444,7 @@ void CAodixCore::import_search_file(char* pfolder,char* pfilename,char* pmatchfi
 			{
 				// file found, check for match
 				if(_stricmp(ffd.cFileName,pfilename)==0)
-					sprintf(pmatchfile,"%s\\%s",pfolder,ffd.cFileName);
+					sprintf(pmatchfile,"%s/%s",pfolder,ffd.cFileName);
 			}
 		}
 	}
@@ -488,7 +488,7 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 	if(matchfile[0]!=0)
 	{
 		// store match filepath in filename pointer
-		sprintf(pfilename,matchfile);
+		strcpy(pfilename,matchfile);
 
 		// relocation success
 		return 1;
@@ -518,7 +518,7 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-long CAodixCore::import_reverse_long(long const data)
+int32_t CAodixCore::import_reverse_long(int32_t const data)
 {
 	return ((data&0xFF)<<24) | ((data&0xFF00)<<8) | ((data&0xFF0000)>>8) | ((data&0xFF000000)>>24);
 }
@@ -537,13 +537,13 @@ void CAodixCore::import_cub_file_dlg(HWND const hwnd)
 		SetCursor(hcursor_wait);
 
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// import cubase preset file
 		import_cub_file(hwnd,filename);
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 
 		// post refresh
 		gui_is_dirty=1;
@@ -568,8 +568,8 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 		if(pfile!=NULL)
 		{
 			// read chunk magic 'CcnK'
-			long chunk_magic=0;
-			fread(&chunk_magic,sizeof(long),1,pfile);
+			int32_t chunk_magic=0;
+			fread(&chunk_magic,sizeof(int32_t),1,pfile);
 			chunk_magic=import_reverse_long(chunk_magic);
 
 			// compare chunk magic id
@@ -584,23 +584,23 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 			}
 
 			// read bytesize of this chunk, excl. magic + byteSize
-			long byte_size=0;
-			fread(&byte_size,sizeof(long),1,pfile);
+			int32_t byte_size=0;
+			fread(&byte_size,sizeof(int32_t),1,pfile);
 			byte_size=import_reverse_long(byte_size);
 
 			// read chunk type identifier
-			long fx_magic=0;
-			fread(&fx_magic,sizeof(long),1,pfile);
+			int32_t fx_magic=0;
+			fread(&fx_magic,sizeof(int32_t),1,pfile);
 			fx_magic=import_reverse_long(fx_magic);
 
 			// read version
-			long version=0;
-			fread(&version,sizeof(long),1,pfile);
+			int32_t version=0;
+			fread(&version,sizeof(int32_t),1,pfile);
 			version=import_reverse_long(version);
 
 			// read fx unique id
-			long fx_id=0;
-			fread(&fx_id,sizeof(long),1,pfile);
+			int32_t fx_id=0;
+			fread(&fx_id,sizeof(int32_t),1,pfile);
 			fx_id=import_reverse_long(fx_id);
 
 			// compare fx unique id
@@ -615,31 +615,31 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 			}
 
 			// read fx version
-			long fx_version=0;
-			fread(&fx_version,sizeof(long),1,pfile);
+			int32_t fx_version=0;
+			fread(&fx_version,sizeof(int32_t),1,pfile);
 			fx_version=import_reverse_long(fx_version);
 
 			// read for preset (program) (.fxp) without chunk (magic = 'FxCk')
 			if(fx_magic=='FxCk')
 			{
 				// read num params
-				long num_params=0;
-				fread(&num_params,sizeof(long),1,pfile);
+				int32_t num_params=0;
+				fread(&num_params,sizeof(int32_t),1,pfile);
 				num_params=import_reverse_long(num_params);
 
 				// read program name
 				char prg_name[28];
 				fread(prg_name,28,1,pfile);
-				pi->peffect->dispatcher(pi->peffect,effSetProgramName,0,0,prg_name,0.0f);
+				pi->peffect->setProgramName(prg_name);
 
 				// read params
 				for(int pa=0;pa<num_params;pa++)
 				{
-					long i_param_value=0;
-					fread(&i_param_value,sizeof(long),1,pfile);
+					int32_t i_param_value=0;
+					fread(&i_param_value,sizeof(int32_t),1,pfile);
 					i_param_value=import_reverse_long(i_param_value);
 					float* pfloatvalue=(float*)(&i_param_value);
-					pi->peffect->setParameter(pi->peffect,pa,*pfloatvalue);
+					pi->peffect->setParameter(pa,*pfloatvalue);
 				}
 
 				// close file
@@ -651,18 +651,18 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 			if(fx_magic=='FPCh')
 			{
 				// read num programs
-				long num_programs=0;
-				fread(&num_programs,sizeof(long),1,pfile);
+				int32_t num_programs=0;
+				fread(&num_programs,sizeof(int32_t),1,pfile);
 				num_programs=import_reverse_long(num_programs);
 
 				// read program name
 				char prg_name[28];
 				fread(prg_name,28,1,pfile);
-				pi->peffect->dispatcher(pi->peffect,effSetProgramName,0,0,prg_name,0.0f);
+				pi->peffect->setProgramName(prg_name);
 
 				// read chunk size
-				long chunk_size=0;
-				fread(&chunk_size,sizeof(long),1,pfile);
+				int32_t chunk_size=0;
+				fread(&chunk_size,sizeof(int32_t),1,pfile);
 				chunk_size=import_reverse_long(chunk_size);
 
 				// alloc chunk memory
@@ -672,7 +672,7 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 				fread(pchkdata,1,chunk_size,pfile);
 
 				// set chunk dispatch (preset)
-				pi->peffect->dispatcher(pi->peffect,effSetChunk,1,chunk_size,pchkdata,0.0f);
+				pi->peffect->setChunk(pchkdata,chunk_size,1!=0);
 
 				// free chunk memory
 				free(pchkdata);
@@ -686,8 +686,8 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 			if(fx_magic=='FxBk')
 			{
 				// read num programs
-				long num_programs=0;
-				fread(&num_programs,sizeof(long),1,pfile);
+				int32_t num_programs=0;
+				fread(&num_programs,sizeof(int32_t),1,pfile);
 				num_programs=import_reverse_long(num_programs);
 
 				// read future
@@ -695,40 +695,40 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 				fread(future,128,1,pfile);
 
 				// retrieve current program
-				int const curr_prg_index=pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f);
+				int const curr_prg_index=pi->peffect->getProgram();
 
 				// read programs
 				for(int p=0;p<num_programs;p++)
 				{
 					// set program
-					pi->peffect->dispatcher(pi->peffect,effSetProgram,0,p,NULL,0.0f);
+					pi->peffect->setProgram(p);
 
 					// skip 24 bytes
 					fseek(pfile,24,SEEK_CUR);
 
 					// read num params
-					long num_params=0;
-					fread(&num_params,sizeof(long),1,pfile);
+					int32_t num_params=0;
+					fread(&num_params,sizeof(int32_t),1,pfile);
 					num_params=import_reverse_long(num_params);
 
 					// read program name
 					char prg_name[28];
 					fread(prg_name,28,1,pfile);
-					pi->peffect->dispatcher(pi->peffect,effSetProgramName,0,0,prg_name,0.0f);
+					pi->peffect->setProgramName(prg_name);
 
 					// read params
 					for(int pa=0;pa<num_params;pa++)
 					{
-						long i_param_value=0;
-						fread(&i_param_value,sizeof(long),1,pfile);
+						int32_t i_param_value=0;
+						fread(&i_param_value,sizeof(int32_t),1,pfile);
 						i_param_value=import_reverse_long(i_param_value);
 						float* pfloatvalue=(float*)(&i_param_value);
-						pi->peffect->setParameter(pi->peffect,pa,*pfloatvalue);
+						pi->peffect->setParameter(pa,*pfloatvalue);
 					}
 				}
 
 				// set current program
-				pi->peffect->dispatcher(pi->peffect,effSetProgram,0,curr_prg_index,NULL,0.0f);
+				pi->peffect->setProgram(curr_prg_index);
 
 				// close file
 				fclose(pfile);
@@ -739,8 +739,8 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 			if(fx_magic=='FBCh')
 			{
 				// read num programs
-				long num_programs=0;
-				fread(&num_programs,sizeof(long),1,pfile);
+				int32_t num_programs=0;
+				fread(&num_programs,sizeof(int32_t),1,pfile);
 				num_programs=import_reverse_long(num_programs);
 
 				// read future
@@ -748,8 +748,8 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 				fread(future,128,1,pfile);
 
 				// read chunk size
-				long chunk_size=0;
-				fread(&chunk_size,sizeof(long),1,pfile);
+				int32_t chunk_size=0;
+				fread(&chunk_size,sizeof(int32_t),1,pfile);
 				chunk_size=import_reverse_long(chunk_size);
 
 				// alloc chunk memory
@@ -759,7 +759,7 @@ void CAodixCore::import_cub_file(HWND const hwnd,char* filename)
 				fread(pchkdata,1,chunk_size,pfile);
 
 				// set chunk dispatch (bank)
-				pi->peffect->dispatcher(pi->peffect,effSetChunk,0,chunk_size,pchkdata,0.0f);
+				pi->peffect->setChunk(pchkdata,chunk_size,0!=0);
 
 				// free chunk memory
 				free(pchkdata);
@@ -799,7 +799,7 @@ void CAodixCore::import_midi_file_dlg(HWND const hwnd)
 		SetCursor(hcursor_wait);
 
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// import midi file
 		import_midi_file(hwnd,filename);
@@ -827,7 +827,7 @@ void CAodixCore::import_midi_file_dlg(HWND const hwnd)
 		}
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 
 		// post refresh
 		gui_is_dirty=1;
@@ -867,7 +867,7 @@ void CAodixCore::import_midi_file(HWND const hwnd,char* filename)
 		}
 
 		// read the number 6 (header length) from the header
-		unsigned long const header_len=import_midi_read_long(pfile);
+		uint32_t const header_len=import_midi_read_long(pfile);
 
 		// check for correct length
 		if(header_len!=6)
@@ -906,7 +906,7 @@ void CAodixCore::import_midi_file(HWND const hwnd,char* filename)
 			// doesn't matter anyway, but for the other types (single and
 			// multiple tracks), 'Mf_currtime' should measure the time elapsed
 			// since the beginning of the track.
-			long midi_currtime=0L;
+			int32_t midi_currtime=0L;
 
 			// indicate that 'mf_eot()' hasn't been called yet
 			int eot_called=0;
@@ -923,17 +923,17 @@ void CAodixCore::import_midi_file(HWND const hwnd,char* filename)
 			}
 
 			// read the length of the track
-			long tklen=import_midi_read_long(pfile);
+			int32_t tklen=import_midi_read_long(pfile);
 
 			// read the data in the track
 			while(tklen)
 			{
 				// get current file position
-				long const curr_pos=ftell(pfile);
+				int32_t const curr_pos=ftell(pfile);
 
 				// read midi event
 				// read delta-time (time since last event)
-				long const delta_time=import_midi_read_var_len(pfile);
+				int32_t const delta_time=import_midi_read_var_len(pfile);
 
 				// update 'mf_currtime' (increment with delta)
 				midi_currtime+=delta_time;
@@ -1028,7 +1028,7 @@ void CAodixCore::import_midi_file(HWND const hwnd,char* filename)
 					import_midi_on_sysex(pfile,user_pat,i_track,midi_currtime,running_stat);
 
 				// get readed bytes
-				long const read_bytes=ftell(pfile)-curr_pos;
+				int32_t const read_bytes=ftell(pfile)-curr_pos;
 
 				// decrement track remaining bytes
 				tklen-=read_bytes;
@@ -1043,7 +1043,7 @@ void CAodixCore::import_midi_file(HWND const hwnd,char* filename)
 		GetFileTitle(filename,_fpath,_MAX_PATH);
 		_fpath[strlen(_fpath)-4]=0;
 		_fpath[12]=0;
-		sprintf(pp->name,_fpath);
+		strcpy(pp->name,_fpath);
 	}
 	else
 	{
@@ -1053,10 +1053,10 @@ void CAodixCore::import_midi_file(HWND const hwnd,char* filename)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-long CAodixCore::import_midi_read_var_len(FILE* pfile)
+int32_t CAodixCore::import_midi_read_var_len(FILE* pfile)
 {
 	// get value
-	long value=fgetc(pfile);
+	int32_t value=fgetc(pfile);
 
 	// check quantity length
 	if(value&0x80)
@@ -1076,17 +1076,17 @@ long CAodixCore::import_midi_read_var_len(FILE* pfile)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-long CAodixCore::import_midi_read_long(FILE* pfile)
+int32_t CAodixCore::import_midi_read_long(FILE* pfile)
 {
 	// temporal
-	unsigned long retval;
+	uint32_t retval;
 	int i;
 	int c;
 
 	// set retval to 0 initially
 	retval=0L;
 
-	// read in 4 bytes (long) into retval
+	// read in 4 bytes (int32_t) into retval
 	for (i=0;i<4;i++)
 	{
 		c=fgetc(pfile);
@@ -1126,7 +1126,7 @@ void CAodixCore::import_midi_on_sysex(FILE* pfile,int const pattern_index,int co
 	if(stat==0xF0)
 	{
 		// read length of meta-event
-		long const length=import_midi_read_var_len(pfile);
+		int32_t const length=import_midi_read_var_len(pfile);
 
 		if(length>0)
 		{
@@ -1148,7 +1148,7 @@ void CAodixCore::import_midi_on_sysex(FILE* pfile,int const pattern_index,int co
 		int const msg_type=fgetc(pfile);
 
 		// read length of meta-event
-		long const length=import_midi_read_var_len(pfile);
+		int32_t const length=import_midi_read_var_len(pfile);
 
 		// check meta message size
 		if(length>0)

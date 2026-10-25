@@ -3,14 +3,14 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::export_adx_file_dlg(HWND const hwnd)
 {
 	// filename holder
 	char filename[_MAX_PATH];
-	sprintf(filename,project.name);
+	strcpy(filename,project.name);
 
 	// open file dialog
 	if(arg_file_dialog_save(hinstance_app,hwnd,"Save Aodix Project File",filename,"Aodix Project File (*.adx)\0*.adx\0\0","adx",""))
@@ -42,7 +42,7 @@ void CAodixCore::export_adx_program(ADX_INSTANCE* pi,FILE* pfile)
 	buf_prg[0]=0;
 
 	// get program name
-	pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,buf_prg,0.0f);
+	pi->peffect->getProgramName(buf_prg);
 
 	// write program name
 	fwrite(buf_prg,sizeof(char),32,pfile);
@@ -50,7 +50,7 @@ void CAodixCore::export_adx_program(ADX_INSTANCE* pi,FILE* pfile)
 	// write all parameters
 	for(int pa=0;pa<pi->peffect->numParams;pa++)
 	{
-		float const pa_value=pi->peffect->getParameter(pi->peffect,pa);
+		float const pa_value=pi->peffect->getParameter(pa);
 		fwrite(&pa_value,sizeof(float),1,pfile);
 	}
 }
@@ -67,17 +67,17 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 	if(pfile!=NULL)
 	{
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// update last file saved
-		sprintf(user_last_file,filename);
+		strcpy(user_last_file,filename);
 
 		// update recent files
 		recent_files_push(filename);
 
 		// write header id
-		long const header_id='ADX4';
-		fwrite(&header_id,sizeof(long),1,pfile);
+		int32_t const header_id='ADX4';
+		fwrite(&header_id,sizeof(int32_t),1,pfile);
 
 		// write project version id (host version)
 		fwrite(&aodix_version,sizeof(int),1,pfile);
@@ -105,7 +105,7 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 			{
 				// write instance format type (since 4.2.0.3, previously flag = 1)
 				char fmt;
-				if(pi->peffect->flags & effFlagsProgramChunks)
+				if(pi->peffect->programChunks)
 					fmt = 2; // chunk format
 				else if(pi->peffect->numPrograms <= 0)
 					fmt = 3; // no programs stored here, single program in extended region
@@ -117,7 +117,7 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 				fwrite(pi->dll_path,sizeof(char),_MAX_PATH,pfile);
 
 				// write effect id
-				fwrite(&pi->peffect->uniqueID,sizeof(long),1,pfile);
+				fwrite(&pi->peffect->uniqueID,sizeof(int32_t),1,pfile);
 
 				// write instance coordinates in dsp routing
 				fwrite(&pi->x,sizeof(int),1,pfile);
@@ -137,19 +137,19 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 				export_adx_pin(&pi->mout_pin,1,pfile);
 
 				// get current instance program index
-				int const curr_prg_index=pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f);
+				int const curr_prg_index=pi->peffect->getProgram();
 
 				// write current instance program index
 				fwrite(&curr_prg_index,sizeof(int),1,pfile);
 
 				// write instance chunk
-				if(pi->peffect->flags & effFlagsProgramChunks)
+				if(pi->peffect->programChunks)
 				{
 					// bank chunk data pointer
 					void* pchkdata=NULL;
 
 					// dispatch
-					int const chk_byte_size=pi->peffect->dispatcher(pi->peffect,effGetChunk,0,0,&pchkdata,0.0f);
+					int const chk_byte_size=pi->peffect->getChunk(&pchkdata,0!=0);
 
 					// write chunk bytesize
 					fwrite(&chk_byte_size,sizeof(int),1,pfile);
@@ -167,14 +167,14 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 					for(int p=0;p<safe_num_programs;p++)
 					{
 						// set program
-						pi->peffect->dispatcher(pi->peffect,effSetProgram,0,p,NULL,0.0f);
+						pi->peffect->setProgram(p);
 
 						// write program
 						export_adx_program(pi,pfile);
 					}
 
 					// set current program
-					pi->peffect->dispatcher(pi->peffect,effSetProgram,0,curr_prg_index,NULL,0.0f);
+					pi->peffect->setProgram(curr_prg_index);
 				}
 
 				// write midi cc array
@@ -237,7 +237,7 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 			ADX_INSTANCE* pi=&instance[i];
 
 			// check if plugin is instanced and parameters must be written
-			if(pi->peffect!=NULL && !(pi->peffect->flags & effFlagsProgramChunks))
+			if(pi->peffect!=NULL && !(pi->peffect->programChunks))
 			{
 				if(pi->peffect->numPrograms <= 0)
 				{
@@ -247,20 +247,20 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 				else if(pi->peffect->numPrograms > 1)
 				{
 					// get current instance program index
-					int const curr_prg_index=pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f);
+					int const curr_prg_index=pi->peffect->getProgram();
 
 					// write all programs after 0
 					for(int p=1;p<pi->peffect->numPrograms;p++)
 					{
 						// set program
-						pi->peffect->dispatcher(pi->peffect,effSetProgram,0,p,NULL,0.0f);
+						pi->peffect->setProgram(p);
 
 						// write program
 						export_adx_program(pi,pfile);
 					}
 
 					// set current program
-					pi->peffect->dispatcher(pi->peffect,effSetProgram,0,curr_prg_index,NULL,0.0f);
+					pi->peffect->setProgram(curr_prg_index);
 				}
 			}
 		}
@@ -275,7 +275,7 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 		fclose(pfile);
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 	}
 
 	// set arrow cursor
@@ -304,13 +304,13 @@ void CAodixCore::export_cub_file_dlg(HWND const hwnd,int const is_fxp)
 		SetCursor(hcursor_wait);
 
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// export cubase fxp file
 		export_cub_file(hwnd,filename,is_fxp);
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 
 		// post refresh
 		gui_is_dirty=1;
@@ -335,21 +335,21 @@ void CAodixCore::export_cub_file(HWND const hwnd,char* filename,int const is_fxp
 		if(pfile!=NULL)
 		{
 			// write chunk magic 'CcnK'
-			long const chunk_magic=import_reverse_long('CcnK');
-			fwrite(&chunk_magic,sizeof(long),1,pfile);
+			int32_t const chunk_magic=import_reverse_long('CcnK');
+			fwrite(&chunk_magic,sizeof(int32_t),1,pfile);
 
 			// write bytesize of this chunk, excl. magic + byteSize
-			long const byte_size=import_reverse_long(0);
-			fwrite(&byte_size,sizeof(long),1,pfile);
+			int32_t const byte_size=import_reverse_long(0);
+			fwrite(&byte_size,sizeof(int32_t),1,pfile);
 
 			// fx magic
-			long fx_magic=0;
+			int32_t fx_magic=0;
 
 			// set fx magic for programs for banks
 			if(is_fxp)
 			{
 				// programs with chunk or chunkless
-				if(pi->peffect->flags & effFlagsProgramChunks)
+				if(pi->peffect->programChunks)
 					fx_magic=import_reverse_long('FPCh');
 				else
 					fx_magic=import_reverse_long('FxCk');
@@ -357,47 +357,47 @@ void CAodixCore::export_cub_file(HWND const hwnd,char* filename,int const is_fxp
 			else
 			{
 				// banks with chunk or chunkless
-				if(pi->peffect->flags & effFlagsProgramChunks)
+				if(pi->peffect->programChunks)
 					fx_magic=import_reverse_long('FBCh');
 				else
 					fx_magic=import_reverse_long('FxBk');
 			}
 
 			// write magic
-			fwrite(&fx_magic,sizeof(long),1,pfile);
+			fwrite(&fx_magic,sizeof(int32_t),1,pfile);
 
 			// write version
-			long const version=import_reverse_long(1);
-			fwrite(&version,sizeof(long),1,pfile);
+			int32_t const version=import_reverse_long(1);
+			fwrite(&version,sizeof(int32_t),1,pfile);
 
 			// write fx unique id
-			long const fx_id=import_reverse_long(pi->peffect->uniqueID);
-			fwrite(&fx_id,sizeof(long),1,pfile);
+			int32_t const fx_id=import_reverse_long(pi->peffect->uniqueID);
+			fwrite(&fx_id,sizeof(int32_t),1,pfile);
 
 			// write fx version
-			long const fx_version=import_reverse_long(pi->peffect->version);
-			fwrite(&fx_version,sizeof(long),1,pfile);
+			int32_t const fx_version=import_reverse_long(pi->peffect->version);
+			fwrite(&fx_version,sizeof(int32_t),1,pfile);
 
 			// write for preset (program) (.fxp) without chunk (magic = 'FxCk')
 			if(fx_magic=='kCxF')
 			{
 				// write num params
-				long const num_params=import_reverse_long(pi->peffect->numParams);
-				fwrite(&num_params,sizeof(long),1,pfile);
+				int32_t const num_params=import_reverse_long(pi->peffect->numParams);
+				fwrite(&num_params,sizeof(int32_t),1,pfile);
 
 				// write program name
 				char prg_name[28];
 				prg_name[0]=0;
-				pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,prg_name,0.0f);
+				pi->peffect->getProgramName(prg_name);
 				fwrite(prg_name,28,1,pfile);
 
 				// write params
 				for(int pa=0;pa<pi->peffect->numParams;pa++)
 				{
-					float const f_param_value=pi->peffect->getParameter(pi->peffect,pa);
-					long* ppv=(long*)(&f_param_value);
-					long const i_param_value=import_reverse_long(*ppv);
-					fwrite(&i_param_value,sizeof(long),1,pfile);
+					float const f_param_value=pi->peffect->getParameter(pa);
+					int32_t* ppv=(int32_t*)(&f_param_value);
+					int32_t const i_param_value=import_reverse_long(*ppv);
+					fwrite(&i_param_value,sizeof(int32_t),1,pfile);
 				}
 
 				// close file
@@ -409,22 +409,22 @@ void CAodixCore::export_cub_file(HWND const hwnd,char* filename,int const is_fxp
 			if(fx_magic=='hCPF')
 			{
 				// write num programs
-				long const num_programs=import_reverse_long(pi->peffect->numPrograms);
-				fwrite(&num_programs,sizeof(long),1,pfile);
+				int32_t const num_programs=import_reverse_long(pi->peffect->numPrograms);
+				fwrite(&num_programs,sizeof(int32_t),1,pfile);
 
 				// write program name
 				char prg_name[28];
 				prg_name[0]=0;
-				pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,prg_name,0.0f);
+				pi->peffect->getProgramName(prg_name);
 				fwrite(prg_name,28,1,pfile);
 
 				// request chunk (is_preset)
 				void* pchkdata=NULL;
-				long const chunk_size=pi->peffect->dispatcher(pi->peffect,effGetChunk,1,0,&pchkdata,0.0f);
+				int32_t const chunk_size=pi->peffect->getChunk(&pchkdata,1!=0);
 
 				// write chunk size
-				long const r_chunk_size=import_reverse_long(chunk_size);
-				fwrite(&r_chunk_size,sizeof(long),1,pfile);
+				int32_t const r_chunk_size=import_reverse_long(chunk_size);
+				fwrite(&r_chunk_size,sizeof(int32_t),1,pfile);
 
 				// write chunk data
 				fwrite(pchkdata,1,chunk_size,pfile);
@@ -438,8 +438,8 @@ void CAodixCore::export_cub_file(HWND const hwnd,char* filename,int const is_fxp
 			if(fx_magic=='kBxF')
 			{
 				// write num programs
-				long const num_programs=import_reverse_long(pi->peffect->numPrograms);
-				fwrite(&num_programs,sizeof(long),1,pfile);
+				int32_t const num_programs=import_reverse_long(pi->peffect->numPrograms);
+				fwrite(&num_programs,sizeof(int32_t),1,pfile);
 
 				// write future
 				char future[128];
@@ -447,56 +447,56 @@ void CAodixCore::export_cub_file(HWND const hwnd,char* filename,int const is_fxp
 				fwrite(future,128,1,pfile);
 
 				// retrieve current program
-				int const curr_prg_index=pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f);
+				int const curr_prg_index=pi->peffect->getProgram();
 
 				// write programs
 				for(int p=0;p<pi->peffect->numPrograms;p++)
 				{
 					// set program
-					pi->peffect->dispatcher(pi->peffect,effSetProgram,0,p,NULL,0.0f);
+					pi->peffect->setProgram(p);
 
 					// write chunk magic 'CcnK'
-					fwrite(&chunk_magic,sizeof(long),1,pfile);
+					fwrite(&chunk_magic,sizeof(int32_t),1,pfile);
 
 					// write bytesize of this chunk, excl. magic + byteSize
-					long const prg_byte_size=import_reverse_long(0);
-					fwrite(&prg_byte_size,sizeof(long),1,pfile);
+					int32_t const prg_byte_size=import_reverse_long(0);
+					fwrite(&prg_byte_size,sizeof(int32_t),1,pfile);
 
 					// write prg fx magic
-					long const prg_fx_magic=import_reverse_long('FxCk');
-					fwrite(&prg_fx_magic,sizeof(long),1,pfile);
+					int32_t const prg_fx_magic=import_reverse_long('FxCk');
+					fwrite(&prg_fx_magic,sizeof(int32_t),1,pfile);
 
 					// write version
-					fwrite(&version,sizeof(long),1,pfile);
+					fwrite(&version,sizeof(int32_t),1,pfile);
 
 					// write fx unique id
-					fwrite(&fx_id,sizeof(long),1,pfile);
+					fwrite(&fx_id,sizeof(int32_t),1,pfile);
 
 					// write fx version
-					fwrite(&fx_version,sizeof(long),1,pfile);
+					fwrite(&fx_version,sizeof(int32_t),1,pfile);
 
 					// write num params
-					long const num_params=import_reverse_long(pi->peffect->numParams);
-					fwrite(&num_params,sizeof(long),1,pfile);
+					int32_t const num_params=import_reverse_long(pi->peffect->numParams);
+					fwrite(&num_params,sizeof(int32_t),1,pfile);
 
 					// write program name
 					char prg_name[28];
 					prg_name[0]=0;
-					pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,prg_name,0.0f);
+					pi->peffect->getProgramName(prg_name);
 					fwrite(prg_name,28,1,pfile);
 
 					// write params
 					for(int pa=0;pa<pi->peffect->numParams;pa++)
 					{
-						float const f_param_value=pi->peffect->getParameter(pi->peffect,pa);
-						long* ppv=(long*)(&f_param_value);
-						long const i_param_value=import_reverse_long(*ppv);
-						fwrite(&i_param_value,sizeof(long),1,pfile);
+						float const f_param_value=pi->peffect->getParameter(pa);
+						int32_t* ppv=(int32_t*)(&f_param_value);
+						int32_t const i_param_value=import_reverse_long(*ppv);
+						fwrite(&i_param_value,sizeof(int32_t),1,pfile);
 					}
 				}
 
 				// set current program
-				pi->peffect->dispatcher(pi->peffect,effSetProgram,0,curr_prg_index,NULL,0.0f);
+				pi->peffect->setProgram(curr_prg_index);
 
 				// close file
 				fclose(pfile);
@@ -507,8 +507,8 @@ void CAodixCore::export_cub_file(HWND const hwnd,char* filename,int const is_fxp
 			if(fx_magic=='hCBF')
 			{
 				// write num programs
-				long const num_programs=import_reverse_long(pi->peffect->numPrograms);
-				fwrite(&num_programs,sizeof(long),1,pfile);
+				int32_t const num_programs=import_reverse_long(pi->peffect->numPrograms);
+				fwrite(&num_programs,sizeof(int32_t),1,pfile);
 
 				// write future
 				char future[128];
@@ -517,11 +517,11 @@ void CAodixCore::export_cub_file(HWND const hwnd,char* filename,int const is_fxp
 
 				// request chunk (is_bank)
 				void* pchkdata=NULL;
-				long const chunk_size=pi->peffect->dispatcher(pi->peffect,effGetChunk,0,0,&pchkdata,0.0f);
+				int32_t const chunk_size=pi->peffect->getChunk(&pchkdata,0!=0);
 
 				// write chunk size
-				long const r_chunk_size=import_reverse_long(chunk_size);
-				fwrite(&r_chunk_size,sizeof(long),1,pfile);
+				int32_t const r_chunk_size=import_reverse_long(chunk_size);
+				fwrite(&r_chunk_size,sizeof(int32_t),1,pfile);
 
 				// write chunk data
 				fwrite(pchkdata,1,chunk_size,pfile);
@@ -542,7 +542,7 @@ void CAodixCore::export_mid_file_dlg(HWND const hwnd)
 {
 	// filename holder
 	char filename[_MAX_PATH];
-	sprintf(filename,project.name);
+	strcpy(filename,project.name);
 
 	// open file dialog
 	if(arg_file_dialog_save(hinstance_app,hwnd,"Export MIDI File",filename,"MIDI File (*.mid)\0*.mid\0\0","mid",""))

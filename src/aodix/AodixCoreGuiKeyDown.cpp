@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
@@ -527,14 +527,14 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 		// master rec events switch
 		if(keycode==VK_F2)
 		{
-			master_time_info.flags^=kVstAutomationWriting;
+			master_time_info.flags^=ADX_AUTOMATION_WRITING;
 			gui_is_dirty=1;
 		}
 
 		// master transport cycle switch
 		if(keycode==VK_F3)
 		{
-			master_time_info.flags^=kVstTransportCycleActive;
+			master_time_info.flags^=ADX_TRANSPORT_CYCLE_ACTIVE;
 			gui_is_dirty=1;
 		}
 
@@ -583,7 +583,7 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 		if(keycode==VK_SPACE)
 		{
 			// switch play/stop
-			if(master_time_info.flags & kVstTransportPlaying)
+			if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
 				dsp_transport_stop();
 			else
 				dsp_transport_play();
@@ -651,7 +651,7 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 
 				// if effect instanced, add midi program change message event (with current instance program index else first program)
 				if(pi->peffect!=NULL)
-					seq_add_event(pp->usr_pos,user_pat,user_trk,EVT_MID,user_instance,0xC0+user_midi_ch,(unsigned char)pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f),0,user_edit_overwrite);
+					seq_add_event(pp->usr_pos,user_pat,user_trk,EVT_MID,user_instance,0xC0+user_midi_ch,(unsigned char)pi->peffect->getProgram(),0,user_edit_overwrite);
 				else
 					seq_add_event(pp->usr_pos,user_pat,user_trk,EVT_MID,user_instance,0xC0+user_midi_ch,0,0,user_edit_overwrite);
 
@@ -753,7 +753,7 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 				if(user_record && pc_kbd_not==-2 && user_row==0)
 				{
 					// new event flags
-					int const t_live=(master_time_info.flags & kVstTransportPlaying) && cfg.rec_live;
+					int const t_live=(master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live;
 					int const t_event_pos=(t_live*seq_sample_to_pos(master_transport_sampleframe))+(!t_live*pp->usr_pos);
 
 					// update undo (combining)
@@ -781,13 +781,13 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 					ADX_INSTANCE* pi=&instance[user_instance];
 
 					// enter critical section
-					asio_enter_cs();
+					audio_enter_cs();
 
 					// send midi note on
 					instance_add_midi_event(&instance[user_instance],user_trk,0x90+user_midi_ch,note_index,user_kbd_velo,0,0);
 
 					// leave critical section
-					asio_leave_cs();
+					audio_leave_cs();
 
 					// record note-on event to the sequencer
 					if(user_record)
@@ -796,7 +796,7 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 						edit_undo_snapshot(true);
 
 						// write midi note on event with transport playing and live
-						if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+						if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 						{
 							// add midi note on event and refresh
 							seq_add_event(seq_sample_to_pos(master_transport_sampleframe),user_pat,user_trk,EVT_NOT,user_instance,user_midi_ch,note_index,user_kbd_velo,user_edit_overwrite);
@@ -871,7 +871,7 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 					edit_undo_snapshot(true);
 
 					// write pattern event
-					if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+					if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 					{
 						// write pattern event with live transport played (quantized)
 						seq_add_event(seq_sample_to_pos(master_transport_sampleframe),user_pat,user_trk,EVT_PAT,pc_kbd_pat,0,0x80,0x80,user_edit_overwrite);

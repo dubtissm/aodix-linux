@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include <time.h>
@@ -14,8 +14,15 @@ HWND		gl_hwnd_main=NULL;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // the root of all evil
-int APIENTRY _tWinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPTSTR lpCmdLine,int nCmdShow)
+int main(int argc,char** argv)
 {
+	// linux port: connect to the x server (the win32 compatibility layer)
+	if(!adxplat::init(argc,argv))
+		return 1;
+
+	// application instance handle (unused on linux)
+	HINSTANCE const hInstance=NULL;
+
 	// random time sed
 	srand((unsigned int)time(NULL));
 
@@ -31,10 +38,14 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPTSTR lpCmdL
 	// get desktop device context
 	HDC const hdc_desktop=GetDC(hwnd_desktop);
 
-	char gfx_path[_MAX_PATH], knb_path[_MAX_PATH], gui_path[_MAX_PATH];
-	sprintf(gfx_path, "%s\\gfx.bmp", gl_padx->cfg.skin_path);
-	sprintf(knb_path, "%s\\knb.bmp", gl_padx->cfg.skin_path);
-	sprintf(gui_path, "%s\\gui.bmp", gl_padx->cfg.skin_path);
+	// linux port: relative skin paths are resolved against the program directory
+	char skin_dir[_MAX_PATH];
+	adx_resolve_resource_path(gl_padx->cfg.skin_path,skin_dir);
+
+	char gfx_path[_MAX_PATH*2], knb_path[_MAX_PATH*2], gui_path[_MAX_PATH*2];
+	sprintf(gfx_path, "%s/gfx.bmp", skin_dir);
+	sprintf(knb_path, "%s/knb.bmp", skin_dir);
+	sprintf(gui_path, "%s/gui.bmp", skin_dir);
 
 	// create gui/gfx device context(s)
 	gl_padx->hdc_gui=CreateCompatibleDC(hdc_desktop);
@@ -45,6 +56,15 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPTSTR lpCmdL
 	HBITMAP const hbitmap_gui=CreateCompatibleBitmap(hdc_desktop,2048,2049);
 	HBITMAP const hbitmap_gfx=(HBITMAP)LoadImage(hInstance,gfx_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 	HBITMAP const hbitmap_knb=(HBITMAP)LoadImage(hInstance,knb_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+
+	// linux port: without skin bitmaps aodix cannot draw anything
+	if(hbitmap_gfx==NULL || hbitmap_knb==NULL)
+	{
+		char buf[_MAX_PATH*2+64];
+		snprintf(buf,sizeof(buf),"Error: Skin Bitmaps Not Found\n\n%s",skin_dir);
+		MessageBox(NULL,buf,"Aodix",MB_OK | MB_ICONERROR);
+		return 1;
+	}
 
 	// select gui/gfx bitmap(s) in gui/gfx device context(s)
 	HBITMAP const hbitmap_gui_obm=(HBITMAP)SelectObject(gl_padx->hdc_gui,(HBITMAP)hbitmap_gui);
@@ -104,7 +124,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPTSTR lpCmdL
 	char buf[256];
 
 	// check version
-	sprintf(buf,"Aodix %c.%c.%c.%c (Enhanced Version)",adx_ver_buf[0],adx_ver_buf[1],adx_ver_buf[2],adx_ver_buf[3]);
+	sprintf(buf,"Aodix %c.%c.%c.%c (Enhanced Version, Linux)",adx_ver_buf[0],adx_ver_buf[1],adx_ver_buf[2],adx_ver_buf[3]);
 
 	// create window
 	if (gl_padx->cfg.fullscreen)
@@ -124,7 +144,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPTSTR lpCmdL
 	gl_padx->midi_in_init();
 
 	// init asio
-	gl_padx->asio_init(gl_hwnd_main);
+	gl_padx->audio_init(gl_hwnd_main);
 
 	// post refresh
 	gl_padx->gui_is_dirty=1;
@@ -136,15 +156,15 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPTSTR lpCmdL
 	// set timer
 	SetTimer(gl_hwnd_main,1,16,NULL);
 
-	if (strlen(lpCmdLine) >= 2)
+	// open project file passed on the command line
+	if (argc >= 2)
 	{
 		char path[MAX_PATH];
-		strcpy(path, lpCmdLine + 1);
-		path[strlen(path) - 1] = 0;
+		snprintf(path, sizeof(path), "%s", argv[1]);
 
-		gl_padx->asio_enter_cs();
+		gl_padx->audio_enter_cs();
 		gl_padx->import_adx_file(gl_hwnd_main, path);
-		gl_padx->asio_leave_cs();
+		gl_padx->audio_leave_cs();
 	}
 
 	// msg
@@ -181,6 +201,9 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPTSTR lpCmdL
 
 	// destroy aodix core instance
 	delete gl_padx;
+
+	// linux port: close the x server connection
+	adxplat::shutdown();
 
 	// exit application
 	return (int)msg.wParam;

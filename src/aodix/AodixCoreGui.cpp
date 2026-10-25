@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 WNDPROC gl_wp_orig_edit_proc;
@@ -38,10 +38,10 @@ void CAodixCore::gui_create_edit(HWND const hwnd,int x,int y,int const w,int con
 		DestroyWindow(hwnd_edit);
 
 	// create edit box
-	hwnd_edit=CreateWindow("EDIT",NULL,WS_CHILD | WS_VISIBLE | ES_LEFT,x+4,y+4,w-8,h-8,hwnd,(HMENU)NULL,(HINSTANCE)GetWindowLong(hwnd, GWL_HINSTANCE),NULL);
+	hwnd_edit=CreateWindow("EDIT",NULL,WS_CHILD | WS_VISIBLE | ES_LEFT,x+4,y+4,w-8,h-8,hwnd,(HMENU)NULL,(HINSTANCE)GetWindowLongPtr(hwnd,GWLP_HINSTANCE),NULL);
 
 	// subclass the edit control.
-	gl_wp_orig_edit_proc=(WNDPROC)SetWindowLong(hwnd_edit,GWL_WNDPROC,(LONG)gui_edit_subclass_proc);
+	gl_wp_orig_edit_proc=(WNDPROC)SetWindowLongPtr(hwnd_edit,GWLP_WNDPROC,(LONG_PTR)gui_edit_subclass_proc);
 
 	// set action id
 	user_edit_text_action_id=text_action_id;
@@ -53,7 +53,7 @@ void CAodixCore::gui_create_edit(HWND const hwnd,int x,int y,int const w,int con
 	SendMessage(hwnd_edit,EM_SETSEL,0,-1);
 
 	// set font
-	SendMessage(hwnd_edit,WM_SETFONT,(UINT)hfont_terminal,TRUE);
+	SendMessage(hwnd_edit,WM_SETFONT,(WPARAM)hfont_terminal,TRUE);
 
 	// set text focus
 	SetFocus(hwnd_edit);
@@ -84,7 +84,7 @@ void CAodixCore::gui_process_text_action(HWND const hwnd)
 				str[24]=0;
 
 				// dispatch set program name
-				pi->peffect->dispatcher(pi->peffect,effSetProgramName,0,0,str,0.0f);
+				pi->peffect->setProgramName(str);
 
 				// update vst editor window caption
 				host_update_window_caption(pi->peffect);
@@ -99,7 +99,7 @@ void CAodixCore::gui_process_text_action(HWND const hwnd)
 
 			// clear and rename track label
 			memset(pt->name,0,32);
-			sprintf(pt->name,str);
+			strcpy(pt->name,str);
 		}
 
 		// change current pattern name
@@ -110,7 +110,7 @@ void CAodixCore::gui_process_text_action(HWND const hwnd)
 
 			// clear and rename pattern label
 			memset(pp->name,0,32);
-			sprintf(pp->name,str);
+			strcpy(pp->name,str);
 		}
 
 		// change project name
@@ -118,7 +118,7 @@ void CAodixCore::gui_process_text_action(HWND const hwnd)
 		{
 			// clear and rename project label
 			memset(project.name,0,32);
-			sprintf(project.name,str);
+			strcpy(project.name,str);
 		}
 
 		// change project info
@@ -126,7 +126,7 @@ void CAodixCore::gui_process_text_action(HWND const hwnd)
 		{
 			// clear and rename project info
 			memset(project.info,0,32);
-			sprintf(project.info,str);
+			strcpy(project.info,str);
 		}
 
 		// change current instance alias
@@ -140,7 +140,7 @@ void CAodixCore::gui_process_text_action(HWND const hwnd)
 			{
 				// clear and change instance alias label
 				memset(pi->alias,0,32);
-				sprintf(pi->alias,str);
+				strcpy(pi->alias,str);
 
 				// update vst editor window caption
 				host_update_window_caption(pi->peffect);
@@ -178,7 +178,7 @@ void CAodixCore::gui_format_pos(int const pos,char* buf)
 void CAodixCore::gui_format_time(int const samples,char* buf)
 {
 	// calculate double time
-	double const samples_per_ms=cfg.asio_driver_sample_rate*0.001;
+	double const samples_per_ms=cfg.audio_driver_sample_rate*0.001;
 	double const ms=double(samples)/samples_per_ms;
 
 	// integer time
@@ -217,7 +217,7 @@ void CAodixCore::gui_timer(HWND const hwnd)
 	HDC const hdc=GetDC(hwnd);
 
 	// update watchclock(s) when transport active (playing)
-	if(master_time_info.flags & kVstTransportPlaying)
+	if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
 	{
 		// master position display
 		paint_seq_pos_big(hdc,10,25,play_pos);
@@ -251,7 +251,7 @@ void CAodixCore::gui_timer(HWND const hwnd)
 		paint_track_midi_vumeters(hdc,TRACK_WIDTH+user_pr_width,seq_area_y-30,seq_visi_t);
 
 	// transport playback position
-	if((master_time_info.flags & kVstTransportPlaying) && user_page==0)
+	if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && user_page==0)
 	{
 		// sequencer clip region
 		arg_gdi_set_clip_rgn(hdc,0,seq_area_y,w,seq_area_h);
@@ -317,7 +317,7 @@ void CAodixCore::gui_delete_current_instance(HWND const hwnd)
 	if(pi->peffect!=NULL && MessageBox(hwnd,"Warning: This Operation Cant Be Undone\n\nAre You Sure?","Aodix - Delete Instance",MB_YESNO | MB_ICONWARNING)==IDYES)
 	{
 		// enter critical section
-		asio_enter_cs();
+		audio_enter_cs();
 
 		// disconnect master input wires connected to current machine
 		for(int p=0;p<NUM_DSP_INPUTS;p++)
@@ -385,7 +385,7 @@ void CAodixCore::gui_delete_current_instance(HWND const hwnd)
 		instance_free(pi);
 
 		// leave critical section
-		asio_leave_cs();
+		audio_leave_cs();
 	}
 }
 
@@ -418,6 +418,30 @@ void CAodixCore::gui_scroll_iterate(HWND const hwnd,int const ym,int const seq_a
 
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+static void gui_vst_add_lib_item(HMENU const pa_hmenu,int const item_count,int const id,char* label)
+{
+	// temp item
+	MENUITEMINFO item;
+
+	// fill up the menu struct
+	item.cbSize		=	sizeof(MENUITEMINFO);
+	item.fMask		=	MIIM_ID | MIIM_TYPE | MIIM_SUBMENU | MIIM_STATE;
+	item.hSubMenu	=	NULL;
+	item.wID		=	id;
+	item.dwTypeData	=	label;
+	item.cch		=	UINT(strlen(label));
+	item.fState		=	MFS_ENABLED;
+
+	if(item_count>0 && (item_count&0x1F)==0)
+		item.fType	=	MFT_STRING | MF_MENUBARBREAK;
+	else
+		item.fType	=	MFT_STRING;
+
+	// insert into menu
+	InsertMenuItem(pa_hmenu,0,FALSE,&item);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder)
 {
 	// get vst library pointer
@@ -425,11 +449,11 @@ int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder)
 
 	// set find path
 	char findpath[_MAX_PATH];
-	sprintf(findpath,"%s\\*.*",pfolder);
+	snprintf(findpath,sizeof(findpath),"%s/*.*",pfolder);
 
 	// data variables
 	WIN32_FIND_DATA ffd;
-	HANDLE hFind=FindFirstFile(findpath,&ffd);
+	void* hFind=FindFirstFile(findpath,&ffd);
 
 	// no files found
 	if(hFind==INVALID_HANDLE_VALUE)
@@ -438,20 +462,74 @@ int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder)
 	// found items
 	int item_count=0;
 
-	// search dlls
+	// search plugins
 	do
 	{
 		// check no dots
 		if(ffd.cFileName[0]!='.')
 		{
-			if(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			// linux port: vst3 plugins are bundles (directories named *.vst3)
+			bool const is_dir=(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)!=0;
+
+			if(adx_plugin_is_candidate(ffd.cFileName,is_dir))
+			{
+				// configure plugin path string
+				char dll_path[_MAX_PATH];
+				snprintf(dll_path,sizeof(dll_path),"%s/%s",pfolder,ffd.cFileName);
+
+				// list the plugin classes inside the bundle
+				std::vector<AdxPluginDesc> descs;
+				adx_plugin_scan(dll_path,descs);
+
+				// bundles with several plugins get a sub menu
+				HMENU target_menu=pa_hmenu;
+				if(descs.size()>1)
+				{
+					target_menu=CreatePopupMenu();
+
+					// directory label
+					char dir_label[_MAX_PATH];
+					strcpy(dir_label,ffd.cFileName);
+					char* const pdot=strrchr(dir_label,'.');
+					if(pdot!=NULL)
+						*pdot=0;
+
+					if(item_count>0 && (item_count&0x1F)==0)
+						AppendMenu(pa_hmenu,MFT_STRING | MF_POPUP | MF_MENUBARBREAK,(UINT_PTR)target_menu,dir_label);
+					else
+						AppendMenu(pa_hmenu,MFT_STRING | MF_POPUP,(UINT_PTR)target_menu,dir_label);
+
+					item_count++;
+				}
+
+				// add each plugin class (check for max dll's count list overflow)
+				int sub_count=0;
+				for(size_t d=0;d<descs.size() && plib->num_dlls<MAX_VST_LIB_ENTRIES;d++)
+				{
+					char dll_label[_MAX_PATH];
+					snprintf(dll_label,sizeof(dll_label),"%s",descs[d].name.c_str());
+
+					gui_vst_add_lib_item(target_menu,(descs.size()>1)?sub_count:item_count,IDM_VST_LIB+plib->num_dlls,dll_label);
+
+					// add to dll library
+					snprintf(plib->dll_path[plib->num_dlls],_MAX_PATH,"%s",dll_path);
+					plib->dll_id[plib->num_dlls]=descs[d].uniqueID;
+					plib->num_dlls++;
+
+					if(descs.size()>1)
+						sub_count++;
+					else
+						item_count++;
+				}
+			}
+			else if(is_dir)
 			{
 				// directory
 				HMENU const h_sub_menu=CreatePopupMenu();
 
 				// configure subpath string
 				char subfindpath[_MAX_PATH];
-				sprintf(subfindpath,"%s\\%s",pfolder,ffd.cFileName);
+				snprintf(subfindpath,sizeof(subfindpath),"%s/%s",pfolder,ffd.cFileName);
 
 				// subsearch files in dir (recursive), and append dir
 				if(gui_vst_search(h_sub_menu,subfindpath)>0)
@@ -467,62 +545,8 @@ int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder)
 				}
 				else
 				{
-					// no dll items found in subdir
+					// no plugin items found in subdir
 					DestroyMenu(h_sub_menu);
-				}
-			}
-			else
-			{
-				// is dll extension flag
-				bool is_dll_gext=false;
-
-				// get filename length
-				int const fstrl=strlen(ffd.cFileName);
-
-				// lowercase extension
-				_strlwr(ffd.cFileName+fstrl-4);
-
-				// check for dll extension
-				if(ffd.cFileName[fstrl-4]=='.' && ffd.cFileName[fstrl-3]=='d' && ffd.cFileName[fstrl-2]=='l' && ffd.cFileName[fstrl-1]=='l')
-					is_dll_gext=true;
-
-				// is dll extension? (and check for max dll's count list overflow)
-				if(is_dll_gext && plib->num_dlls<MAX_VST_LIB_ENTRIES)
-				{
-					// temp item
-					MENUITEMINFO item;
-
-					// dll label
-					char dll_label[_MAX_PATH];
-					sprintf(dll_label,ffd.cFileName);
-					dll_label[strlen(dll_label)-4]=0;
-
-					// fill up the menu struct
-					item.cbSize		=	sizeof(MENUITEMINFO);
-					item.fMask		=	MIIM_ID | MIIM_TYPE | MIIM_SUBMENU | MIIM_STATE;
-					item.hSubMenu	=	NULL;
-					item.wID		=	IDM_VST_LIB+plib->num_dlls;
-					item.dwTypeData	=	dll_label;
-					item.cch		=	UINT(strlen(dll_label));
-					item.fState		=	MFS_ENABLED;
-
-					if(item_count>0 && (item_count&0x1F)==0)
-						item.fType	=	MFT_STRING | MF_MENUBARBREAK;
-					else
-						item.fType	=	MFT_STRING;
-
-					// insert into menu
-					InsertMenuItem(pa_hmenu,0,FALSE,&item);
-
-					// configure dll path string
-					char dll_path[_MAX_PATH];
-					sprintf(dll_path,"%s\\%s",pfolder,ffd.cFileName);
-
-					// add to dll library
-					sprintf(plib->dll_path[plib->num_dlls++],dll_path);
-
-					// increment found items
-					item_count++;
 				}
 			}
 		}

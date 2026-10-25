@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int const h)
@@ -61,7 +61,7 @@ void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int con
 
 		// paint master input connection panel
 		for(int i=0;i<NUM_DSP_INPUTS;i++)
-			BitBlt(hdc,m_i_x+i*8,m_i_y+16,8,16,hdc_gfx,112+(cfg.asio_input_pin[i]>=asio_num_inputs)*16,0,SRCCOPY);
+			BitBlt(hdc,m_i_x+i*8,m_i_y+16,8,16,hdc_gfx,112+(cfg.audio_input_pin[i]>=audio_num_inputs)*16,0,SRCCOPY);
 
 		// paint master input selected pin
 		BitBlt(hdc,m_i_x+user_input_pin*8,m_i_y+16,8,8,hdc_gfx,104,0,SRCCOPY);
@@ -74,7 +74,7 @@ void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int con
 
 		// paint master output connection panel
 		for(int o=0;o<NUM_DSP_OUTPUTS;o++)
-			BitBlt(hdc,m_o_x+o*8,m_o_y,8,8,hdc_gfx,120+(cfg.asio_output_pin[o]>=asio_num_outputs)*8,0,SRCCOPY);
+			BitBlt(hdc,m_o_x+o*8,m_o_y,8,8,hdc_gfx,120+(cfg.audio_output_pin[o]>=audio_num_outputs)*8,0,SRCCOPY);
 
 		// paint master output selected pin
 		BitBlt(hdc,m_o_x+user_output_pin*8,m_o_y,8,8,hdc_gfx,104,0,SRCCOPY);
@@ -106,7 +106,7 @@ void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int con
 
 				// get instance current program label
 				buf_a[0]=0;
-				pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,buf_a,0.0f);
+				pi->peffect->getProgramName(buf_a);
 
 				// paint instance labels
 				TextOut(hdc,i_x+36,i_y+12,pi->alias,min((int)strlen(pi->alias),(i_w-40)/6));

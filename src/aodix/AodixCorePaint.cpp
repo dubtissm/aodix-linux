@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::paint_master_vumeter(HDC const hdc)
@@ -214,12 +214,12 @@ void CAodixCore::paint_wire(HDC const hdc,int const x1,int const y1,int const x2
 		POINT pnt[3];
 
 		// get the three arrow coordinates
-		pnt[0].x=(long)(d_cx+d_xr);
-		pnt[0].y=(long)(d_cy+d_yr);
-		pnt[1].x=(long)(d_cx+d_yr);
-		pnt[1].y=(long)(d_cy-d_xr);
-		pnt[2].x=(long)(d_cx-d_yr);
-		pnt[2].y=(long)(d_cy+d_xr);
+		pnt[0].x=(int32_t)(d_cx+d_xr);
+		pnt[0].y=(int32_t)(d_cy+d_yr);
+		pnt[1].x=(int32_t)(d_cx+d_yr);
+		pnt[1].y=(int32_t)(d_cy-d_xr);
+		pnt[2].x=(int32_t)(d_cx-d_yr);
+		pnt[2].y=(int32_t)(d_cy+d_xr);
 
 		// point polygon
 		Polygon(hdc,pnt,3);
@@ -338,7 +338,7 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 	paint_txt(hdc,159,37,buf_a,4,2);
 
 	// master transport cycle switch
-	BitBlt(hdc,195,17,32,16,hdc_gfx,64,240+(user_pressed==PRESS_CYCLE)*16+(master_time_info.flags & kVstTransportCycleActive)*8,SRCCOPY);
+	BitBlt(hdc,195,17,32,16,hdc_gfx,64,240+(user_pressed==PRESS_CYCLE)*16+(master_time_info.flags & ADX_TRANSPORT_CYCLE_ACTIVE)*8,SRCCOPY);
 
 	// master config rec-live switch
 	BitBlt(hdc,227,17,32,16,hdc_gfx,96,240+(user_pressed==PRESS_LIVE)*16+cfg.rec_live*32,SRCCOPY);
@@ -367,7 +367,7 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 	paint_seq_pos_big(hdc,10,25,i_master_play_pos);
 
 	// master transport play
-	BitBlt(hdc,3,85,64,28,hdc_gfx,64,96+(user_pressed==PRESS_PLAY)*28+(master_time_info.flags & kVstTransportPlaying)*28,SRCCOPY);
+	BitBlt(hdc,3,85,64,28,hdc_gfx,64,96+(user_pressed==PRESS_PLAY)*28+(master_time_info.flags & ADX_TRANSPORT_PLAYING)*28,SRCCOPY);
 
 	// master transport stop
 	BitBlt(hdc,67,85,64,28,hdc_gfx,128,96+(user_pressed==PRESS_STOP)*28,SRCCOPY);
@@ -376,7 +376,7 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 	BitBlt(hdc,131,85,64,28,hdc_gfx,192,96+(user_pressed==PRESS_REC)*28+user_record*56,SRCCOPY);
 
 	// master transport record automation
-	BitBlt(hdc,195,85,64,28,hdc_gfx,256,96+(user_pressed==PRESS_AUTO)*28+((master_time_info.flags & kVstAutomationWriting)>0)*56,SRCCOPY);
+	BitBlt(hdc,195,85,64,28,hdc_gfx,256,96+(user_pressed==PRESS_AUTO)*28+((master_time_info.flags & ADX_AUTOMATION_WRITING)>0)*56,SRCCOPY);
 
 	// edit pos
 	paint_seq_pos_big(hdc,10,141,pp->usr_pos);
@@ -458,12 +458,12 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 	if(pi->peffect!=NULL)
 	{
 		// edit display current instance program
-		sprintf(buf_a,"%.2X",pi->peffect->dispatcher(pi->peffect,effGetProgram,0,0,NULL,0.0f));
+		sprintf(buf_a,"%.2X",pi->peffect->getProgram());
 		paint_txt(hdc,333,217,buf_a,2,0);
 
 		// get program name
 		memset(buf_a,0,24);
-		pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,buf_a,0.0f);
+		pi->peffect->getProgramName(buf_a);
 		paint_txt(hdc,353,217,buf_a,19,0);
 
 		// check number of programs
@@ -516,7 +516,7 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 
 		// get plugin program label (if instanced)
 		if(pi->peffect!=NULL)
-			pi->peffect->dispatcher(pi->peffect,effGetProgramName,0,0,buf_a,0.0f);
+			pi->peffect->getProgramName(buf_a);
 		else
 			sprintf(buf_a,"---");
 
@@ -576,12 +576,12 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 
 				// blit parameter name
 				memset(buf_a,0,12);
-				pi->peffect->dispatcher(pi->peffect,effGetParamName,param_index,0,buf_a,0.0f);
+				pi->peffect->getParamName(param_index,buf_a);
 				paint_txt(hdc,584,iy+4,buf_a,11,psf);
 
 				// blit parameter label
 				memset(buf_a,0,12);
-				pi->peffect->dispatcher(pi->peffect,effGetParamDisplay,param_index,0,buf_a,0.0f);
+				pi->peffect->getParamDisplay(param_index,buf_a);
 				paint_txt(hdc,660,iy+4,buf_a,11,psf);
 
 				// blit parameter midi cc#
@@ -592,7 +592,7 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 				}
 
 				// select knob frame
-				float const f_frame=pi->peffect->getParameter(pi->peffect,param_index)*128.0f;
+				float const f_frame=pi->peffect->getParameter(param_index)*128.0f;
 				int const i_frame=arg_tool_clipped_assign(int(f_frame),0,127);
 
 				// draw parameter knob

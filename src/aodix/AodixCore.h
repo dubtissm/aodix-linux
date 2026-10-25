@@ -25,35 +25,25 @@
 #define IDM_VST_LIB			8192
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// exclude rarely-used stuff from windows headers
-#define STRICT
-#define WIN32_LEAN_AND_MEAN
+// maximum number of midi events queued per instance and processing block
+#define MAX_BLOCK_EVENTS	1024
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#undef UNICODE
-#include <windows.h>
-#include <tchar.h>
-#include <stdio.h>
-#include <math.h>
-#include <objbase.h>
-#include <mmsystem.h>
-#include <commdlg.h>
-#include <float.h>
-#pragma warning(push)
-#pragma warning(disable: 4091)
-#include <shlobj.h>
-#pragma warning(pop)
+// linux port: the win32 api subset used by aodix is provided by the platform layer (X11)
+#include "../platform/win32compat.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "resource.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "../argulib/argulib.h"
+#include "../argulib/Argulib.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "../vstsdk2.3/source/common/aeffectx.h"
-#include "../vstsdk2.3/source/common/audioeffectx.h"
-#include "../vstsdk2.3/source/common/aeffeditor.hpp"
+// linux port: plugins are accessed through the format independent AdxPlugin interface (VST3)
+#include "../plugin/AdxPlugin.h"
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#include "AodixLinux.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // window procedures
@@ -67,10 +57,6 @@ LRESULT CALLBACK boun_dlg_proc(HWND,UINT,WPARAM,LPARAM);
 LRESULT CALLBACK abou_dlg_proc(HWND,UINT,WPARAM,LPARAM);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// host audiomaster callback
-long VSTCALLBACK host_audiomaster(AEffect *effect, long opcode, long index, long value, void *ptr, float opt);
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ADX_CONFIG
 {
 	// reserved
@@ -82,11 +68,11 @@ struct ADX_CONFIG
 	int	rec_live;
 	int	keyboard_layout;
 
-	// asio driver index
-	int	asio_driver_id;
+	// audio driver index (linux port: 0 = jack, -1 = no audio)
+	int	audio_driver_id;
 
-	// asio driver sample rate
-	double asio_driver_sample_rate;
+	// audio driver sample rate (linux port: reported by the jack server)
+	double audio_driver_sample_rate;
 
 	// midi input
 	int midi_in_ch_rout;
@@ -103,9 +89,9 @@ struct ADX_CONFIG
 	char user_name[32];
 	char user_reserved[32];
 
-	// asio output pins assigns
-	int asio_input_pin[NUM_DSP_INPUTS];
-	int asio_output_pin[NUM_DSP_OUTPUTS];
+	// audio input/output pins assigns (linux port: jack port index)
+	int audio_input_pin[NUM_DSP_INPUTS];
+	int audio_output_pin[NUM_DSP_OUTPUTS];
 
 	// vst plugin paths
 	char vst_path[MAX_VST_FOLDERS][_MAX_PATH];
@@ -165,11 +151,11 @@ struct ADX_PIN
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ADX_INSTANCE
 {
-	// handle to vst instnace editor frame window
+	// handle to vst instance editor frame window
 	HWND hwnd;
 
-	// the vst instance pointer
-	AEffect* peffect;
+	// the plugin instance pointer (linux port: format independent plugin object, owns the loaded library)
+	AdxPlugin* peffect;
 
 	// inputs and outputs pins
 	float**	pins;
@@ -185,14 +171,11 @@ struct ADX_INSTANCE
 	// dll path (where the vst dll is stored)
 	char dll_path[_MAX_PATH];
 
-	// handle to vst module
-	HMODULE h_dll;
-
 	// counter of midi events queue size in processing block
 	int midi_queue_size;
 
-	// vst midi events for processing block
-	VstMidiEvent midi_event[MAX_BLOCK_EVENTS];
+	// midi events for processing block
+	ADX_MIDI_EVENT midi_event[MAX_BLOCK_EVENTS];
 
 	// graphical screen position in routing
 	int	x;
@@ -276,17 +259,30 @@ struct ADX_PROJECT
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: these structures are written to / read from .adx files as raw memory, their layout must
+// stay identical to the 32-bit windows version (see docs/adx-spec.txt)
+static_assert(sizeof(ADX_EVENT)==0x10,"ADX_EVENT layout changed");
+static_assert(sizeof(ADX_WIRE)==0x08,"ADX_WIRE layout changed");
+static_assert(sizeof(ADX_TRACK)==0x24,"ADX_TRACK layout changed");
+static_assert(sizeof(ADX_MARKER)==0x08,"ADX_MARKER layout changed");
+static_assert(sizeof(ADX_PATTERN)==0x2C60,"ADX_PATTERN layout changed");
+static_assert(sizeof(ADX_PROJECT)==0x2C6058,"ADX_PROJECT layout changed");
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct ADX_VST_LIB
 {
-	// path of each dll
+	// path of each dll (linux port: vst3 bundle path)
 	char dll_path[MAX_VST_LIB_ENTRIES][_MAX_PATH];
+
+	// linux port: unique id of the plugin class inside the bundle (a bundle may contain several plugins)
+	int32_t dll_id[MAX_VST_LIB_ENTRIES];
 
 	// num vst dlls found
 	int num_dlls;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class CAodixCore
+class CAodixCore : public AdxPluginHost
 {
 public:
 	CAodixCore(HINSTANCE const hinstance);
@@ -377,12 +373,20 @@ public:
 
 public:
 	void host_idle(void);
-	void host_on_automation(AEffect* peffect,int const param,float const value);
-	void host_on_events(AEffect* peffect,VstEvents* pevents);
-	void host_update_window_caption(AEffect* peffect);
+	void host_on_automation(AdxPlugin* peffect,int const param,float const value);
+	void host_on_events(AdxPlugin* peffect,const ADX_MIDI_EVENT* pevents,int const num_events);
+	void host_update_window_caption(AdxPlugin* peffect);
 
 public:
-	ADX_INSTANCE* instance_get_from_effect(AEffect* peffect,int* pindex);
+	// AdxPluginHost (callbacks from plugins)
+	void plugin_automate(AdxPlugin* plugin,int param,float value) override;
+	void plugin_midi_out(AdxPlugin* plugin,const ADX_MIDI_EVENT* events,int num_events) override;
+	void plugin_update_display(AdxPlugin* plugin) override;
+	void plugin_resize_editor(AdxPlugin* plugin,int width,int height) override;
+	const ADX_TIME_INFO* plugin_time_info(void) override;
+
+public:
+	ADX_INSTANCE* instance_get_from_effect(AdxPlugin* peffect,int* pindex);
 
 public:
 	void edit_undo_snapshot(bool combine=false);
@@ -426,14 +430,14 @@ public:
 	void import_adx_file(HWND const hwnd,char* filename);
 	void import_search_file(char* pfolder,char* pfilename,char* pmatchfile);
 	int  import_localize_vst_dll(HWND const hwnd,int index,char* pfilename);
-	long import_reverse_long(long const data);
+	int32_t import_reverse_long(int32_t const data);
 	void import_cub_file_dlg(HWND const hwnd);
 	void import_cub_file(HWND const hwnd,char* filename);
 	void import_midi_file_dlg(HWND const hwnd);
 	void import_midi_file(HWND const hwnd,char* filename);
-	long import_midi_read_long(FILE* pfile);
+	int32_t import_midi_read_long(FILE* pfile);
 	int  import_midi_read_short(FILE* pfile);
-	long import_midi_read_var_len(FILE* pfile);
+	int32_t import_midi_read_var_len(FILE* pfile);
 	void import_midi_on_sysex(FILE* pfile,int const pattern_index,int const track,int const i_event_pos,unsigned char const stat);
 
 public:
@@ -450,17 +454,19 @@ public:
 	void midi_in_init(void);
 	void midi_in_process(BYTE const data0,BYTE const data1,BYTE const data2);
 	void midi_in_close(void);
+	int  midi_in_get_num_devices(void);
+	void midi_in_get_device_name(int const index,char* buf,int const num_chars);
 
 public:
-	void asio_enter_cs(void);
-	void asio_leave_cs(void);
-	void asio_init(HWND const hwnd);
-	void asio_close(HWND const hwnd);
-	bool asio_is_inited(void);
-	void asio_get_driver_name(int const id,char* buf,int const num_chars);
-	long asio_init_list(void);
-	void asio_fill_pin_menu(HMENU const hmenu,int const fill_inputs,int const init_id);
-	void asio_control_panel(void);
+	void audio_enter_cs(void);
+	void audio_leave_cs(void);
+	void audio_init(HWND const hwnd);
+	void audio_close(HWND const hwnd);
+	bool audio_is_inited(void);
+	void audio_get_driver_name(int const id,char* buf,int const num_chars);
+	int32_t audio_init_list(void);
+	void audio_fill_pin_menu(HMENU const hmenu,int const fill_inputs,int const init_id);
+	void audio_control_panel(void);
 
 public:
 	// application instance handler
@@ -499,14 +505,14 @@ public:
 	HMENU hmenu_midi_mask;
 	HMENU hmenu_program;
 	HMENU hmenu_instance;
-	HMENU hmenu_asio_input;
-	HMENU hmenu_asio_output;
+	HMENU hmenu_audio_input;
+	HMENU hmenu_audio_output;
 
 	// fonts
 	HFONT hfont_terminal;
 
-	// midi in devices
-	HMIDIIN* p_hmidi_in;
+	// midi in devices opened (linux port: replaces the HMIDIIN array, only tested for null in the gui)
+	void* p_hmidi_in;
 
 public:
 	// dsp variables
@@ -514,8 +520,8 @@ public:
 	float dsp_output_buffer[NUM_DSP_OUTPUTS][MAX_DSP_BLOCK_SIZE];
 	float dsp_output_vumeter[NUM_DSP_OUTPUTS];
 	float dsp_cpu_cost;
-	long  dsp_block_size;
-	long  dsp_highest_opin_count;
+	int32_t  dsp_block_size;
+	int32_t  dsp_highest_opin_count;
 
 public:
 	// master variables
@@ -531,7 +537,7 @@ public:
 	ADX_PIN master_input_pin[NUM_DSP_INPUTS];
 
 public:
-	VstTimeInfo	master_time_info;
+	ADX_TIME_INFO	master_time_info;
 
 public:
 	char cfg_fil[_MAX_PATH];
@@ -544,7 +550,7 @@ public:
 	ADX_VST_LIB		vst_lib;
 
 public:
-	long instance_eff_id_currently_loading;
+	int32_t instance_eff_id_currently_loading;
 
 public:
 	// event vectors
@@ -688,8 +694,8 @@ public:
 	int	aodix_version;
 
 public:
-	// asio properties
-	long asio_num_drivers;
-	long asio_num_inputs;
-	long asio_num_outputs;
+	// audio driver properties
+	int32_t audio_num_drivers;
+	int32_t audio_num_inputs;
+	int32_t audio_num_outputs;
 };

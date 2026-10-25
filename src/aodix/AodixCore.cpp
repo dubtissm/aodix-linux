@@ -3,13 +3,13 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CAodixCore::CAodixCore(HINSTANCE const hinstance)
 {
 	// init master time info flags
-	master_time_info.flags=kVstPpqPosValid | kVstTempoValid | kVstBarsValid | kVstTimeSigValid | kVstCyclePosValid;
+	master_time_info.flags=ADX_PPQ_POS_VALID | ADX_TEMPO_VALID | ADX_BARS_VALID | ADX_TIME_SIG_VALID | ADX_CYCLE_POS_VALID;
 
 	// set default blocksize
 	dsp_block_size=MAX_DSP_BLOCK_SIZE;
@@ -33,34 +33,12 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 	// assign instance
 	hinstance_app=hinstance;
 
-	// get application executable path
-	GetModuleFileName((HMODULE)hinstance,hlp_fil,_MAX_PATH);
+	// linux port: help pages and the configuration file
+	// html help: <exe dir>/HTMLHelp/index.htm (or the installed share directory)
+	adx_resolve_resource_path("HTMLHelp/index.htm",hlp_fil);
 
-	// get application path string length
-	int const adl=strlen(hlp_fil);
-
-	// extract dir
-	for(int i=adl;i>0;i--)
-	{
-		if(hlp_fil[i]=='\\')
-		{
-			hlp_fil[i]=0;
-			i=0;
-		}
-	}
-
-	// set html help file path
-	strcat(hlp_fil,"\\aodix.chm");
-
-	// get local app data folder
-	SHGetFolderPath(NULL,CSIDL_LOCAL_APPDATA,NULL,0,cfg_fil);
-
-	// create containing directory
-	strcat(cfg_fil,"\\Arguru Software");
-	CreateDirectory(cfg_fil, NULL);
-
-	// set config file path
-	strcat(cfg_fil, "\\Aodix.cfg");
+	// configuration file: ~/.config/aodix/Aodix.cfg (same binary format as the windows version)
+	snprintf(cfg_fil,sizeof(cfg_fil),"%s/Aodix.cfg",adxplat::config_dir());
 
 	// read configuration
 	config_read();
@@ -120,6 +98,15 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 	// reset user and project
 	reset_user();
 	reset_project();
+
+	// menus created on demand
+	hmenu_patterns=NULL;
+	hmenu_program=NULL;
+	hmenu_audio_input=NULL;
+	hmenu_audio_output=NULL;
+
+	// midi input not opened yet
+	p_hmidi_in=NULL;
 
 	// create ppqn menu
 	hmenu_ppqn=CreatePopupMenu();
@@ -260,9 +247,9 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 		dsp_output_vumeter[o]=0.0f;
 
 	// open asio driver list and store num of drivers
-	asio_num_inputs=0;
-	asio_num_outputs=0;
-	asio_num_drivers=asio_init_list();
+	audio_num_inputs=0;
+	audio_num_outputs=0;
+	audio_num_drivers=audio_init_list();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,6 +260,11 @@ CAodixCore::~CAodixCore(void)
 
 	// destroy menus
 	DestroyMenu(hmenu_vst_lib);
+	if(hmenu_patterns) DestroyMenu(hmenu_patterns);
+	if(hmenu_program) DestroyMenu(hmenu_program);
+	if(hmenu_audio_input) DestroyMenu(hmenu_audio_input);
+	if(hmenu_audio_output) DestroyMenu(hmenu_audio_output);
+	hmenu_patterns=hmenu_program=hmenu_audio_input=hmenu_audio_output=NULL;
 	DestroyMenu(hmenu_timesig);
 	DestroyMenu(hmenu_ppqn);
 	DestroyMenu(hmenu_patterns);
@@ -282,8 +274,8 @@ CAodixCore::~CAodixCore(void)
 	DestroyMenu(hmenu_midi_mask);
 	DestroyMenu(hmenu_program);
 	DestroyMenu(hmenu_instance);
-	DestroyMenu(hmenu_asio_input);
-	DestroyMenu(hmenu_asio_output);
+	DestroyMenu(hmenu_audio_input);
+	DestroyMenu(hmenu_audio_output);
 
 	// delete cursors
 	DestroyCursor(hcursor_diag);
@@ -471,8 +463,8 @@ void CAodixCore::config_read(void)
 	for(int r=0;r<_MAX_PATH;r++)
 		cfg.reserved[r]=0;
 
-	// init skin path
-	strcpy(cfg.skin_path, "Skins\\Blue");
+	// init skin path (relative paths are resolved against the program directory)
+	strcpy(cfg.skin_path, "Skins/Blue");
 
 	// init config vst path(s)
 	for(int pi=0;pi<MAX_VST_FOLDERS;pi++)
@@ -489,9 +481,9 @@ void CAodixCore::config_read(void)
 	cfg.keyboard_layout=0;
 	cfg.fullscreen = 0;
 
-	// init config asio driver
-	cfg.asio_driver_id=-1;
-	cfg.asio_driver_sample_rate=44100.0;
+	// init config audio driver (linux port: 0 = jack)
+	cfg.audio_driver_id=0;
+	cfg.audio_driver_sample_rate=44100.0;
 
 	// init midi in config
 	cfg.midi_in_ch_rout=0;
@@ -511,11 +503,11 @@ void CAodixCore::config_read(void)
 
 	// reset asio input pins
 	for(int i=0;i<NUM_DSP_INPUTS;i++)
-		cfg.asio_input_pin[i]=i;
+		cfg.audio_input_pin[i]=i;
 
 	// reset asio output pins
 	for(int o=0;o<NUM_DSP_OUTPUTS;o++)
-		cfg.asio_output_pin[o]=o;
+		cfg.audio_output_pin[o]=o;
 
 	// open config file
 	FILE* pfile=fopen(cfg_fil,"rb");
@@ -523,8 +515,14 @@ void CAodixCore::config_read(void)
 	// read config file if opened
 	if(pfile!=NULL)
 	{
-		fread(&cfg,1,sizeof(ADX_CONFIG),pfile);
+		if(fread(&cfg,1,sizeof(ADX_CONFIG),pfile)!=sizeof(ADX_CONFIG))
+			fprintf(stderr,"aodix: configuration file '%s' is incomplete\n",cfg_fil);
 		fclose(pfile);
+
+		// linux port: windows style skin path from an older config
+		for(char* pc=cfg.skin_path;*pc;pc++)
+			if(*pc=='\\')
+				*pc='/';
 	}
 	else
 	{

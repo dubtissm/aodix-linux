@@ -3,14 +3,14 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int CAodixCore::seq_sample_to_pos(int const sample)
 {
 	// constants
 	double const d_points_per_second=project.master_tempo*double(project.master_ppqn)/60.0;
-	double const d_samples_per_point=cfg.asio_driver_sample_rate/d_points_per_second;
+	double const d_samples_per_point=cfg.audio_driver_sample_rate/d_points_per_second;
 
 	// get samples per point integer
 	int const i_samples_per_point=int(d_samples_per_point*16.0);
@@ -24,7 +24,7 @@ int CAodixCore::seq_pos_to_sample(int const pos)
 {
 	// constants
 	double const d_points_per_second=project.master_tempo*double(project.master_ppqn)/60.0;
-	double const d_samples_per_point=cfg.asio_driver_sample_rate/d_points_per_second;
+	double const d_samples_per_point=cfg.audio_driver_sample_rate/d_points_per_second;
 
 	// get samples per point integer
 	int const i_samples_per_point=int(d_samples_per_point*16.0);

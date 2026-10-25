@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_key_up(HWND const hwnd,int const keycode)
@@ -34,13 +34,13 @@ void CAodixCore::gui_key_up(HWND const hwnd,int const keycode)
 			ADX_INSTANCE* pi=&instance[user_instance];
 
 			// enter critical section
-			asio_enter_cs();
+			audio_enter_cs();
 
 			// send note off message
 			instance_add_midi_event(&instance[user_instance],user_trk,0x80+user_midi_ch,note_index,64,0,0);
 
 			// leave critical section
-			asio_leave_cs();
+			audio_leave_cs();
 
 			// rec note-off
 			if(user_record && user_row==0)
@@ -58,7 +58,7 @@ void CAodixCore::gui_key_up(HWND const hwnd,int const keycode)
 						if(pe->typ==EVT_NOT && pe->par==0 && pe->da2==note_index)
 						{
 							// finish note off event (live else offline)
-							if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+							if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 								pe->par=arg_tool_clipped_assign(seq_sample_to_pos(master_transport_sampleframe)-pe->pos,1,MAX_SIGNED_INT);
 							else
 								pe->par=arg_tool_clipped_assign((pp->usr_pos-pe->pos)-pp->usr_pre,1,MAX_SIGNED_INT);
@@ -79,7 +79,7 @@ void CAodixCore::gui_key_up(HWND const hwnd,int const keycode)
 						if(pe->typ==EVT_JMP && pe->par==0)
 						{
 							// finish jump event (live else offline)
-							if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+							if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 								pe->par=arg_tool_clipped_assign(seq_sample_to_pos(master_transport_sampleframe)-pe->pos,1,MAX_SIGNED_INT);
 							else
 								pe->par=arg_tool_clipped_assign(pp->usr_pos-pe->pos,1,MAX_SIGNED_INT);
@@ -153,7 +153,7 @@ void CAodixCore::gui_key_up(HWND const hwnd,int const keycode)
 				if(pe->typ==EVT_PAT && pe->par==0 && pe->da0==pc_kbd_pat)
 				{
 					// finish pattern event (live else offline)
-					if((master_time_info.flags & kVstTransportPlaying) && cfg.rec_live)
+					if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 						pe->par=arg_tool_clipped_assign(seq_sample_to_pos(master_transport_sampleframe)-pe->pos,1,MAX_SIGNED_INT);
 					else
 						pe->par=arg_tool_clipped_assign(pp->usr_pos-pe->pos,1,MAX_SIGNED_INT);

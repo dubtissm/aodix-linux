@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LRESULT CALLBACK plug_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lparam)
@@ -15,7 +15,7 @@ LRESULT CALLBACK plug_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 	extern HWND	gl_hwnd_main;
 
 	// get vst effect pointer
-	AEffect* peffect=(AEffect*)GetWindowLong(hwnd,GWL_USERDATA);
+	AdxPlugin* peffect=(AdxPlugin*)GetWindowLongPtr(hwnd,GWLP_USERDATA);
 
 	// paint message
 	if(message==WM_PAINT)
@@ -44,8 +44,8 @@ LRESULT CALLBACK plug_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 	if(message==WM_CLOSE)
 	{
 		// check plugin editor window
-		if(peffect!=NULL && (peffect->flags & effFlagsHasEditor))
-			peffect->dispatcher(peffect,effEditClose,0,0,NULL,0.f);
+		if(peffect!=NULL && (peffect->hasEditor))
+			peffect->editorClose();
 
 		// destroy window
 		DestroyWindow(hwnd);
@@ -55,7 +55,7 @@ LRESULT CALLBACK plug_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 	// key down message
 	if(message==WM_KEYDOWN)
 	{
-		if(gl_padx->asio_is_inited())
+		if(gl_padx->audio_is_inited())
 			gl_padx->gui_key_down(gl_hwnd_main,wparam,lparam);
 		return 0;
 	}
@@ -63,7 +63,7 @@ LRESULT CALLBACK plug_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 	// key up message
 	if(message==WM_KEYUP)
 	{
-		if(gl_padx->asio_is_inited())
+		if(gl_padx->audio_is_inited())
 			gl_padx->gui_key_up(gl_hwnd_main,wparam);
 		return 0;
 	}

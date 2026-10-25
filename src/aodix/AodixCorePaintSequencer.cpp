@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-#include "./aodixcore.h"
+#include "AodixCore.h"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 char note_name[128][4]=
@@ -161,7 +161,7 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 			if(bgi>=0)
 			{
 				// gridline label
-				int const i_guid_seconds=seq_pos_to_sample(tick_pos)/int(cfg.asio_driver_sample_rate);
+				int const i_guid_seconds=seq_pos_to_sample(tick_pos)/int(cfg.audio_driver_sample_rate);
 				sprintf(buf_a,"%.2d:%.2d   %.3d:%.1d",(i_guid_seconds/60)%60,i_guid_seconds%60,tick_pos/(project.master_ppqn*project.master_numerator),(tick_pos/project.master_ppqn)%project.master_numerator);
 
 				// tick gridline
@@ -358,7 +358,7 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 
 						// pattern event label
 						SetTextColor(hdc,0x00FFFFFF);
-						sprintf(buf_a,project.pattern[pe->da0].name);
+						strcpy(buf_a,project.pattern[pe->da0].name);
 						buf_a[15]=0;
 						TextOut(hdc,e_x+3,e_y+16,buf_a,strlen(buf_a));
 					}
@@ -475,7 +475,7 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 		AlphaBlend(hdc,0,seq_cent_y,w,1,hdc_gfx,240,0,16,16,bf);
 
 		// invert player transport rect
-		if(master_time_info.flags & kVstTransportPlaying)
+		if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
 		{
 			// get transport gridline coordinate
 			int const i_ty=seq_cent_y+(i_master_play_pos-pp->usr_pos)/pp->usr_ppp;
