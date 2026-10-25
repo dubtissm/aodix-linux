@@ -53,7 +53,14 @@ int main(int argc,char** argv)
 	gl_padx->hdc_knb=CreateCompatibleDC(hdc_desktop);
 
 	// load gui/gfx bitmap(s)
-	HBITMAP const hbitmap_gui=CreateCompatibleBitmap(hdc_desktop,2048,2049);
+	// linux port: the original used a fixed 2048x2049 back buffer, which cut off the view on screens wider
+	// than 2048 pixels. the buffer is now at least as large as the screen.
+	RECT desktop_rect;
+	GetClientRect(hwnd_desktop,&desktop_rect);
+	int const gui_w=max(2048,(int)desktop_rect.right);
+	int const gui_h=max(2049,(int)desktop_rect.bottom+1);
+
+	HBITMAP const hbitmap_gui=CreateCompatibleBitmap(hdc_desktop,gui_w,gui_h);
 	HBITMAP const hbitmap_gfx=(HBITMAP)LoadImage(hInstance,gfx_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 	HBITMAP const hbitmap_knb=(HBITMAP)LoadImage(hInstance,knb_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 
@@ -76,6 +83,10 @@ int main(int argc,char** argv)
 	HBITMAP const hbitmap_frm=(HBITMAP)LoadImage(hInstance,gui_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
 	HBITMAP const hbitmap_frm_obm=(HBITMAP)SelectObject(hdc_frm,hbitmap_frm);
 	BitBlt(gl_padx->hdc_gui,0,0,2048,276,hdc_frm,0,0,SRCCOPY);
+
+	// linux port: extend the skin header to the right by repeating its last pixel column
+	for(int x=2048;x<gui_w;x++)
+		BitBlt(gl_padx->hdc_gui,x,0,1,276,hdc_frm,2047,0,SRCCOPY);
 	SelectObject(hdc_frm,hbitmap_frm_obm);
 	DeleteObject((HBITMAP)hbitmap_frm);
 	DeleteDC(hdc_frm);
