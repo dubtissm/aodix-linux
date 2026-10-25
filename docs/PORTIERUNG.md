@@ -208,6 +208,10 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   `AodixLinux.cpp` (`adx_project_open_read/open_write/close_write`).
 - „Save As“ schlägt `.adxl` vor, `.adx` bleibt wählbar; „Save“ behält die Endung der geöffneten Datei.
   Ein fehlgeschlagenes Speichern wird jetzt gemeldet (das Original speicherte stumm).
+- Dateitypen (`resources/aodix-mime.xml`, shared-mime-info): `application/x-aodix-project` (`*.adx`, Magic
+  `4XDA` = Header-ID `'ADX4'` als Little-Endian-int32) und `application/x-aodix-project-compressed` (`*.adxl`,
+  Unterklasse von `application/gzip`, damit Dateimanager die Datei nicht als Archiv behandeln). Der
+  Desktop-Eintrag meldet Aodix für beide an. Geprüft mit `gio info` (GIO, wie Thunar).
 - Geprüft: `.adx` laden → als `.adxl` und `.adx` speichern → `.adxl` laden → als `.adx` speichern; entpackte
   `.adxl`, direkt gespeicherte und neu gespeicherte `.adx` sind byte-identisch (2,9 MB → 10 KB).
 
@@ -278,4 +282,4 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
 3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ und ~~Tastatur-Layouts (QWERTY/QWERTZ/AZERTY)~~ erledigt und getestet; offen: Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
-5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`/`.adxl` (CLAP, LV2 und LADSPA sind bereits erledigt).
+5. **Paketierung**: Installationspaket, Dateityp-Zuordnung im Paket (MIME-Definition liegt bereit; CLAP, LV2 und LADSPA sind bereits erledigt).

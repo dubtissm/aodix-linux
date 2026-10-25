@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- file types of Aodix projects (shared-mime-info); installed to share/mime/packages -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-aodix-project">
+    <comment>Aodix project</comment>
+    <comment xml:lang="de">Aodix-Projekt</comment>
+    <comment xml:lang="fr">Projet Aodix</comment>
+    <generic-icon name="audio-x-generic"/>
+    <!-- header id 'ADX4' written as a little endian int32 -->
+    <magic priority="60">
+      <match type="string" value="4XDA" offset="0"/>
+    </magic>
+    <glob pattern="*.adx"/>
+  </mime-type>
+  <mime-type type="application/x-aodix-project-compressed">
+    <comment>Aodix project (compressed)</comment>
+    <comment xml:lang="de">Aodix-Projekt (komprimiert)</comment>
+    <comment xml:lang="fr">Projet Aodix (compressé)</comment>
+    <generic-icon name="audio-x-generic"/>
+    <!-- a gzip compressed .adx: file managers would otherwise show it as a gzip archive -->
+    <sub-class-of type="application/gzip"/>
+    <glob pattern="*.adxl" weight="80"/>
+  </mime-type>
+</mime-info>

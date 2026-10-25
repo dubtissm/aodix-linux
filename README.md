@@ -41,6 +41,10 @@ daraus wieder eine originale `.adx`-Datei.
 - **Speichern** behält das Format der geöffneten Datei bei: Ein geöffnetes `.adx` bleibt ein `.adx`.
 - **Öffnen** erkennt komprimierte Dateien am Inhalt, unabhängig von der Endung; `.adx` und `.adxl` werden
   beide angeboten.
+- **Dateityp:** `resources/aodix-mime.xml` meldet beide Endungen beim System an (wird mit `cmake --install`
+  installiert), damit Dateimanager wie Thunar `.adxl` als „Aodix-Projekt (komprimiert)“ statt als Gzip-Archiv
+  zeigen und per Doppelklick mit Aodix öffnen. Von Hand für den eigenen Benutzer:
+  `xdg-mime install --novendor resources/aodix-mime.xml`.
 
 ## Audio und MIDI (JACK)
 

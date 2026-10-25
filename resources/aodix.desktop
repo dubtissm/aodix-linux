@@ -7,4 +7,4 @@ Exec=aodix %f
 Icon=aodix
 Terminal=false
 Categories=AudioVideo;Audio;Sequencer;Midi;
-MimeType=application/x-aodix-project;
+MimeType=application/x-aodix-project;application/x-aodix-project-compressed;
