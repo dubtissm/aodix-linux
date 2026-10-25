@@ -2322,9 +2322,208 @@ static void scale_x_event(XEvent& ev)
 	}
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// clipboard: aodix owns the selection with a hidden window and serves the text on request (SelectionRequest);
+// reading converts the selection of another program to UTF8_STRING (or STRING) and waits for the answer
+static ::Window		g_clip_win=0;
+static Atom			a_clipboard=0,a_targets=0,a_text=0,a_clip_prop=0,a_incr=0;
+static std::string	g_clip_text[2];		// [0] CLIPBOARD, [1] PRIMARY
+static bool			g_clip_owned[2]={false,false};
+
+static bool clip_init(void)
+{
+	if(!g_dpy)
+		return false;
+	if(!g_clip_win)
+	{
+		g_clip_win=XCreateSimpleWindow(g_dpy,g_root,-10,-10,1,1,0,0,0);
+		XSelectInput(g_dpy,g_clip_win,PropertyChangeMask);
+		a_clipboard=XInternAtom(g_dpy,"CLIPBOARD",False);
+		a_targets=XInternAtom(g_dpy,"TARGETS",False);
+		a_text=XInternAtom(g_dpy,"TEXT",False);
+		a_clip_prop=XInternAtom(g_dpy,"AODIX_CLIPBOARD",False);
+		a_incr=XInternAtom(g_dpy,"INCR",False);
+	}
+	return true;
+}
+
+static int clip_index(Atom sel)
+{
+	if(sel==a_clipboard)
+		return 0;
+	if(sel==XA_PRIMARY)
+		return 1;
+	return -1;
+}
+
+// returns true if the event was a selection event
+static bool clip_handle_event(XEvent& ev)
+{
+	if(!g_clip_win || ev.xany.window!=g_clip_win)
+		return false;
+
+	if(ev.type==SelectionClear)
+	{
+		int const i=clip_index(ev.xselectionclear.selection);
+		if(i>=0)
+			g_clip_owned[i]=false;
+		return true;
+	}
+
+	if(ev.type==SelectionRequest)
+	{
+		XSelectionRequestEvent const& rq=ev.xselectionrequest;
+		XSelectionEvent ans;
+		memset(&ans,0,sizeof(ans));
+		ans.type=SelectionNotify;
+		ans.display=rq.display;
+		ans.requestor=rq.requestor;
+		ans.selection=rq.selection;
+		ans.target=rq.target;
+		ans.time=rq.time;
+		ans.property=None;
+
+		int const i=clip_index(rq.selection);
+		Atom const prop=(rq.property!=None)?rq.property:rq.target;	// obsolete clients pass no property
+		if(i>=0 && g_clip_owned[i])
+		{
+			if(rq.target==a_targets)
+			{
+				Atom const targets[]={a_targets,a_utf8,XA_STRING,a_text};
+				XChangeProperty(g_dpy,rq.requestor,prop,XA_ATOM,32,PropModeReplace,(const unsigned char*)targets,4);
+				ans.property=prop;
+			}
+			else if(rq.target==a_utf8 || rq.target==a_text)
+			{
+				std::string const& t=g_clip_text[i];
+				XChangeProperty(g_dpy,rq.requestor,prop,a_utf8,8,PropModeReplace,(const unsigned char*)t.data(),(int)t.size());
+				ans.property=prop;
+			}
+			else if(rq.target==XA_STRING)
+			{
+				// latin-1 for old clients
+				std::string l;
+				std::string const& t=g_clip_text[i];
+				for(size_t k=0;k<t.size();k++)
+				{
+					unsigned char const c=(unsigned char)t[k];
+					if(c<0x80)
+						l+=(char)c;
+					else if((c&0xE0)==0xC0 && k+1<t.size())
+					{
+						unsigned const cp=((c&0x1F)<<6)|((unsigned char)t[k+1]&0x3F);
+						l+=(char)(cp<0x100?cp:'?');
+						k++;
+					}
+					else
+					{
+						l+='?';
+						while(k+1<t.size() && ((unsigned char)t[k+1]&0xC0)==0x80)
+							k++;
+					}
+				}
+				XChangeProperty(g_dpy,rq.requestor,prop,XA_STRING,8,PropModeReplace,(const unsigned char*)l.data(),(int)l.size());
+				ans.property=prop;
+			}
+		}
+		XSendEvent(g_dpy,rq.requestor,False,0,(XEvent*)&ans);
+		XFlush(g_dpy);
+		return true;
+	}
+
+	// SelectionNotify / PropertyNotify are picked up by get_clipboard_text
+	return ev.type==SelectionNotify || ev.type==PropertyNotify;
+}
+
+void adxplat::set_clipboard_text(const char* utf8,bool primary)
+{
+	if(!clip_init() || !utf8)
+		return;
+	int const i=primary?1:0;
+	g_clip_text[i]=utf8;
+	XSetSelectionOwner(g_dpy,primary?XA_PRIMARY:a_clipboard,g_clip_win,CurrentTime);
+	g_clip_owned[i]=(XGetSelectionOwner(g_dpy,primary?XA_PRIMARY:a_clipboard)==g_clip_win);
+	XFlush(g_dpy);
+}
+
+char* adxplat::get_clipboard_text(bool primary)
+{
+	if(!clip_init())
+		return nullptr;
+	int const i=primary?1:0;
+	Atom const sel=primary?XA_PRIMARY:a_clipboard;
+
+	// our own selection
+	::Window const owner=XGetSelectionOwner(g_dpy,sel);
+	if(owner==g_clip_win && g_clip_owned[i])
+		return strdup(g_clip_text[i].c_str());
+	if(owner==None)
+		return nullptr;
+
+	Atom const targets[]={a_utf8,XA_STRING};
+	for(Atom target:targets)
+	{
+		XDeleteProperty(g_dpy,g_clip_win,a_clip_prop);
+		XConvertSelection(g_dpy,sel,target,a_clip_prop,g_clip_win,CurrentTime);
+		XFlush(g_dpy);
+
+		// wait for the owner's answer (at most one second; other events stay queued)
+		XEvent ev;
+		bool got=false;
+		for(int t=0;t<500 && !got;t++)
+		{
+			if(XCheckTypedWindowEvent(g_dpy,g_clip_win,SelectionNotify,&ev))
+				got=true;
+			else
+				usleep(2000);
+		}
+		if(!got || ev.xselection.property==None)
+			continue;
+
+		Atom type;
+		int format;
+		unsigned long n,rest;
+		unsigned char* data=nullptr;
+		if(XGetWindowProperty(g_dpy,g_clip_win,a_clip_prop,0,1<<20,True,AnyPropertyType,&type,&format,&n,&rest,&data)!=Success)
+			continue;
+		char* r=nullptr;
+		if(data && format==8 && type!=a_incr)
+		{
+			if(type==XA_STRING)
+			{
+				// latin-1 -> utf-8
+				std::string u;
+				for(unsigned long k=0;k<n;k++)
+				{
+					unsigned char const c=data[k];
+					if(c<0x80)
+						u+=(char)c;
+					else
+					{
+						u+=(char)(0xC0|(c>>6));
+						u+=(char)(0x80|(c&0x3F));
+					}
+				}
+				r=strdup(u.c_str());
+			}
+			else
+				r=strndup((const char*)data,n);
+		}
+		if(data)
+			XFree(data);
+		if(r)
+			return r;
+	}
+	return nullptr;
+}
+
 static void handle_x_event(XEvent& ev)
 {
 	if(XFilterEvent(&ev,None))
+		return;
+
+	// clipboard requests from other programs
+	if(clip_handle_event(ev))
 		return;
 
 	scale_x_event(ev);

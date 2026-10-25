@@ -743,6 +743,11 @@ namespace adxplat
 	bool		choose_file(HWND owner,const char* title,char* path,int path_size,const char* filter,bool save,const char* default_ext,const char* initial_dir);
 	bool		choose_folder(HWND owner,const char* title,char* path,int path_size);
 
+	// X11 clipboard (CLIPBOARD for ctrl+c / ctrl+v, PRIMARY for select / middle click), utf-8 text.
+	// get returns a malloc'ed string (free it) or NULL if there is no text
+	void		set_clipboard_text(const char* utf8,bool primary);
+	char*		get_clipboard_text(bool primary);
+
 	// ui scaling (100, 150 or 200 percent). must be set before the first window is created.
 	// all coordinates seen by the application are logical; only windows with WS_EX_ADX_NATIVE_PIXELS use physical sizes.
 	void		set_ui_scale(int percent);

@@ -222,6 +222,15 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - About-Dialog (breiter, eine Zeile mehr): Arguelles Rius & Kantar (bis 4.2.0.1), J. van't Hoog (bis 4.2.0.3),
   Linux-Version und Weiterentwicklung: Marcus Honnacker via Claude Opus 5.5.
 
+**Zwischenablage**
+- Textfelder (Dialoge, Dateidialog und die Umbenennen-Felder im Hauptfenster) unterstützen Strg+C/X/V sowie
+  Strg+Einfg, Umschalt+Entf und Umschalt+Einfg. Nach X11-Art wird markierter Text zusätzlich als PRIMARY
+  angeboten und mit der mittleren Maustaste eingefügt. Eingefügte Zeilenumbrüche/Tabs werden zu Leerzeichen.
+- Umsetzung in `win32_window.cpp`: ein verstecktes Fenster besitzt CLIPBOARD/PRIMARY und beantwortet
+  `SelectionRequest` (TARGETS, UTF8_STRING, TEXT, STRING); Lesen per `XConvertSelection` mit bis zu 1 s
+  Wartezeit (UTF8_STRING, sonst STRING). Sehr große Inhalte (INCR) werden nicht gelesen. Die Event-Zwischenablage
+  des Sequencers ist davon unabhängig (intern, wie im Original).
+
 **Kleinere Korrekturen**
 - Die Konfiguration wird beim Übernehmen sofort gespeichert (nicht erst beim Beenden) – sie überlebt so
   einen abstürzenden Plugin oder eine beendete Sitzung.
@@ -262,7 +271,6 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - Alte Projekte mit **Windows**-Plugins: Patterns, Events, Spuren und Marker werden geladen. Ältere Dateien
   (vor Version 4.2.0.3) enthalten keine Ersatzinformationen für fehlende Plugins; dort bricht Aodix – wie
   das Original – das Laden der Instanzen beim ersten fehlenden Plugin ab.
-- Zwischenablage zwischen Aodix-Textfeldern und anderen Programmen fehlt noch.
 
 ## Testen ohne Audio-Hardware
 
@@ -287,6 +295,6 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 ## Nächste Etappen
 
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
-3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ und ~~Tastatur-Layouts (QWERTY/QWERTZ/AZERTY)~~ erledigt und getestet; offen: Zwischenablage.
+3. ~~**Oberfläche**~~ erledigt: Skalierung 1,5× und 2×, Tastatur-Layouts (QWERTY/QWERTZ/AZERTY), Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
 5. **Paketierung**: Installationspaket, Dateityp-Zuordnung im Paket (MIME-Definition liegt bereit; CLAP, LV2 und LADSPA sind bereits erledigt).

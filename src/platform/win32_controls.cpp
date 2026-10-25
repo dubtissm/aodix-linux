@@ -79,6 +79,41 @@ static void edit_ensure_caret_visible(HWND hwnd)
 		c->scroll=0;
 }
 
+// selected text (utf-8)
+static std::string edit_selected_text(HWND hwnd)
+{
+	ControlData* c=ctl_of(hwnd);
+	int const a=std::min(c->sel_start,c->sel_end);
+	int const b=std::max(c->sel_start,c->sel_end);
+	return (a!=b)?hwnd->text.substr(a,b-a):std::string();
+}
+
+// x11 convention: selected text is offered as PRIMARY (pasted with the middle mouse button elsewhere)
+static void edit_offer_primary(HWND hwnd)
+{
+	std::string const t=edit_selected_text(hwnd);
+	if(!t.empty())
+		adxplat::set_clipboard_text(t.c_str(),true);
+}
+
+static void edit_delete_selection(HWND hwnd);
+
+// insert text at the caret (replacing the selection); single line field: line breaks and tabs become spaces
+static void edit_insert_text(HWND hwnd,const char* text)
+{
+	ControlData* c=ctl_of(hwnd);
+	std::string ins=text?text:"";
+	while(!ins.empty() && (ins.back()=='\n' || ins.back()=='\r'))
+		ins.pop_back();
+	for(char& ch:ins)
+		if((unsigned char)ch<32 || ch==127)
+			ch=' ';
+	edit_delete_selection(hwnd);
+	hwnd->text.insert(c->caret,ins);
+	c->caret+=(int)ins.size();
+	c->sel_start=c->sel_end=c->caret;
+}
+
 static void edit_delete_selection(HWND hwnd)
 {
 	ControlData* c=ctl_of(hwnd);
@@ -230,6 +265,7 @@ static LRESULT edit_proc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam)
 			{
 				c->sel_start=0;
 				c->sel_end=c->caret=(int)hwnd->text.size();
+				edit_offer_primary(hwnd);
 			}
 			else
 				c->sel_start=c->sel_end=c->caret;
@@ -253,8 +289,29 @@ static LRESULT edit_proc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam)
 		{
 			c->pressed=false;
 			ReleaseCapture();
+			edit_offer_primary(hwnd);
 		}
 		return 0;
+
+	case WM_MBUTTONDOWN:
+		{
+			// linux port: middle click pastes the PRIMARY selection at the click position
+			if(!hwnd->enabled)
+				return 0;
+			SetFocus(hwnd);
+			char* t=adxplat::get_clipboard_text(true);
+			if(t)
+			{
+				c->caret=edit_hit(hwnd,(short)LOWORD(lparam));
+				c->sel_start=c->sel_end=c->caret;
+				edit_insert_text(hwnd,t);
+				free(t);
+				edit_ensure_caret_visible(hwnd);
+				hwnd->invalid=true;
+				notify_parent(hwnd,EN_CHANGE);
+			}
+			return 0;
+		}
 
 	case WM_KEYDOWN:
 		{
@@ -271,6 +328,8 @@ static LRESULT edit_proc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam)
 			case VK_HOME:	c->caret=0; move=true; break;
 			case VK_END:	c->caret=n; move=true; break;
 			case VK_DELETE:
+				if(shift && c->sel_start!=c->sel_end)
+					adxplat::set_clipboard_text(edit_selected_text(hwnd).c_str(),false);
 				if(c->sel_start!=c->sel_end)
 					edit_delete_selection(hwnd);
 				else if(c->caret<n)
@@ -286,6 +345,52 @@ static LRESULT edit_proc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam)
 				{
 					c->sel_start=0;
 					c->sel_end=c->caret=n;
+					edit_offer_primary(hwnd);
+				}
+				break;
+
+			// linux port: clipboard (ctrl+c / ctrl+x / ctrl+v and the old ctrl+insert / shift+delete / shift+insert)
+			case 'C':
+			case VK_INSERT:
+				if(ctrl && !shift)
+				{
+					std::string const t=edit_selected_text(hwnd);
+					if(!t.empty())
+						adxplat::set_clipboard_text(t.c_str(),false);
+				}
+				else if(wparam==VK_INSERT && shift && hwnd->enabled)
+				{
+					char* t=adxplat::get_clipboard_text(false);
+					if(t)
+					{
+						edit_insert_text(hwnd,t);
+						free(t);
+						notify_parent(hwnd,EN_CHANGE);
+					}
+				}
+				break;
+			case 'X':
+				if(ctrl && hwnd->enabled)
+				{
+					std::string const t=edit_selected_text(hwnd);
+					if(!t.empty())
+					{
+						adxplat::set_clipboard_text(t.c_str(),false);
+						edit_delete_selection(hwnd);
+						notify_parent(hwnd,EN_CHANGE);
+					}
+				}
+				break;
+			case 'V':
+				if(ctrl && hwnd->enabled)
+				{
+					char* t=adxplat::get_clipboard_text(false);
+					if(t)
+					{
+						edit_insert_text(hwnd,t);
+						free(t);
+						notify_parent(hwnd,EN_CHANGE);
+					}
 				}
 				break;
 			}
@@ -297,6 +402,7 @@ static LRESULT edit_proc(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam)
 					if(c->sel_start==c->sel_end)
 						c->sel_start=old_caret;
 					c->sel_end=c->caret;
+					edit_offer_primary(hwnd);
 				}
 				else
 					c->sel_start=c->sel_end=c->caret;
