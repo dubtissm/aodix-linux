@@ -8,7 +8,7 @@ Ziele der Portierung:
 
 - natives 64-bit-Linux-Programm (X11, unter Wayland über XWayland)
 - **JACK** statt ASIO für Audio und MIDI
-- **VST3**-Plugins (64-bit Linux), später eventuell CLAP
+- **VST3**-Plugins (64-bit Linux) und **LADSPA**-Effekte, später eventuell CLAP
 - alte `.adx`-Projekte bleiben lesbar und werden im selben Format gespeichert
 
 ![Aodix unter Linux](docs/screenshot-stage1.png)
@@ -97,6 +97,24 @@ Aodix systemweit installiert (Programm, Skins, Hilfe, Desktop-Eintrag).
 Optional für native Dateidialoge: `zenity` (GNOME/GTK) oder `kdialog` (KDE). Ohne diese Programme
 verwendet Aodix einen eingebauten Dateidialog.
 
+## LADSPA-Plugins
+
+Neben VST3 lädt Aodix auch LADSPA-Effekte (64-bit). Sie stehen in der Plugin-Bibliothek im Untermenü
+**LADSPA**; Bibliotheken mit mehreren Plugins (z. B. `caps.so`, `phasers_1217.so`) bekommen ein eigenes
+Untermenü.
+
+- **Suchorte:** `$LADSPA_PATH`, `~/.ladspa`, `/usr/local/lib/ladspa`, `/usr/lib/ladspa`, `/usr/lib64/ladspa`.
+  Die VST-Pfade aus der Konfiguration werden dafür nicht verwendet.
+- **Parameter:** Die Regler des Plugins erscheinen in der Parameterliste – mit Wertebereich, Standardwert und
+  passender Darstellung (logarithmisch, ganzzahlig, an/aus, abhängig von der Samplerate) – und lassen sich wie
+  bei VST3 automatisieren und per MIDI-CC steuern.
+- **Projekte:** Die Reglerwerte werden im `.adx` gespeichert; das Plugin wird über seine LADSPA-ID
+  wiedergefunden.
+- LADSPA kennt kein MIDI und keine eigene Oberfläche: Es gibt also nur Effekte (keine Instrumente), bedient
+  über die Aodix-Parameterliste.
+
+Getestet mit der Plugin-Sammlung von Steve Harris (swh-plugins, ~90 Plugins).
+
 ## Mehrkern-Verarbeitung
 
 Aodix verteilt die Plugins auf mehrere CPU-Kerne. Instanzen, die im Routing nicht voneinander abhängen
@@ -141,7 +159,7 @@ Größeneinstellung. Zum Ausprobieren ohne Konfiguration: `AODIX_UI_SCALE=150 ./
 src/aodix/      Original-Programmcode von Aodix (nur dort geändert, wo die Portierung es erfordert)
 src/argulib/    Arguru-Hilfsbibliothek (Original)
 src/platform/   Win32-Kompatibilitätsschicht auf X11 (Zeichnen, Fenster, Menüs, Dialoge)
-src/plugin/     Plugin-Schnittstelle (AdxPlugin) und VST3-Host (plugin_vst3.cpp)
+src/plugin/     Plugin-Schnittstelle (AdxPlugin), VST3-Host (plugin_vst3.cpp), LADSPA-Host (plugin_ladspa.cpp)
                 (Mehrkern-Verarbeitung: src/aodix/AodixCoreDspGraph.cpp, AodixDspPool.cpp)
 third_party/    benötigter Teil des VST3-SDK 3.8 (MIT-Lizenz)
 tests/          Test-Plugin für den VST3-Host

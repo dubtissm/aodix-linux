@@ -151,11 +151,23 @@ struct AdxPluginDesc
 	bool		isSynth;
 };
 
-// true if a directory entry is a plugin we can load (e.g. a ".vst3" bundle)
+// true if a directory entry in a vst folder is a plugin we can load (a ".vst3" bundle)
 bool		adx_plugin_is_candidate(const char* name,bool is_dir);
+
+// true if a path is a LADSPA library (".so"); LADSPA libraries are only searched in the LADSPA folders
+bool		adx_plugin_is_ladspa(const char* path);
+
+// the existing LADSPA folders ($LADSPA_PATH, ~/.ladspa, /usr/local/lib/ladspa, /usr/lib/ladspa, ...)
+void		adx_ladspa_paths(std::vector<std::string>& dirs);
 
 // list the plugins contained in a bundle / file
 int			adx_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
 
 // load a plugin. wanted_id selects the class inside a bundle (0 = first instrument / first class)
 AdxPlugin*	adx_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);
+
+// format implementations (dispatched by adx_plugin_scan / adx_plugin_load)
+int			vst3_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
+AdxPlugin*	vst3_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);
+int			ladspa_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
+AdxPlugin*	ladspa_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);

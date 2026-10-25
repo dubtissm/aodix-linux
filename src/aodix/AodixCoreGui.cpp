@@ -445,7 +445,7 @@ static void gui_vst_add_lib_item(HMENU const pa_hmenu,int const item_count,int c
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder)
+int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder,bool ladspa)
 {
 	// get vst library pointer
 	ADX_VST_LIB* plib=&vst_lib;
@@ -474,7 +474,10 @@ int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder)
 			// linux port: vst3 plugins are bundles (directories named *.vst3)
 			bool const is_dir=(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)!=0;
 
-			if(adx_plugin_is_candidate(ffd.cFileName,is_dir))
+			// linux port: in the ladspa folders the plugins are shared libraries (*.so)
+			bool const candidate=ladspa?(!is_dir && adx_plugin_is_ladspa(ffd.cFileName)):adx_plugin_is_candidate(ffd.cFileName,is_dir);
+
+			if(candidate)
 			{
 				// configure plugin path string
 				char dll_path[_MAX_PATH];
@@ -535,7 +538,7 @@ int CAodixCore::gui_vst_search(HMENU const pa_hmenu,char* pfolder)
 				snprintf(subfindpath,sizeof(subfindpath),"%s/%s",pfolder,ffd.cFileName);
 
 				// subsearch files in dir (recursive), and append dir
-				if(gui_vst_search(h_sub_menu,subfindpath)>0)
+				if(gui_vst_search(h_sub_menu,subfindpath,ladspa)>0)
 				{
 					// append menu
 					if(item_count>0 && (item_count&0x1F)==0)
@@ -582,6 +585,30 @@ void CAodixCore::gui_vst_build_lib(void)
 		// search in folder if configured
 		if(cfg.vst_path[pi][0]!=0)
 			gui_vst_search(hmenu_vst_lib,cfg.vst_path[pi]);
+	}
+
+	// linux port: ladspa plugins from the standard ladspa folders in their own sub menu
+	std::vector<std::string> ladspa_dirs;
+	adx_ladspa_paths(ladspa_dirs);
+
+	HMENU const hmenu_ladspa=CreatePopupMenu();
+	int num_ladspa=0;
+	for(size_t d=0;d<ladspa_dirs.size();d++)
+	{
+		char folder[_MAX_PATH];
+		snprintf(folder,sizeof(folder),"%s",ladspa_dirs[d].c_str());
+		num_ladspa+=gui_vst_search(hmenu_ladspa,folder,true);
+	}
+
+	if(num_ladspa>0)
+	{
+		if(vst_lib.num_dlls>0)
+			AppendMenu(hmenu_vst_lib,MF_SEPARATOR,0,NULL);
+		AppendMenu(hmenu_vst_lib,MFT_STRING | MF_POPUP,(UINT_PTR)hmenu_ladspa,"LADSPA");
+	}
+	else
+	{
+		DestroyMenu(hmenu_ladspa);
 	}
 }
 

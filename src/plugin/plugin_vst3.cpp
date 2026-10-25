@@ -1376,14 +1376,14 @@ static bool scan_classes(const char* path,std::vector<AdxPluginDesc>& out,std::v
 	return true;
 }
 
-int adx_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out)
+int vst3_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out)
 {
 	size_t const before=out.size();
 	scan_classes(path,out,nullptr);
 	return (int)(out.size()-before);
 }
 
-AdxPlugin* adx_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size)
+AdxPlugin* vst3_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size)
 {
 	std::string err;
 	auto module=get_module(path,err);

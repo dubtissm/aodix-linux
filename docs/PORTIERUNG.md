@@ -74,6 +74,26 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   des Plugins (`resizeView`) und Größenänderungen durch den Benutzer (bei skalierbaren Editoren) werden
   weitergereicht; nicht skalierbare Editorfenster haben eine feste Größe.
 
+**LADSPA-Host** (`plugin_ladspa.cpp`)
+- Eigene Schnittstellendefinitionen nach der öffentlichen LADSPA-1.1-Spezifikation (ABI-kompatibel zu
+  `ladspa.h`, damit das Projekt vollständig MIT-lizenziert bleibt). `plugin_registry.cpp` verteilt `scan`/`load`
+  nach Dateityp (`.vst3` → VST3, `.so` → LADSPA).
+- Bibliotheken werden einmal geöffnet und nie entladen. Plugins ohne Audio-Ausgang werden ausgelassen.
+- Steuer-Eingänge → Aodix-Parameter: Bereich aus den Range-Hints (unbegrenzte Seiten werden ergänzt,
+  `SAMPLE_RATE`-Hints mit der aktuellen Samplerate multipliziert), logarithmische, ganzzahlige und
+  Schalter-Parameter, Standardwerte nach Spezifikation. Steuer-Ausgänge (Anzeigen) werden angeschlossen, aber
+  nicht dargestellt.
+- Thread-Sicherheit: Aodix schreibt Zielwerte (atomar); der Audio-Thread kopiert sie zu Beginn jedes Blocks in
+  den Port-Speicher, den das Plugin liest. Audio-Ports werden pro Block an Aodix' Puffer angeschlossen.
+  Neuinstanziierung bei geänderter Samplerate (LADSPA kennt die Samplerate nur beim Instanziieren); der
+  Audio-Thread gibt währenddessen Stille aus.
+- Zustand im Projekt: Chunk `"ADXLADS1"` + Anzahl + Reglerwerte (in Plugin-Einheiten). Programm: ein festes
+  „Default“-Programm. Die 32-bit-LADSPA-ID wird direkt als Plugin-ID gespeichert.
+- Bibliothek: eigenes Untermenü „LADSPA“, Suche in den LADSPA-Standardordnern; fehlende Bibliotheken eines
+  Projekts werden dort nach Dateinamen gesucht, sonst per Dateiauswahl.
+- Geprüft mit swh-plugins (Steve Harris): Laden, Parameterbereiche und Standardwerte, Signalkette mit
+  Hallfahne, Zustand speichern/laden (bitgleiche Werte), AddressSanitizer.
+
 **Mehrkern-Verarbeitung** (`AodixCoreDspGraph.cpp`, `AodixDspPool.cpp`)
 - Das Original berechnet die Instanzen in „Bubble“-Durchläufen nacheinander: Eine Instanz arbeitet, sobald
   alle Instanzen mit Audio- oder MIDI-Kabeln zu ihr gearbeitet haben; direkt nach ihrem `process()` werden die
@@ -139,7 +159,7 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 ## Bekannte Einschränkungen
 
-- Nur VST3 (64-bit Linux). Windows-Plugins, VST 2 und 32-bit-Plugins werden nicht geladen.
+- VST3 und LADSPA (64-bit Linux). Windows-Plugins, VST 2, LV2, DSSI und 32-bit-Plugins werden nicht geladen.
 - Alte Windows-Projekte mit VST-2-Plugins: Ein VST3-Nachfolger desselben Plugins hat eine andere ID und ein
   anderes Zustandsformat; solche Instanzen müssen neu geladen und eingestellt werden.
 - Plugin-Editoren, die nur Wayland oder kein X11-Einbetten können, öffnen sich nicht (unter XWayland läuft X11).
@@ -173,4 +193,4 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
 3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ und ~~Tastatur-Layouts (QWERTY/QWERTZ/AZERTY)~~ erledigt und getestet; offen: Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
-5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`, optional CLAP.
+5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`, optional CLAP (LADSPA ist bereits erledigt).

@@ -364,7 +364,7 @@ public:
 	void gui_scroll_iterate(HWND const hwnd,int const ym,int const seq_area_y,int const h);
 
 public:
-	int gui_vst_search(HMENU const pa_hmenu,char* pfolder);
+	int gui_vst_search(HMENU const pa_hmenu,char* pfolder,bool ladspa=false);
 	int	gui_get_event_height(ADX_EVENT* pe);
 
 public:

@@ -485,6 +485,19 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 			import_search_file(cfg.vst_path[pi],filetitle,matchfile);
 	}
 
+	// linux port: ladspa libraries are searched in the ladspa folders
+	if(matchfile[0]==0 && adx_plugin_is_ladspa(filetitle))
+	{
+		std::vector<std::string> ladspa_dirs;
+		adx_ladspa_paths(ladspa_dirs);
+		for(size_t d=0;d<ladspa_dirs.size() && matchfile[0]==0;d++)
+		{
+			char folder[_MAX_PATH];
+			snprintf(folder,sizeof(folder),"%s",ladspa_dirs[d].c_str());
+			import_search_file(folder,filetitle,matchfile);
+		}
+	}
+
 	// check for match file existance
 	if(matchfile[0]!=0)
 	{
@@ -503,6 +516,14 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 		// verbose failed relocation
 		if(MessageBox(hwnd,buf,"Aodix - VST Host",MB_YESNO | MB_ICONWARNING)==IDYES)
 		{
+			// linux port: a ladspa plugin is a shared library file
+			if(adx_plugin_is_ladspa(filetitle))
+			{
+				if(arg_file_dialog_open(hinstance_app,hwnd,"Choose LADSPA Plugin",pfilename,"LADSPA Plugins (*.so)\0*.so\0\0","so","/usr/lib/ladspa",1,0))
+					return access(pfilename,R_OK)==0;
+				return 0;
+			}
+
 			// linux port: a vst3 plugin is a bundle directory, so choose a folder
 			char chosen[_MAX_PATH];
 			strcpy(chosen,cfg.vst_path[0]);
