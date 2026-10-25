@@ -64,9 +64,10 @@ Laufzeit geladen.
   Größe ändern wollen oder frei skalierbar sind, werden unterstützt.
 - Windows-Plugins (`.dll`) und VST 2 werden nicht geladen.
 
-Getestet mit den Beispiel-Plugins des VST3-SDK (u. a. mda JX10, ADelay) und einem eigenen Test-Instrument
-mit Editor (`tests/vst3_test_synth`). Kommerzielle Plugins wie u-he BazilleCM oder TetraOP benutzen dieselben
-Schnittstellen; Rückmeldungen dazu sind willkommen.
+Getestet mit u-he **Bazille** (Vollversion, VST3 Linux x64) inklusive Editor, den Beispiel-Plugins des VST3-SDK
+(u. a. mda JX10, ADelay) und einem eigenen Test-Instrument mit Editor (`tests/vst3_test_synth`).
+
+![u-he Bazille in Aodix unter Linux](docs/screenshot-vst3-bazille.png)
 
 ## Bauen
 

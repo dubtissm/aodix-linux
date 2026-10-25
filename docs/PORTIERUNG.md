@@ -126,7 +126,8 @@ Mit `--thru` sind Master-Eingang 1/2 direkt mit Master-Ausgang 1/2 verbunden –
 
 Für den VST3-Host gibt es ein kleines Test-Instrument mit Xlib-Editor in `tests/vst3_test_synth`
 (protokolliert Einbettung, Timer, Klicks und Größenänderungen). Geprüft wurde außerdem mit den
-Beispiel-Plugins des VST3-SDK und unter AddressSanitizer.
+Beispiel-Plugins des VST3-SDK und unter AddressSanitizer. Auf echter Hardware erfolgreich getestet:
+u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns und Parameteranzeige.
 
 ## Nächste Etappen
 
