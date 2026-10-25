@@ -88,6 +88,7 @@ struct JACK_API
 	void			(*free)(void*);
 	uint32_t		(*midi_get_event_count)(void* buffer);
 	int				(*midi_event_get)(jack_midi_event_t* event,void* buffer,uint32_t index);
+	int				(*client_real_time_priority)(jack_client_t*);	// optional
 };
 
 static JACK_API	jack;
@@ -146,6 +147,7 @@ static bool jack_load(char* error,int error_size)
 	*(void**)&jack.free=sym("jack_free");
 	*(void**)&jack.midi_get_event_count=sym("jack_midi_get_event_count");
 	*(void**)&jack.midi_event_get=sym("jack_midi_event_get");
+	*(void**)&jack.client_real_time_priority=dlsym(jack.lib,"jack_client_real_time_priority");
 
 	if(!ok)
 	{
@@ -640,6 +642,10 @@ void CAodixCore::audio_init(HWND const hwnd)
 		}
 
 		audio_auto_connect();
+
+		// dsp worker threads get the real-time priority of the jack process thread
+		int const rt_prio=jack.client_real_time_priority?jack.client_real_time_priority(pdi->client):-1;
+		dsp_pool.set_realtime_priority(rt_prio>0?rt_prio:0);
 	}
 	// note: the number of ports is only changed when the client is opened (ports are never unregistered
 	// while the process callback runs); a changed channel count takes effect after restarting aodix

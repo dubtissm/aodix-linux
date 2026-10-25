@@ -44,6 +44,8 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "AodixLinux.h"
+#include "AodixDspPool.h"
+#include <vector>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // window procedures
@@ -88,8 +90,11 @@ struct ADX_CONFIG
 	// linux port: user interface scaling, 0 = 100%, 1 = 150%, 2 = 200%
 	unsigned char ui_scale;
 
+	// linux port: number of dsp threads, 0 = automatic, 1 = no parallel processing, n = n threads
+	unsigned char dsp_threads;
+
 	// reserved fields
-	char reserved2[53];
+	char reserved2[52];
 
 	// registration info
 	char user_name[32];
@@ -288,6 +293,37 @@ struct ADX_VST_LIB
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: parallel dsp processing (AodixCoreDspGraph.cpp)
+
+// one audio contribution: source output pin mixed into a destination input pin
+struct ADX_DSP_MIX
+{
+	float*	src;
+	float*	dst;
+	float	gain;
+};
+
+// one midi-out wire (source instance and wire velocity factor) delivered to a destination
+struct ADX_DSP_MIDI_LINK
+{
+	int		src;
+	float	value;
+};
+
+// midi events produced by an instance during its process call
+#define MAX_MIDI_CAPTURE_SEGMENTS 8
+struct ADX_MIDI_CAPTURE
+{
+	int				num_events;
+	int				num_segments;
+	int				segment_end[MAX_MIDI_CAPTURE_SEGMENTS];
+	ADX_MIDI_EVENT	event[MAX_BLOCK_EVENTS];
+};
+
+// capture target of the calling thread (set while an instance is processed)
+extern thread_local ADX_MIDI_CAPTURE* g_dsp_midi_capture;
+
 class CAodixCore : public AdxPluginHost
 {
 public:
@@ -355,6 +391,14 @@ public:
 	int  dsp_play_events(int i_samples_per_point,int block_sample_sta,int block_sample_end,int deltaframe,int const track_on[],double* tempo_change);
 	void dsp_stop_playing_notes(int pos,int pat,int trk,bool check_muted,int deltaframe);
 	void dsp_vumeter_drive(float* psrc,float& vum,int const num_samples);
+
+	// linux port: parallel dsp processing
+	void dsp_configure_threads(void);
+	int  dsp_auto_threads(void);
+	void dsp_route_and_process(int* hpc);
+	void dsp_node_work(int node);
+	void dsp_deliver_midi(int src,int dst,float value);
+	static void dsp_node_work_cb(void* ctx,int node);
 
 public:
 	int	seq_sample_to_pos(int const sample);
@@ -526,6 +570,22 @@ public:
 	// dsp variables
 	float dsp_input_buffer[NUM_DSP_INPUTS][MAX_DSP_BLOCK_SIZE];
 	float dsp_output_buffer[NUM_DSP_OUTPUTS][MAX_DSP_BLOCK_SIZE];
+
+	// linux port: parallel dsp processing (processing order, dependency graph and per node input lists of the current block)
+	AdxDspPool						dsp_pool;
+	int								dsp_num_nodes;
+	int								dsp_node_instance[MAX_INSTANCES];
+	int								dsp_instance_node[MAX_INSTANCES];
+	int								dsp_node_pending[MAX_INSTANCES];
+	int								dsp_node_succ_off[MAX_INSTANCES+1];
+	int								dsp_node_mix_off[MAX_INSTANCES+1];
+	int								dsp_node_midi_off[MAX_INSTANCES+1];
+	std::vector<int>				dsp_node_succ;
+	std::vector<ADX_DSP_MIX>		dsp_node_mix;
+	std::vector<ADX_DSP_MIDI_LINK>	dsp_node_midi;
+	ADX_MIDI_CAPTURE*				dsp_midi_capture;
+	float							dsp_instance_cost[MAX_INSTANCES];	// measured processing time per instance (microseconds, smoothed)
+	bool							dsp_parallel;						// current block is processed in parallel
 	float dsp_output_vumeter[NUM_DSP_OUTPUTS];
 	float dsp_cpu_cost;
 	int32_t  dsp_block_size;

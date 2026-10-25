@@ -20,6 +20,19 @@ void CAodixCore::plugin_automate(AdxPlugin* plugin,int param,float value)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::plugin_midi_out(AdxPlugin* plugin,const ADX_MIDI_EVENT* events,int num_events)
 {
+	// linux port: during dsp_work() the events are captured and delivered to the midi-out destinations right before they
+	// are processed (instances may be processed in parallel, see AodixCoreDspGraph.cpp)
+	ADX_MIDI_CAPTURE* const pc=g_dsp_midi_capture;
+	if(pc!=NULL)
+	{
+		for(int e=0;e<num_events && pc->num_events<MAX_BLOCK_EVENTS;e++)
+			pc->event[pc->num_events++]=events[e];
+		if(pc->num_segments<MAX_MIDI_CAPTURE_SEGMENTS)
+			pc->num_segments++;
+		pc->segment_end[pc->num_segments-1]=pc->num_events;
+		return;
+	}
+
 	// instance wants host to process events (was audioMasterProcessEvents)
 	host_on_events(plugin,events,num_events);
 }

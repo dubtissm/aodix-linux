@@ -105,6 +105,19 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// set kbd layout combo selected index
 		SendMessage(hwnd_kbd_comb,(UINT)CB_SETCURSEL,gl_padx->cfg.keyboard_layout,0);
 
+		// linux port: dsp threads combo (0 = automatic, n = n threads)
+		HWND const hwnd_thr_comb=GetDlgItem(hdlg,IDC_DSP_THREADS_COMBO);
+		snprintf(buf,sizeof(buf),"Automatic (%d)",gl_padx->dsp_auto_threads());
+		SendMessage(hwnd_thr_comb,(UINT)CB_ADDSTRING,0,(LPARAM)buf);
+		SendMessage(hwnd_thr_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"1 (No Parallel Processing)");
+		int const max_threads=AdxDspPool::cpu_count()>gl_padx->cfg.dsp_threads ? AdxDspPool::cpu_count() : gl_padx->cfg.dsp_threads;
+		for(int t=2;t<=max_threads && t<=64;t++)
+		{
+			snprintf(buf,sizeof(buf),"%d",t);
+			SendMessage(hwnd_thr_comb,(UINT)CB_ADDSTRING,0,(LPARAM)buf);
+		}
+		SendMessage(hwnd_thr_comb,(UINT)CB_SETCURSEL,gl_padx->cfg.dsp_threads,0);
+
 		// linux port: user interface scaling combo
 		HWND const hwnd_scale_comb=GetDlgItem(hdlg,IDC_UI_SCALE_COMBO);
 		SendMessage(hwnd_scale_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"100%");
@@ -261,6 +274,16 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 			// set new kbd layout
 			gl_padx->cfg.keyboard_layout=SendMessage(hwnd_kbd_comb,(UINT)CB_GETCURSEL,0,0);
+
+			// linux port: dsp threads (applied right away)
+			int const thr_sel=(int)SendMessage(GetDlgItem(hdlg,IDC_DSP_THREADS_COMBO),(UINT)CB_GETCURSEL,0,0);
+			if(thr_sel>=0 && thr_sel<=64 && thr_sel!=gl_padx->cfg.dsp_threads)
+			{
+				gl_padx->cfg.dsp_threads=(unsigned char)thr_sel;
+				gl_padx->audio_enter_cs();
+				gl_padx->dsp_configure_threads();
+				gl_padx->audio_leave_cs();
+			}
 
 			// linux port: set new ui scaling (takes effect after restart)
 			int const ui_scale_sel=(int)SendMessage(GetDlgItem(hdlg,IDC_UI_SCALE_COMBO),(UINT)CB_GETCURSEL,0,0);

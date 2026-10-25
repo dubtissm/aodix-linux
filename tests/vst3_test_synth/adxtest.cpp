@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <ctime>
 
 using namespace Steinberg;
 using namespace Steinberg::Vst;
@@ -62,6 +63,15 @@ public:
 				if(e.type==Event::kNoteOnEvent && e.noteOn.velocity>0){note=e.noteOn.pitch;on=true;}
 				else if(e.type==Event::kNoteOffEvent && e.noteOff.pitch==note) on=false;
 			}
+		// optional artificial cpu load for host performance tests: ADXTEST_LOAD_US=<microseconds per process call>
+		if(load_us<0) { const char* e=getenv("ADXTEST_LOAD_US"); load_us=e?atoi(e):0; }
+		if(load_us>0)
+		{
+			struct timespec a,b; clock_gettime(CLOCK_MONOTONIC,&a);
+			volatile double x=1.0;
+			do { for(int k=0;k<200;k++) x=x*1.0000001+1e-9; clock_gettime(CLOCK_MONOTONIC,&b); }
+			while((b.tv_sec-a.tv_sec)*1000000L+(b.tv_nsec-a.tv_nsec)/1000<load_us);
+		}
 		if(d.numOutputs<1 || d.numSamples<=0) return kResultOk;
 		float* l=d.outputs[0].channelBuffers32[0];
 		float* r=d.outputs[0].channelBuffers32[1];
@@ -77,7 +87,7 @@ public:
 	}
 	tresult PLUGIN_API setState(IBStream* st) SMTG_OVERRIDE{float g;int32 n;if(st->read(&g,4,&n)==kResultOk&&n==4)gain=g;return kResultOk;}
 	tresult PLUGIN_API getState(IBStream* st) SMTG_OVERRIDE{float g=(float)gain;return st->write(&g,4,nullptr);}
-	double sr=48000,phase=0,gain=0.8; int note=60; bool on=false;
+	double sr=48000,phase=0,gain=0.8; int note=60; bool on=false; int load_us=-1;
 };
 
 //------------------------------------------------------------------------------------------------

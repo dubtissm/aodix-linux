@@ -36,6 +36,9 @@ int main(int argc,char** argv)
 	static int const ui_scale_percent[3]={100,150,200};
 	adxplat::set_ui_scale(ui_scale_percent[gl_padx->cfg.ui_scale<=2 ? gl_padx->cfg.ui_scale : 0]);
 
+	// linux port: dsp threads for parallel plugin processing
+	gl_padx->dsp_configure_threads();
+
 	// get desktop window handler
 	HWND const hwnd_desktop=GetDesktopWindow();
 

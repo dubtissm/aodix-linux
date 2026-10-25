@@ -8,6 +8,8 @@ X11 embedding (`X11EmbedWindowID`), `Linux::IRunLoop` (timer + X connection fd),
 `IPlugFrame::resizeView` (right click grows the editor) and parameter edits from the
 editor (left click sets the gain, which Aodix receives like a knob movement / automation).
 With `ADXTEST_LOG=/path/to/file` the plugin writes a log of these callbacks.
+With `ADXTEST_LOAD_US=<n>` every process call takes at least n microseconds (artificial cpu load for
+performance tests of the parallel dsp processing).
 
 Build (needs the complete VST3 SDK, built once with CMake):
 

@@ -8,6 +8,11 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::dsp_work(void)
 {
+	// linux port: wake the dsp worker threads early if the last block was processed in parallel
+	// (the wake up overlaps with the sequencer work below)
+	if(dsp_parallel)
+		dsp_pool.prewake();
+
 	// get current pattern pointer
 	ADX_PATTERN* pp=&project.pattern[user_pat];
 
@@ -58,15 +63,9 @@ void CAodixCore::dsp_work(void)
 	for(int mo=0;mo<NUM_DSP_OUTPUTS;mo++)
 		arg_dsp_zero(dsp_output_buffer[mo],dsp_block_size);
 
-	// instance working flag
-	bool i_worked[MAX_INSTANCES];
-
 	// init instance buffers
 	for(int i=0;i<MAX_INSTANCES;i++)
 	{
-		// set non-worked flag
-		i_worked[i]=false;
-
 		// get instance pointer
 		ADX_INSTANCE* pi=&instance[i];
 
@@ -176,162 +175,8 @@ void CAodixCore::dsp_work(void)
 		}
 	}
 
-	// routing work
-	bool all_worked=false;
-	bool any_worked=true;
-
-	// bubble routing loop iteration
-	while(!all_worked&&any_worked)
-	{
-		all_worked=true;
-		any_worked=false;
-
-		// scan all instances
-		for(int i=0;i<MAX_INSTANCES;i++)
-		{
-			// get working candidate machine
-			ADX_INSTANCE* pi=&instance[i];
-
-			// only instanced slots and not-working machine should be evaluated
-			if(pi->peffect!=NULL && i_worked[i]==false)
-			{
-				// check if machine indexed 'i' can work in this iteration
-				bool can_work=true;
-
-				// scan destination instances
-				for(int ii=0;ii<MAX_INSTANCES;ii++)
-				{
-					// get destination instance
-					ADX_INSTANCE* pii=&instance[ii];
-
-					// skip current machine or uninstanced machine
-					if(pii->peffect!=NULL && ii!=i)
-					{
-						// check if any output is connected to our machine
-						for(int io=0;io<pii->peffect->numOutputs;io++)
-						{
-							// get output pin pointer
-							ADX_PIN* pp=&pii->pout_pin[io];
-
-							// scan wires
-							for(int w=0;w<pp->num_wires;w++)
-							{
-								// get wire pointer
-								ADX_WIRE* pw=&pp->pwire[w];
-
-								// check if instance 'ii' (source) wich is connected to candidate didnt work
-								// so candidate must wait to next iteration
-								if(pw->instance_index==i && i_worked[ii]==false)
-									can_work=false;
-							}
-						}
-
-						// check if any midi-out pin(s) is connected to source instance
-						for(int w=0;w<pii->mout_pin.num_wires;w++)
-						{
-							// get wire pointer
-							ADX_WIRE* pw=&pii->mout_pin.pwire[w];
-
-							// check if any midi-out link is connected to working candidate instance and source instance still didnt worked
-							// so candidate must wait to next iteration
-							if(pw->instance_index==i && i_worked[ii]==false)
-								can_work=false;
-						}
-					}
-				}
-
-				// work if flag set
-				if(can_work)
-				{
-					// set worked flag
-					i_worked[i]=true;
-					any_worked=true;
-
-					// sort events by delta
-					if(pi->midi_queue_size>1)
-					{
-						bool all_sorted=false;
-
-						while(!all_sorted)
-						{
-							all_sorted=true;
-
-							// scan block events
-							for(int ev=0;ev<(pi->midi_queue_size-1);ev++)
-							{
-								// check event pair
-								if(pi->midi_event[ev].deltaFrames>pi->midi_event[ev+1].deltaFrames)
-								{
-									ADX_MIDI_EVENT tev=pi->midi_event[ev];
-									pi->midi_event[ev]=pi->midi_event[ev+1];
-									pi->midi_event[ev+1]=tev;
-									all_sorted=false;
-								}
-							}
-						}
-					}
-
-					// linux port: the queued events are passed together with the audio buffers
-					int const num_block_events=pi->midi_queue_size;
-
-					// empty list
-					pi->midi_queue_size=0;
-
-					// plugin process (events + audio)
-					pi->peffect->process(pi->pins,pi->pous,dsp_block_size,pi->midi_event,num_block_events);
-
-					// output rout
-					for(int o=0;o<pi->peffect->numOutputs;o++)
-					{
-						// instance process mute
-						if(pi->process_mute)
-							arg_dsp_zero(pi->pous[o],dsp_block_size);
-
-						// instance process thru (bypass)
-						if(pi->process_thru)
-						{
-							if(o<pi->peffect->numInputs)
-								arg_dsp_copy(pi->pins[o],pi->pous[o],dsp_block_size);
-							else
-								arg_dsp_zero(pi->pous[o],dsp_block_size);
-						}
-
-						// get audio-output pin pointer
-						ADX_PIN* pp=&pi->pout_pin[o];
-
-						// scan wires
-						for(int w=0;w<pp->num_wires;w++)
-						{
-							// get wire pointer
-							ADX_WIRE* pw=&pp->pwire[w];
-
-							// mix instance out in other plugin input
-							if(pw->instance_index<MASTER_INSTANCE)
-							{
-								ADX_INSTANCE* pdi=&instance[pw->instance_index];
-								if(pdi->peffect)
-									arg_dsp_gmix(pi->pous[o],pdi->pins[pw->pin_index],dsp_block_size,pw->value*pw->value);
-							}
-
-							// mix instance out in master out
-							if(pw->instance_index==MASTER_INSTANCE)
-							{
-								arg_dsp_gmix(pi->pous[o],dsp_output_buffer[pw->pin_index],dsp_block_size,pw->value*pw->value);
-
-								// update highest pin count
-								if(pw->pin_index>hpc)
-									hpc=pw->pin_index;
-							}
-						}
-					}
-				}
-				else
-				{
-					all_worked=false;
-				}
-			}
-		}
-	}
+	// routing work (linux port: processing order and results as in the original, independent instances run in parallel)
+	dsp_route_and_process(&hpc);
 
 	// drive master vumeter
 	for(int mo=0;mo<NUM_DSP_OUTPUTS;mo++)

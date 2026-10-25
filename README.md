@@ -97,6 +97,30 @@ Aodix systemweit installiert (Programm, Skins, Hilfe, Desktop-Eintrag).
 Optional für native Dateidialoge: `zenity` (GNOME/GTK) oder `kdialog` (KDE). Ohne diese Programme
 verwendet Aodix einen eingebauten Dateidialog.
 
+## Mehrkern-Verarbeitung
+
+Aodix verteilt die Plugins auf mehrere CPU-Kerne. Instanzen, die im Routing nicht voneinander abhängen
+(z. B. mehrere Synthesizer mit eigenen Effektketten), werden gleichzeitig berechnet; eine Instanz startet,
+sobald alle Instanzen fertig sind, deren Audio- oder MIDI-Kabel in sie hineinführen.
+
+- **Einstellung:** *File → Configuration → DSP Threads* – „Automatic“ (alle Kerne, höchstens 16), „1“
+  (keine Parallelverarbeitung, wie das Original) oder eine feste Anzahl. Wirkt sofort.
+- **Automatische Entscheidung:** Aodix misst laufend die Rechenzeit jeder Instanz und rechnet nur dann
+  parallel, wenn es sich lohnt. Bei leichten Projekten bleibt alles auf einem Kern, weil das Aufwecken weiterer
+  Threads mehr kosten würde als es bringt.
+- **Gleicher Klang:** Die Eingänge jeder Instanz werden in genau der Reihenfolge gemischt wie im Original,
+  MIDI-Ausgaben in derselben Reihenfolge weitergereicht. Das Ergebnis ist bitgenau dasselbe wie bei der
+  Verarbeitung auf einem Kern (überprüft durch Vergleich gerenderter WAV-Dateien).
+- **Echtzeit-Priorität:** Die zusätzlichen Threads bekommen dieselbe Echtzeit-Priorität wie der JACK-Thread,
+  sofern der Benutzer das darf (bei JACK-Installationen meist über die Gruppe `audio` eingerichtet). Sonst
+  erscheint ein Hinweis im Terminal; die Verarbeitung funktioniert trotzdem.
+- Plugins mit eigener Mehrkern-Option (z. B. „Multicore“ in u-he-Plugins) können zusätzlich ihre Stimmen
+  verteilen.
+
+Gewinn in Zahlen (Test mit 6 rechenintensiven Instrumenten auf 2 Kernen): DSP-Last 69 % → 36 %. Den größten
+Effekt hat es bei vielen unabhängigen, schweren Instrumenten; eine einzelne lange Effektkette kann nicht
+schneller werden als ihre Glieder nacheinander.
+
 ## Skalierung für hochauflösende Bildschirme
 
 Unter *File → Configuration → UI Scaling* lässt sich die Oberfläche auf **100 %, 150 % oder 200 %** stellen
@@ -118,6 +142,7 @@ src/aodix/      Original-Programmcode von Aodix (nur dort geändert, wo die Port
 src/argulib/    Arguru-Hilfsbibliothek (Original)
 src/platform/   Win32-Kompatibilitätsschicht auf X11 (Zeichnen, Fenster, Menüs, Dialoge)
 src/plugin/     Plugin-Schnittstelle (AdxPlugin) und VST3-Host (plugin_vst3.cpp)
+                (Mehrkern-Verarbeitung: src/aodix/AodixCoreDspGraph.cpp, AodixDspPool.cpp)
 third_party/    benötigter Teil des VST3-SDK 3.8 (MIT-Lizenz)
 tests/          Test-Plugin für den VST3-Host
 resources/      Skins, Hilfe, Icon, Desktop-Eintrag

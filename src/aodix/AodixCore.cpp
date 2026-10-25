@@ -14,6 +14,16 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 	// set default blocksize
 	dsp_block_size=MAX_DSP_BLOCK_SIZE;
 
+	// linux port: parallel dsp (midi capture buffers per instance, threads are started in dsp_configure_threads)
+	dsp_num_nodes=0;
+	dsp_parallel=false;
+	for(int i=0;i<MAX_INSTANCES;i++)
+		dsp_instance_cost[i]=0.0f;
+	dsp_midi_capture=(ADX_MIDI_CAPTURE*)calloc(MAX_INSTANCES,sizeof(ADX_MIDI_CAPTURE));
+	dsp_node_mix.reserve(4096);
+	dsp_node_midi.reserve(1024);
+	dsp_node_succ.reserve(4096);
+
 	// init text action vars
 	hwnd_edit=NULL;
 
@@ -257,6 +267,11 @@ CAodixCore::~CAodixCore(void)
 {
 	// linux port: stop audio processing and close the jack client before anything is freed
 	audio_shutdown();
+
+	// linux port: stop the dsp worker threads
+	dsp_pool.set_workers(0);
+	free(dsp_midi_capture);
+	dsp_midi_capture=NULL;
 
 	// destroy brush
 	DeleteObject(hbrush_edit);
@@ -508,6 +523,9 @@ void CAodixCore::config_read(void)
 
 	// linux port: no ui scaling (100%)
 	cfg.ui_scale=0;
+
+	// linux port: automatic number of dsp threads
+	cfg.dsp_threads=0;
 
 	// init reserved fields 2
 	for(int r=0;r<_countof(cfg.reserved2);r++)

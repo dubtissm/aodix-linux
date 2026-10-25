@@ -74,6 +74,32 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   des Plugins (`resizeView`) und Größenänderungen durch den Benutzer (bei skalierbaren Editoren) werden
   weitergereicht; nicht skalierbare Editorfenster haben eine feste Größe.
 
+**Mehrkern-Verarbeitung** (`AodixCoreDspGraph.cpp`, `AodixDspPool.cpp`)
+- Das Original berechnet die Instanzen in „Bubble“-Durchläufen nacheinander: Eine Instanz arbeitet, sobald
+  alle Instanzen mit Audio- oder MIDI-Kabeln zu ihr gearbeitet haben; direkt nach ihrem `process()` werden die
+  Ausgänge in die Eingänge der Ziele gemischt und die MIDI-Ausgabe in deren Warteschlangen gehängt.
+- Pro Block wird zuerst genau diese Reihenfolge bestimmt (dieselben Durchläufe, ohne zu rechnen). Daraus
+  entsteht der Abhängigkeitsgraph. Unabhängige Instanzen laufen parallel in einem kleinen Echtzeit-Threadpool;
+  der JACK-Thread arbeitet mit. Instanzen in Rückkopplungsschleifen arbeiten wie im Original nicht.
+- Bitgenaue Ergebnisse: Statt dass eine Quelle in die Eingänge ihrer Ziele mischt („push“), sammelt jede
+  Instanz unmittelbar vor ihrer Verarbeitung ihre Eingänge selbst ein („pull“), in exakt der Reihenfolge des
+  Originals (Master-Eingang zuerst, dann die Quellen in Verarbeitungsreihenfolge, Ausgang für Ausgang, Kabel
+  für Kabel). Die Master-Ausgänge werden am Ende in Verarbeitungsreihenfolge gemischt. MIDI-Ausgaben eines
+  Plugins werden während `process()` pro Instanz zwischengespeichert und genauso zugestellt.
+- Kein Speicheranlegen und keine blockierenden Systemaufrufe im Audio-Thread; leere Worker warten kurz aktiv und
+  schlafen dann auf einem Semaphor. Gleicher Gleitkomma-Modus (Denormals) und Echtzeit-Priorität wie der
+  JACK-Thread (`jack_client_real_time_priority`).
+- Parallel wird nur gerechnet, wenn es sich lohnt: Die Rechenzeit jeder Instanz wird geglättet gemessen;
+  aus Gesamtzeit, kritischem Pfad und geschätzten Kosten fürs Aufwecken (40 µs) wird pro Block entschieden.
+  War der letzte Block parallel, werden die Worker gleich zu Beginn von `dsp_work()` geweckt.
+- Einstellung `dsp_threads` in `Aodix.cfg` (0 = automatisch), Auswahl „DSP Threads“ im Konfigurationsdialog
+  (wirkt sofort, der Dialog ist dafür eine Zeile höher). Testweise: `AODIX_DSP_THREADS=n`.
+- Geprüft: gerenderte WAV-Dateien von Original und neuem Code mit 1, 2, 3, 4 und 8 Threads sind bitgleich
+  (Projekte mit parallelen Zweigen, Ketten, Zusammenführungen und MIDI-Kabeln), ThreadSanitizer und
+  AddressSanitizer ohne Befund im neuen Code. Einzige beobachtete Abweichung: das erste Sample von
+  „mda Overdrive“ – das Plugin liest nicht initialisierten Speicher (`filt1`/`filt2`), das tritt mit
+  veränderter Speicherbelegung auch im Original auf.
+
 **HiDPI-Skalierung** (100/150/200 %)
 - Wird komplett in der Plattformschicht erledigt: Aodix arbeitet weiter in seinen ursprünglichen
   (logischen) Pixeln. Erst bei der Übergabe an X11 werden Bildausgabe, Fenstergrößen, Positionen und
@@ -133,6 +159,9 @@ python3 tools/make_test_adx.py /tmp/test.adx
 
 Mit `--thru` sind Master-Eingang 1/2 direkt mit Master-Ausgang 1/2 verbunden – ein Signal an
 `Aodix:in_1` muss dann an `Aodix:out_1` herauskommen (Audio-Test ohne Plugins).
+
+`tools/adx_rewire.py` schreibt Routing, Noten und Cue-Bereich in ein gespeichertes Projekt (für Tests der
+Mehrkern-Verarbeitung: Bounce mit `AODIX_DSP_THREADS=1` und `=n` erzeugen und die WAV-Dateien vergleichen).
 
 Für den VST3-Host gibt es ein kleines Test-Instrument mit Xlib-Editor in `tests/vst3_test_synth`
 (protokolliert Einbettung, Timer, Klicks und Größenänderungen). Geprüft wurde außerdem mit den

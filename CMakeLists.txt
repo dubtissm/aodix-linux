@@ -76,6 +76,8 @@ add_executable(aodix
 	src/aodix/AodixCore.cpp
 	src/aodix/AodixCoreAudio.cpp
 	src/aodix/AodixCoreDsp.cpp
+	src/aodix/AodixCoreDspGraph.cpp
+	src/aodix/AodixDspPool.cpp
 	src/aodix/AodixCoreEdit.cpp
 	src/aodix/AodixCoreExport.cpp
 	src/aodix/AodixCoreGui.cpp
