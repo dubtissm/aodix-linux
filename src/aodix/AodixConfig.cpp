@@ -127,6 +127,18 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		}
 		SendMessage(hwnd_thr_comb,(UINT)CB_SETCURSEL,gl_padx->cfg.dsp_threads,0);
 
+		// linux port: buffer size and sample rate requested from pipewire (take effect after restart)
+		HWND const hwnd_pwb_comb=GetDlgItem(hdlg,IDC_PW_BUFFER_COMBO);
+		const char* const pw_buffers[]={"Server Default","64 Samples","128 Samples","256 Samples","512 Samples","1024 Samples","2048 Samples"};
+		for(const char* t:pw_buffers)
+			SendMessage(hwnd_pwb_comb,(UINT)CB_ADDSTRING,0,(LPARAM)t);
+		SendMessage(hwnd_pwb_comb,(UINT)CB_SETCURSEL,audio_pw_buffer_index(gl_padx->cfg.pw_buffer_size),0);
+		HWND const hwnd_pwr_comb=GetDlgItem(hdlg,IDC_PW_RATE_COMBO);
+		const char* const pw_rates[]={"Default","44100","48000","88200","96000"};
+		for(const char* t:pw_rates)
+			SendMessage(hwnd_pwr_comb,(UINT)CB_ADDSTRING,0,(LPARAM)t);
+		SendMessage(hwnd_pwr_comb,(UINT)CB_SETCURSEL,audio_pw_rate_index(gl_padx->cfg.pw_sample_rate),0);
+
 		// linux port: user interface scaling combo
 		HWND const hwnd_scale_comb=GetDlgItem(hdlg,IDC_UI_SCALE_COMBO);
 		SendMessage(hwnd_scale_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"100%");
@@ -315,6 +327,14 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 				gl_padx->dsp_configure_threads();
 				gl_padx->audio_leave_cs();
 			}
+
+			// linux port: pipewire buffer size / sample rate (take effect after restart)
+			int const pwb_sel=(int)SendMessage(GetDlgItem(hdlg,IDC_PW_BUFFER_COMBO),(UINT)CB_GETCURSEL,0,0);
+			if(pwb_sel>=0)
+				gl_padx->cfg.pw_buffer_size=(unsigned char)(pwb_sel+1);
+			int const pwr_sel=(int)SendMessage(GetDlgItem(hdlg,IDC_PW_RATE_COMBO),(UINT)CB_GETCURSEL,0,0);
+			if(pwr_sel>=0)
+				gl_padx->cfg.pw_sample_rate=(unsigned char)(pwr_sel+1);
 
 			// linux port: set new ui scaling (takes effect after restart)
 			int const ui_scale_sel=(int)SendMessage(GetDlgItem(hdlg,IDC_UI_SCALE_COMBO),(UINT)CB_GETCURSEL,0,0);

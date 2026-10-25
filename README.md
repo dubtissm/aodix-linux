@@ -48,18 +48,26 @@ daraus wieder eine originale `.adx`-Datei.
   zeigen und per Doppelklick mit Aodix öffnen. Von Hand für den eigenen Benutzer:
   `xdg-mime install --novendor resources/aodix-mime.xml`.
 
-## Audio und MIDI (JACK)
+## Audio und MIDI (JACK / PipeWire)
 
-Aodix verbindet sich beim Start mit einem laufenden JACK-Server. Das funktioniert mit jack2 (z. B. über
-QjackCtl gestartet) und mit PipeWire. Falls Aodix unter PipeWire keine Verbindung bekommt, mit
-`pw-jack ./build/aodix` starten. Zum Bauen wird JACK nicht benötigt, die Bibliothek wird erst zur
-Laufzeit geladen.
+Aodix verbindet sich beim Start mit einem laufenden JACK-Server (jack2, z. B. über QjackCtl gestartet)
+oder mit **PipeWire**, wie es die meisten aktuellen Distributionen verwenden. Ein Start über `pw-jack`
+ist nicht nötig: Findet Aodix keinen JACK-Server, lädt es selbst die JACK-Bibliothek von PipeWire
+(Paket `pipewire-jack`). Zum Bauen wird JACK nicht benötigt, die Bibliothek wird erst zur Laufzeit geladen.
+
+- **Puffergröße und Samplerate unter PipeWire:** *File → Configuration → Buffer Size / Sample Rate*
+  (Voreinstellung 256 Samples, 48000 Hz; wirkt nach Neustart). Aodix übergibt sie wie
+  `PIPEWIRE_LATENCY=256/48000` und `PIPEWIRE_RATE=1/48000`; PipeWire stellt die Samplerate nur um, wenn
+  sie in seiner Konfiguration erlaubt ist und gerade nichts anderes läuft. Beim Start über
+  `PIPEWIRE_LATENCY=… pw-jack aodix` haben die Werte der Kommandozeile Vorrang. Mit jack2 bestimmt
+  der JACK-Server beides.
 
 - **Ports:** `Aodix:out_1 …` und `Aodix:in_1 …` werden beim Start mit den Hardware-Ports verbunden.
   Die Anzahl (2/4/8/16/32) stellt man unter *File → Configuration → Channels* ein (wirkt nach Neustart).
   Welche JACK-Ports zu welchem Master-Pin gehören, wählt man wie im Original per Klick auf die Pins der
   Master-Input/Output-Module in der Routing-Ansicht.
-- **Samplerate und Puffergröße** gibt der JACK-Server vor (Anzeige *block size* im Audio-Master).
+- Die tatsächliche Samplerate und Puffergröße zeigt *Current Driver*, z. B. „PipeWire (48 kHz, 256 Samples)“,
+  sowie *block size* im Audio-Master.
 - **MIDI:** Eingang `Aodix:midi_in`. Ist *Open MIDI In Devices* aktiv, verbindet Aodix alle Hardware-MIDI-
   Quellen automatisch (unter jack2 ggf. `a2jmidid -e` für ALSA-MIDI-Geräte starten).
 - Wird der JACK-Server beendet, meldet Aodix das; nach dem Neustart von JACK den Treiber unter

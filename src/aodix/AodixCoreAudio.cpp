@@ -8,6 +8,11 @@
 // JACK specifics:
 // - libjack is loaded at runtime (dlopen), so aodix builds and starts without jack development packages
 //   and works with jack2 as well as with pipewire-jack.
+// - pipewire: many distributions (debian, mx linux, ...) install pipewire's libjack in a private folder that
+//   is only used when a program is started with "pw-jack". if the regular libjack cannot reach a jack server,
+//   aodix loads pipewire's libjack itself, so starting from the menu works without pw-jack. buffer size and
+//   sample rate requested from pipewire (PIPEWIRE_LATENCY / PIPEWIRE_RATE) come from the configuration,
+//   unless they are already set in the environment.
 // - the jack client stays open while aodix runs. audio_close()/audio_init() (used by the configuration
 //   and bounce dialogs) suspend and resume processing instead of closing the client, so the user's port
 //   connections survive.
@@ -17,6 +22,9 @@
 #include "AodixCore.h"
 
 #include <dlfcn.h>
+#include <link.h>
+#include <unistd.h>
+#include <climits>
 #include <semaphore.h>
 #include <atomic>
 #include <string>
@@ -92,26 +100,104 @@ struct JACK_API
 };
 
 static JACK_API	jack;
+static bool		jack_is_pipewire=false;		// the loaded libjack is pipewire's
+
+// pipewire's libjack in the private folders used by pw-jack (debian/ubuntu/mx, fedora/suse, arch)
+static const char* const g_pipewire_jack_libs[]=
+{
+	"/usr/lib/x86_64-linux-gnu/pipewire-0.3/jack/libjack.so.0",
+	"/usr/lib64/pipewire-0.3/jack/libjack.so.0",
+	"/usr/lib/pipewire-0.3/jack/libjack.so.0",
+	"/usr/local/lib/x86_64-linux-gnu/pipewire-0.3/jack/libjack.so.0",
+	"/usr/local/lib/pipewire-0.3/jack/libjack.so.0",
+	NULL
+};
+
+static const char* pipewire_jack_lib(void)
+{
+	for(const char* const* p=g_pipewire_jack_libs;*p;p++)
+		if(access(*p,R_OK)==0)
+			return *p;
+	return NULL;
+}
+
+// true if a loaded library file belongs to pipewire (pw-jack, or pipewire-jack installed as the system libjack)
+static bool lib_is_pipewire(void* lib)
+{
+	struct link_map* lm=NULL;
+	if(dlinfo(lib,RTLD_DI_LINKMAP,&lm)!=0 || lm==NULL || lm->l_name==NULL)
+		return false;
+	char real[PATH_MAX];
+	const char* const path=realpath(lm->l_name,real)?real:lm->l_name;
+	return strstr(path,"pipewire")!=NULL;
+}
+
+static bool jack_bind(void* lib);
 
 static bool jack_load(char* error,int error_size)
 {
 	if(jack.lib)
 		return true;
 
+	// the regular libjack (jack2, or pipewire-jack when the distribution installs it as the system libjack)
+	void* lib=NULL;
 	const char* const names[]={"libjack.so.0","libjack.so"};
 	for(const char* n:names)
 	{
-		jack.lib=dlopen(n,RTLD_NOW|RTLD_LOCAL);
-		if(jack.lib)
+		lib=dlopen(n,RTLD_NOW|RTLD_LOCAL);
+		if(lib)
 			break;
 	}
 
-	if(!jack.lib)
+	// otherwise pipewire's private libjack
+	if(!lib)
 	{
-		snprintf(error,error_size,"Error: JACK Library Not Found (libjack.so.0)\n\nPlease install JACK (jack2) or PipeWire-JACK.");
+		const char* const pw=pipewire_jack_lib();
+		if(pw)
+			lib=dlopen(pw,RTLD_NOW|RTLD_LOCAL);
+	}
+
+	if(!lib)
+	{
+		snprintf(error,error_size,"Error: JACK Library Not Found (libjack.so.0)\n\nPlease install JACK (jack2) or PipeWire-JACK (pipewire-jack).");
 		return false;
 	}
 
+	if(!jack_bind(lib))
+	{
+		dlclose(lib);
+		snprintf(error,error_size,"Error: The Installed JACK Library Is Incomplete");
+		return false;
+	}
+	return true;
+}
+
+// switch to pipewire's libjack (after the regular libjack could not reach a server). the previous library stays
+// loaded (unloading libjack is not always safe); both are opened RTLD_LOCAL, so their symbols do not mix
+static bool jack_load_pipewire(void)
+{
+	if(jack_is_pipewire)
+		return false;
+	const char* const pw=pipewire_jack_lib();
+	if(!pw)
+		return false;
+	void* lib=dlopen(pw,RTLD_NOW|RTLD_LOCAL);
+	if(!lib)
+		return false;
+	JACK_API const saved=jack;
+	if(!jack_bind(lib))
+	{
+		jack=saved;
+		dlclose(lib);
+		return false;
+	}
+	fprintf(stderr,"aodix: no jack server reachable, using pipewire's libjack (%s)\n",pw);
+	return true;
+}
+
+static bool jack_bind(void* lib)
+{
+	jack.lib=lib;
 	bool ok=true;
 	auto sym=[&](const char* name)->void*
 	{
@@ -151,13 +237,50 @@ static bool jack_load(char* error,int error_size)
 
 	if(!ok)
 	{
-		dlclose(jack.lib);
 		jack.lib=NULL;
-		snprintf(error,error_size,"Error: The Installed JACK Library Is Incomplete");
 		return false;
 	}
 
+	jack_is_pipewire=lib_is_pipewire(lib);
 	return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// buffer size / sample rate wished from pipewire (configuration), as pw-jack's environment variables. they are
+// read when the client is opened and ignored by jack2; values set by the user (PIPEWIRE_LATENCY=... pw-jack aodix)
+// have priority
+static const int g_pw_buffer_sizes[]={0,64,128,256,512,1024,2048};			// combo index -> samples (0 = server default)
+static const int g_pw_sample_rates[]={0,44100,48000,88200,96000};			// combo index -> hz (0 = server default)
+
+int audio_pw_buffer_index(unsigned char stored)
+{
+	// stored = combo index + 1, 0 (old / new configurations) = 256 samples
+	int const i=stored?stored-1:3;
+	return (i>=0 && i<(int)(sizeof(g_pw_buffer_sizes)/sizeof(int)))?i:3;
+}
+
+int audio_pw_rate_index(unsigned char stored)
+{
+	// stored = combo index + 1, 0 = 48000 hz
+	int const i=stored?stored-1:2;
+	return (i>=0 && i<(int)(sizeof(g_pw_sample_rates)/sizeof(int)))?i:2;
+}
+
+static void audio_set_pipewire_env(ADX_CONFIG const* pcfg)
+{
+	int const frames=g_pw_buffer_sizes[audio_pw_buffer_index(pcfg->pw_buffer_size)];
+	int const rate=g_pw_sample_rates[audio_pw_rate_index(pcfg->pw_sample_rate)];
+	char buf[64];
+	if(frames>0)
+	{
+		snprintf(buf,sizeof(buf),"%d/%d",frames,rate>0?rate:48000);
+		setenv("PIPEWIRE_LATENCY",buf,0);
+	}
+	if(rate>0)
+	{
+		snprintf(buf,sizeof(buf),"1/%d",rate);
+		setenv("PIPEWIRE_RATE",buf,0);
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -608,11 +731,19 @@ void CAodixCore::audio_init(HWND const hwnd)
 	if(pdi->client==NULL)
 	{
 		int status=0;
+		audio_set_pipewire_env(&cfg);
 		pdi->client=jack.client_open("Aodix",JackNoStartServer,&status);
+
+		// linux port: no jack server (or pipewire-jack not installed as the system libjack): try pipewire's libjack
+		if(pdi->client==NULL && jack_load_pipewire())
+		{
+			status=0;
+			pdi->client=jack.client_open("Aodix",JackNoStartServer,&status);
+		}
 
 		if(pdi->client==NULL)
 		{
-			MessageBox(hwnd,"Error: Could Not Connect To The JACK Server\n\nPlease start JACK (for example with QjackCtl) or use PipeWire-JACK,\nthen select the driver again in File > Configuration.","Aodix - JACK Initialization",MB_OK | MB_ICONERROR);
+			MessageBox(hwnd,"Error: Could Not Connect To The JACK Server\n\nPlease start JACK (for example with QjackCtl) or PipeWire with its JACK support\n(package pipewire-jack), then select the driver again in File > Configuration.","Aodix - JACK Initialization",MB_OK | MB_ICONERROR);
 			audio_num_inputs=0;
 			audio_num_outputs=0;
 			return;
@@ -759,7 +890,20 @@ void CAodixCore::audio_get_driver_name(int const id,char* buf,int const num_char
 	if(id==0)
 	{
 		if(audio_driver_info.client!=NULL)
-			snprintf(buf,num_chars,"JACK (%u Hz, %u Samples)",jack.get_sample_rate(audio_driver_info.client),jack.get_buffer_size(audio_driver_info.client));
+		{
+			unsigned const rate=jack.get_sample_rate(audio_driver_info.client);
+			unsigned const frames=jack.get_buffer_size(audio_driver_info.client);
+			if(jack_is_pipewire)
+			{
+				// shorter, so it fits into the combo box
+				if(rate%1000==0)
+					snprintf(buf,num_chars,"PipeWire (%u kHz, %u Samples)",rate/1000,frames);
+				else
+					snprintf(buf,num_chars,"PipeWire (%.1f kHz, %u Samples)",rate/1000.0,frames);
+			}
+			else
+				snprintf(buf,num_chars,"JACK (%u Hz, %u Samples)",rate,frames);
+		}
 		else
 			snprintf(buf,num_chars,"JACK Audio Connection Kit");
 	}

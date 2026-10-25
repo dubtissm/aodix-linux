@@ -58,6 +58,8 @@
 #define IDC_CLAP_PATH_BUTTON3           1040
 #define IDC_CLAP_PATH_EDIT4             1041
 #define IDC_CLAP_PATH_BUTTON4           1042
+#define IDC_PW_BUFFER_COMBO             1043
+#define IDC_PW_RATE_COMBO               1044
 #define ID_FILE_NEW40001                40001
 #define ID_FILE_OPEN40002               40002
 #define ID_FILE_SAVEAS                  40003

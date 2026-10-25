@@ -240,6 +240,17 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - `AodixCoreAsio.cpp` → `AodixCoreAudio.cpp`: gleiche Struktur wie das Original (Audio-Callback füllt die
   Eingänge, ruft `dsp_work()` in der Critical Section, kopiert die Ausgänge mit Begrenzung auf ±1).
 - libjack wird per `dlopen` geladen: keine Build-Abhängigkeit, funktioniert mit jack2 und PipeWire-JACK.
+- PipeWire ohne `pw-jack`: Manche Distributionen (Debian, MX Linux, …) legen PipeWires libjack in einen
+  eigenen Ordner (`…/pipewire-0.3/jack/`), den nur `pw-jack` per `LD_LIBRARY_PATH` einbindet. Kann die normale
+  libjack keinen Server erreichen, lädt Aodix diese Bibliothek selbst (die erste bleibt geladen, beide
+  `RTLD_LOCAL`) und öffnet den Client erneut. Ob PipeWire benutzt wird, erkennt Aodix am Pfad der geladenen
+  Bibliothek (`dlinfo`); der Treibername lautet dann „PipeWire (48 kHz, 256 Samples)“.
+- Puffergröße/Samplerate für PipeWire (`pw_buffer_size`, `pw_sample_rate` aus reservierten Bytes von
+  `Aodix.cfg`; 0 = 256 Samples / 48000 Hz) werden vor `jack_client_open` als `PIPEWIRE_LATENCY` und
+  `PIPEWIRE_RATE` gesetzt, ohne vorhandene Umgebungsvariablen zu überschreiben. jack2 ignoriert sie.
+  Neue Zeile im Konfigurationsdialog (Audio-Gruppe, Dialog 16 Einheiten höher).
+- Geprüft mit einer Ersatz-libjack ohne Server und der echten libjack am PipeWire-Pfad: Rückfall, Werte der
+  Konfiguration bzw. der Umgebung, Anzeige; außerdem jack2 direkt und die Fehlermeldung ohne jeden Server.
 - Der JACK-Client bleibt während der ganzen Sitzung offen. `audio_close()`/`audio_init()` (Konfiguration,
   Bounce) pausieren nur die Verarbeitung – so bleiben Verbindungen im Patchbay erhalten. Die Portanzahl wird
   nur beim Öffnen des Clients festgelegt (Ports werden nie entfernt, während der Callback läuft).

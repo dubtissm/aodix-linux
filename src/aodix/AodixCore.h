@@ -94,8 +94,12 @@ struct ADX_CONFIG
 	// linux port: number of dsp threads, 0 = automatic, 1 = no parallel processing, n = n threads
 	unsigned char dsp_threads;
 
+	// linux port: buffer size / sample rate requested from pipewire (combo index + 1, 0 = 256 samples / 48000 hz)
+	unsigned char pw_buffer_size;
+	unsigned char pw_sample_rate;
+
 	// reserved fields
-	char reserved2[52];
+	char reserved2[50];
 
 	// registration info
 	char user_name[32];
@@ -328,6 +332,11 @@ struct ADX_MIDI_CAPTURE
 // capture target of the calling thread (set while an instance is processed)
 extern thread_local ADX_MIDI_CAPTURE* g_dsp_midi_capture;
 
+// linux port: combo index of the stored pipewire buffer size / sample rate (AodixCoreAudio.cpp)
+int audio_pw_buffer_index(unsigned char stored);
+int audio_pw_rate_index(unsigned char stored);
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class CAodixCore : public AdxPluginHost
 {
 public:
