@@ -23,7 +23,7 @@ Ziele der Portierung:
 | 2 | JACK-Audio und JACK-MIDI | ✅ fertig |
 | 3 | Feinschliff der Oberfläche (HiDPI-Skalierung, Tastatur-Layouts, Zwischenablage) | ✅ fertig |
 | 4 | VST3-Hosting inklusive Plugin-Editoren | ✅ fertig |
-| 5 | Installation, Paketierung, CLAP (optional) | offen |
+| 5 | Installation, Debian-Paket, CLAP, LV2, LADSPA, Mehrkern | ✅ fertig |
 
 Die komplette Oberfläche läuft (Sequencer, Routing, Menüs, Dialoge), Projekte werden geladen und
 gespeichert, Audio und MIDI laufen über JACK, Bounce schreibt WAV-Dateien, und 64-bit-**VST3**-Plugins
@@ -114,7 +114,37 @@ cmake --build build -j
 ```
 
 Die Skins und die Hilfe werden beim Bauen neben das Programm kopiert. Mit `cmake --install build` wird
-Aodix systemweit installiert (Programm, Skins, Hilfe, Desktop-Eintrag).
+Aodix systemweit installiert (Programm, Skins, Hilfe, Desktop-Eintrag, Icon, Dateityp).
+
+Zur Laufzeit lädt Aodix außerdem, falls vorhanden: **libjack** (jack2 oder PipeWire-JACK, für Audio und
+MIDI) und **liblilv** (für LV2-Plugins).
+
+## Debian-Paket (.deb)
+
+Für Debian, Ubuntu, Linux Mint, Xubuntu und Verwandte lässt sich ein Paket bauen (zusätzlich nötig:
+`dpkg-dev`):
+
+```bash
+cmake -B build-release -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+cmake --build build-release -j
+cd build-release && cpack -G DEB          # -> aodix_4.2.1.0_amd64.deb
+sudo apt install ./aodix_4.2.1.0_amd64.deb
+```
+
+Das Paket installiert Programm, Skins, Hilfe, Desktop-Eintrag, Icons und die Dateitypen `.adx`/`.adxl`; die
+Abhängigkeiten werden aus dem Programm ermittelt, JACK und lilv sind empfohlen. Ein Paket läuft auf der
+Distribution, auf der es gebaut wurde, und neueren (wegen der glibc-Version).
+
+**GitHub-Releases:** `.github/workflows/release.yml` baut das Paket automatisch auf Ubuntu 22.04 (läuft damit
+auf Ubuntu/Mint/Xubuntu ab 22.04 und Debian ab 12), sobald ein Versions-Tag hochgeladen wird, und hängt es
+an das Release:
+
+```bash
+git tag v4.2.1.0
+git push origin v4.2.1.0
+```
+
+`.github/workflows/build.yml` prüft bei jedem Push, ob sich das Projekt bauen lässt.
 
 Optional für native Dateidialoge: `zenity` (GNOME/GTK) oder `kdialog` (KDE). Ohne diese Programme
 verwendet Aodix einen eingebauten Dateidialog.
@@ -239,6 +269,6 @@ git diff 77e4cf3 -- src/aodix   # alle Änderungen am Original-Aodix-Code
 
 MIT-Lizenz wie das Original (siehe `LICENSE`). Aodix wurde von Juan Antonio Arguelles Rius („Arguru“)
 und Zafer Kantar entwickelt, die Grafiken stammen von Paul Merchant und Marc De Haar; weitere Arbeiten von
-J. van't Hoog (Aodix Enhanced). Die eingebettete Oberflächenschrift ist aus DejaVu Sans Condensed
+J. van't Hoog (Aodix Enhanced, 4.2.0.3); Linux-Version und Weiterentwicklung von Marcus Honnacker. Die eingebettete Oberflächenschrift ist aus DejaVu Sans Condensed
 gerendert (freie Bitstream-Vera-/DejaVu-Lizenz). Der mitgelieferte Teil des VST3-SDK von Steinberg steht
 unter der MIT-Lizenz (`third_party/vst3sdk/LICENSE.txt`); VST ist eine Marke der Steinberg Media Technologies GmbH.

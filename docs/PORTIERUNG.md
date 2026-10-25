@@ -258,6 +258,17 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - Pfadtrenner `\` → `/`; Dateiendungen werden nicht mehr in Kleinbuchstaben umgeschrieben (Linux-Dateisysteme
   unterscheiden Groß-/Kleinschreibung).
 
+**Paketierung**
+- `cmake/Packaging.cmake`: CPack-DEB, Präfix `/usr`, Abhängigkeiten per `dpkg-shlibdeps` (libc, libstdc++,
+  libX11, libXext, zlib); per `dlopen` geladene Bibliotheken als „Recommends“ (libjack/pipewire-jack, liblilv),
+  zenity/kdialog und JACK-Server als „Suggests“. Keine Maintainer-Skripte: Desktop-, MIME- und Icon-Caches
+  aktualisieren die dpkg-Trigger. Icons 32/64/128/256 px (die größeren pixelgenau aus dem 32-px-Original
+  vergrößert), Lizenzen unter `/usr/share/doc/aodix`. Maintainer-Feld über `-DAODIX_PACKAGE_MAINTAINER=...`.
+- Geprüft: Paket gebaut, installiert (Trigger laufen), `/usr/bin/aodix` startet mit frischer Konfiguration und
+  findet Skins und Hilfe unter `/usr/share/aodix`; `.adxl` wird als Aodix-Projekt erkannt.
+- `.github/workflows/build.yml` (Build bei jedem Push) und `release.yml` (Paket bei Tag `v*`, als Release-Datei)
+  auf Ubuntu 22.04. Die Workflows laufen erst auf GitHub und sind hier nicht ausgeführt worden.
+
 ## Bekannte Einschränkungen
 
 - VST3, CLAP, LV2 und LADSPA (64-bit Linux). Windows-Plugins, VST 2, DSSI und 32-bit-Plugins werden nicht geladen.
@@ -297,4 +308,4 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
 3. ~~**Oberfläche**~~ erledigt: Skalierung 1,5× und 2×, Tastatur-Layouts (QWERTY/QWERTZ/AZERTY), Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
-5. **Paketierung**: Installationspaket, Dateityp-Zuordnung im Paket (MIME-Definition liegt bereit; CLAP, LV2 und LADSPA sind bereits erledigt).
+5. ~~**Paketierung**~~ erledigt: Debian-Paket über CPack (`cmake/Packaging.cmake`), GitHub-Workflows für Build und Release.

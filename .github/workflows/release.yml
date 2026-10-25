@@ -1,0 +1,36 @@
+# builds the Debian package for a version tag (e.g. "git tag v4.2.1.0 && git push origin v4.2.1.0")
+# and attaches it to the GitHub release of that tag (the release is created if it does not exist yet)
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  deb:
+    # Ubuntu 22.04: the package then runs on Ubuntu/Mint/Xubuntu 22.04 and newer and on Debian 12 and newer
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ninja-build libx11-dev libxext-dev zlib1g-dev dpkg-dev
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: cd build && cpack -G DEB
+
+      - name: Upload to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/aodix_*.deb
