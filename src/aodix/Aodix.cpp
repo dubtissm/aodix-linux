@@ -134,15 +134,11 @@ int main(int argc,char** argv)
 	wndcl_adx.hIconSm=LoadIcon(hInstance,(LPCTSTR)IDI_AODIX);
 	RegisterClassEx(&wndcl_adx);
 
-	// format aodix version label string
-	char adx_ver_buf[256];
-	sprintf(adx_ver_buf,"%d",gl_padx->aodix_version);
-
 	// get main window label
+	// linux port: the program version (4.2.1.x) is shown; aodix_version stays the project format version (4203) that is
+	// written into .adx files, so Aodix 4.2.0.3 on windows keeps reading them
 	char buf[256];
-
-	// check version
-	sprintf(buf,"Aodix %c.%c.%c.%c (Enhanced Version, Linux)",adx_ver_buf[0],adx_ver_buf[1],adx_ver_buf[2],adx_ver_buf[3]);
+	sprintf(buf,"Aodix %s (Linux)",AODIX_VERSION_STRING);
 
 	// create window
 	if (gl_padx->cfg.fullscreen)

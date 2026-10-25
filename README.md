@@ -1,7 +1,9 @@
 # Aodix für Linux (64-bit)
 
-Portierung des Musik-Sequencers **Aodix 4.2.0.3** von Arguru Software auf Linux, basierend auf
-[Aodix Enhanced](https://github.com/vanjac/aodix-enhanced). Das Programm soll so originalgetreu wie
+**Aodix 4.2.1.0 (Linux)** – der Musik-Sequencer Aodix von Arguru Software für Linux. Arguru hinterließ die
+Version 4.2.0.1; J. van't Hoog hat Fehler behoben und sie als
+[Aodix Enhanced](https://github.com/vanjac/aodix-enhanced) (4.2.0.3) weitergeführt. Darauf baut diese
+Linux-Version auf. Das Programm soll so originalgetreu wie
 möglich bleiben: gleiche Oberfläche, gleiche Bedienung, gleiches Projektformat (`.adx`).
 
 Ziele der Portierung:

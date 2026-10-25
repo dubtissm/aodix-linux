@@ -29,7 +29,7 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 	hwnd_edit=NULL;
 
 	// aodix version
-	aodix_version=4203;
+	aodix_version=4203;	// project file format version (linux port: unchanged, the program version is AODIX_VERSION_STRING)
 
 	// id of effect currently loading
 	instance_eff_id_currently_loading=0;

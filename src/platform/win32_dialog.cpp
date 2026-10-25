@@ -39,15 +39,16 @@ struct DlgTemplate
 static std::vector<DlgTemplate> g_templates=
 {
 	{
-		IDD_ABOUTBOX,"Aodix - About",208,91,
+		IDD_ABOUTBOX,"Aodix - About",288,103,
 		{
-			{"BUTTON","",-1,4,0,200,88,S_GROUP,0},
-			{"STATIC","Arguru Software Aodix",-1,8,8,192,12,S_CTEXT|SS_CENTERIMAGE,WS_EX_STATICEDGE},
-			{"STATIC","By Juan Antonio Arguelles Rius && Zafer Kantar",-1,8,24,192,8,S_CTEXT|SS_CENTERIMAGE,0},
-			{"STATIC","Graphics: Paul Merchant && Marc De Haar",-1,8,36,192,8,S_CTEXT|SS_CENTERIMAGE,0},
-			{"STATIC","Additional development: J. van't Hoog",-1,8,48,192,8,S_CTEXT|SS_CENTERIMAGE,0},
-			{"STATIC","",-1,93,64,20,20,WS_CHILD|WS_VISIBLE|SS_ICON,0},
-			{"STATIC","",-1,8,60,192,1,WS_CHILD|WS_VISIBLE|SS_BLACKFRAME,WS_EX_STATICEDGE},
+			{"BUTTON","",-1,4,0,280,100,S_GROUP,0},
+			{"STATIC","Arguru Software Aodix",-1,8,8,272,12,S_CTEXT|SS_CENTERIMAGE,WS_EX_STATICEDGE},
+			{"STATIC","By Juan Antonio Arguelles Rius && Zafer Kantar (up to v4.2.0.1)",-1,8,24,272,8,S_CTEXT|SS_CENTERIMAGE,0},
+			{"STATIC","Graphics: Paul Merchant && Marc De Haar",-1,8,36,272,8,S_CTEXT|SS_CENTERIMAGE,0},
+			{"STATIC","Additional development: J. van't Hoog (up to v4.2.0.3)",-1,8,48,272,8,S_CTEXT|SS_CENTERIMAGE,0},
+			{"STATIC","Linux version && further development: Marcus Honnacker via Claude Opus 5.5",-1,8,60,272,8,S_CTEXT|SS_CENTERIMAGE,0},
+			{"STATIC","",-1,133,76,20,20,WS_CHILD|WS_VISIBLE|SS_ICON,0},
+			{"STATIC","",-1,8,72,272,1,WS_CHILD|WS_VISIBLE|SS_BLACKFRAME,WS_EX_STATICEDGE},
 		}
 	},
 	{

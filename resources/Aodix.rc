@@ -93,19 +93,20 @@ END
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 22, 17, 208, 91
+IDD_ABOUTBOX DIALOGEX 22, 17, 288, 103
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_CAPTION | WS_SYSMENU
 EXSTYLE WS_EX_TOOLWINDOW
 CAPTION "Aodix - About"
 FONT 8, "Tahoma", 400, 0, 0x0
 BEGIN
-    GROUPBOX        "",IDC_STATIC,4,0,200,88
-    CTEXT           "Arguru Software Aodix",IDC_STATIC,8,8,192,12,SS_CENTERIMAGE,WS_EX_STATICEDGE
-    CTEXT           "By Juan Antonio Arguelles Rius && Zafer Kantar",IDC_STATIC,8,24,192,8,SS_CENTERIMAGE
-    CTEXT           "Graphics: Paul Merchant && Marc De Haar",IDC_STATIC,8,36,192,8,SS_CENTERIMAGE
-    CTEXT           "Additional development: J. van't Hoog",IDC_STATIC,8,48,192,8,SS_CENTERIMAGE
-    ICON            IDI_AODIX,IDC_STATIC,93,64,20,20
-    CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME,8,60,192,1,WS_EX_STATICEDGE
+    GROUPBOX        "",IDC_STATIC,4,0,280,100
+    CTEXT           "Arguru Software Aodix",IDC_STATIC,8,8,272,12,SS_CENTERIMAGE,WS_EX_STATICEDGE
+    CTEXT           "By Juan Antonio Arguelles Rius && Zafer Kantar (up to v4.2.0.1)",IDC_STATIC,8,24,272,8,SS_CENTERIMAGE
+    CTEXT           "Graphics: Paul Merchant && Marc De Haar",IDC_STATIC,8,36,272,8,SS_CENTERIMAGE
+    CTEXT           "Additional development: J. van't Hoog (up to v4.2.0.3)",IDC_STATIC,8,48,272,8,SS_CENTERIMAGE
+    CTEXT           "Linux version && further development: Marcus Honnacker via Claude Opus 5.5",IDC_STATIC,8,60,272,8,SS_CENTERIMAGE
+    ICON            IDI_AODIX,IDC_STATIC,133,76,20,20
+    CONTROL         "",IDC_STATIC,"Static",SS_BLACKFRAME,8,72,272,1,WS_EX_STATICEDGE
 END
 
 IDD_BOUNCE DIALOGEX 0, 0, 256, 154
