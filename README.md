@@ -109,6 +109,8 @@ Plugin-Bibliothek im Untermenü **CLAP**. Gesucht wird in den vier Ordnern unter
 - Eine Datei mit mehreren Plugins bekommt ein eigenes Untermenü. Im Projekt wird das Plugin über seine
   CLAP-ID wiedergefunden.
 
+Getestet mit u-he **Bazille** (CLAP) inklusive Oberfläche und Änderung der GUI-Skalierung im Plugin.
+
 ## LADSPA-Plugins
 
 Neben VST3 lädt Aodix auch LADSPA-Effekte (64-bit). Sie stehen in der Plugin-Bibliothek im Untermenü
