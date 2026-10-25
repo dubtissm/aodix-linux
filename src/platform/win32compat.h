@@ -339,6 +339,8 @@ struct CRITICAL_SECTION
 
 #define WS_EX_TOOLWINDOW	0x00000080L
 #define WS_EX_STATICEDGE	0x00020000L
+// linux port: top level window whose size is given in physical pixels and that is never scaled (plugin editors)
+#define WS_EX_ADX_NATIVE_PIXELS	0x40000000L
 
 #define CS_VREDRAW			0x0001
 #define CS_HREDRAW			0x0002
@@ -740,6 +742,12 @@ namespace adxplat
 	// built-in file / folder chooser (falls back from zenity / kdialog)
 	bool		choose_file(HWND owner,const char* title,char* path,int path_size,const char* filter,bool save,const char* default_ext,const char* initial_dir);
 	bool		choose_folder(HWND owner,const char* title,char* path,int path_size);
+
+	// ui scaling (100, 150 or 200 percent). must be set before the first window is created.
+	// all coordinates seen by the application are logical; only windows with WS_EX_ADX_NATIVE_PIXELS use physical sizes.
+	void		set_ui_scale(int percent);
+	int			ui_scale(void);
+	int			ui_scale_to_logical(int physical_pixels);
 
 	// set the cursor for a window (persists until changed)
 	void		set_window_cursor(HWND hwnd,HCURSOR cursor);

@@ -19,7 +19,7 @@ Ziele der Portierung:
 |---|---|---|
 | 1 | 64-bit-Linux-Build, X11-Oberfläche, Projekte laden/speichern | ✅ fertig |
 | 2 | JACK-Audio und JACK-MIDI | ✅ fertig |
-| 3 | Feinschliff der Oberfläche (Zwischenablage, Tastatur-Layouts, HiDPI) | offen |
+| 3 | Feinschliff der Oberfläche (HiDPI-Skalierung ✅, Zwischenablage, Tastatur-Layouts) | teilweise |
 | 4 | VST3-Hosting inklusive Plugin-Editoren | ✅ fertig |
 | 5 | Installation, Paketierung, CLAP (optional) | offen |
 
@@ -96,6 +96,14 @@ Aodix systemweit installiert (Programm, Skins, Hilfe, Desktop-Eintrag).
 
 Optional für native Dateidialoge: `zenity` (GNOME/GTK) oder `kdialog` (KDE). Ohne diese Programme
 verwendet Aodix einen eingebauten Dateidialog.
+
+## Skalierung für hochauflösende Bildschirme
+
+Unter *File → Configuration → UI Scaling* lässt sich die Oberfläche auf **100 %, 150 % oder 200 %** stellen
+(wirkt nach einem Neustart). Bei 200 % wird jedes Pixel verdoppelt und bleibt scharf; bei 150 % wird jeder
+2×2-Block zu 3×3 Pixeln (Eckpixel bleiben erhalten, dazwischen wird gemittelt), damit es keine ungleich breiten
+Pixel gibt. Plugin-Fenster werden **nicht** skaliert – sie zeichnen sich selbst und haben meist eine eigene
+Größeneinstellung. Zum Ausprobieren ohne Konfiguration: `AODIX_UI_SCALE=150 ./build/aodix`.
 
 ## Wo liegt was?
 

@@ -85,8 +85,11 @@ struct ADX_CONFIG
 	// linux port: number of jack audio ports (in and out), 0 = default (2)
 	unsigned char audio_num_ports;
 
+	// linux port: user interface scaling, 0 = 100%, 1 = 150%, 2 = 200%
+	unsigned char ui_scale;
+
 	// reserved fields
-	char reserved2[54];
+	char reserved2[53];
 
 	// registration info
 	char user_name[32];

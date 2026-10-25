@@ -105,6 +105,13 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// set kbd layout combo selected index
 		SendMessage(hwnd_kbd_comb,(UINT)CB_SETCURSEL,gl_padx->cfg.keyboard_layout,0);
 
+		// linux port: user interface scaling combo
+		HWND const hwnd_scale_comb=GetDlgItem(hdlg,IDC_UI_SCALE_COMBO);
+		SendMessage(hwnd_scale_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"100%");
+		SendMessage(hwnd_scale_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"150%");
+		SendMessage(hwnd_scale_comb,(UINT)CB_ADDSTRING,0,(LPARAM)"200%");
+		SendMessage(hwnd_scale_comb,(UINT)CB_SETCURSEL,gl_padx->cfg.ui_scale<=2 ? gl_padx->cfg.ui_scale : 0,0);
+
 		// get midi in list pointer
 		HWND const hwnd_midi_in_list=GetDlgItem(hdlg,IDC_MIDI_IN_LIST);
 
@@ -254,6 +261,11 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 			// set new kbd layout
 			gl_padx->cfg.keyboard_layout=SendMessage(hwnd_kbd_comb,(UINT)CB_GETCURSEL,0,0);
+
+			// linux port: set new ui scaling (takes effect after restart)
+			int const ui_scale_sel=(int)SendMessage(GetDlgItem(hdlg,IDC_UI_SCALE_COMBO),(UINT)CB_GETCURSEL,0,0);
+			if(ui_scale_sel>=0 && ui_scale_sel<=2)
+				gl_padx->cfg.ui_scale=(unsigned char)ui_scale_sel;
 
 			// close midi
 			gl_padx->midi_in_close();

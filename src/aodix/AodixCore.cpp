@@ -506,6 +506,9 @@ void CAodixCore::config_read(void)
 	// linux port: jack ports (in and out)
 	cfg.audio_num_ports=2;
 
+	// linux port: no ui scaling (100%)
+	cfg.ui_scale=0;
+
 	// init reserved fields 2
 	for(int r=0;r<_countof(cfg.reserved2);r++)
 		cfg.reserved2[r]=0;

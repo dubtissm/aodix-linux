@@ -74,6 +74,16 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   des Plugins (`resizeView`) und Größenänderungen durch den Benutzer (bei skalierbaren Editoren) werden
   weitergereicht; nicht skalierbare Editorfenster haben eine feste Größe.
 
+**HiDPI-Skalierung** (100/150/200 %)
+- Wird komplett in der Plattformschicht erledigt: Aodix arbeitet weiter in seinen ursprünglichen
+  (logischen) Pixeln. Erst bei der Übergabe an X11 werden Bildausgabe, Fenstergrößen, Positionen und
+  Mauskoordinaten umgerechnet. Der Original-Code und die Skins bleiben unverändert.
+- 200 %: Pixelverdopplung. 150 %: 2×2 → 3×3 mit exakter Mittelung der Zwischenpixel.
+- Fenster mit `WS_EX_ADX_NATIVE_PIXELS` (Plugin-Editoren) werden nicht skaliert; ihre Größe ist in echten
+  Pixeln, nur ihre Position wird umgerechnet (das Fenster bleibt über Aodix zentriert).
+- Einstellung `ui_scale` in `Aodix.cfg` (aus einem reservierten Byte, Format bleibt kompatibel), neue Auswahl
+  „UI Scaling *“ im Konfigurationsdialog; die MIDI-Geräteliste darunter ist dafür etwas kürzer.
+
 **Kleinere Korrekturen**
 - Die Konfiguration wird beim Übernehmen sofort gespeichert (nicht erst beim Beenden) – sie überlebt so
   einen abstürzenden Plugin oder eine beendete Sitzung.
@@ -132,7 +142,6 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 ## Nächste Etappen
 
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
-3. **Oberfläche**: Zwischenablage, Tastatur-Layouts prüfen (QWERTZ/AZERTY), Skalierung 1,5× und 2× für
-   HiDPI-Bildschirme.
+3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ erledigt; offen: Zwischenablage, Tastatur-Layouts prüfen (QWERTZ/AZERTY).
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
 5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`, optional CLAP.

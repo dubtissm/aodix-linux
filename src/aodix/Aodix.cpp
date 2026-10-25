@@ -32,6 +32,10 @@ int main(int argc,char** argv)
 	// create main aodix core object
 	gl_padx=new CAodixCore(hInstance); 
 
+	// linux port: user interface scaling (before any window is created)
+	static int const ui_scale_percent[3]={100,150,200};
+	adxplat::set_ui_scale(ui_scale_percent[gl_padx->cfg.ui_scale<=2 ? gl_padx->cfg.ui_scale : 0]);
+
 	// get desktop window handler
 	HWND const hwnd_desktop=GetDesktopWindow();
 

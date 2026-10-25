@@ -256,9 +256,10 @@ void CAodixCore::instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd)
 			win_h=300;
 		}
 
-		// position window (linux port: the window manager adds the frame, so no frame size correction)
-		int const win_x=w/2-win_w/2;
-		int const win_y=h/2-win_h/2;
+		// position window (linux port: the window manager adds the frame, so no frame size correction.
+		// the editor is never scaled: its size is in physical pixels, the position in (scaled) aodix coordinates)
+		int const win_x=w/2-adxplat::ui_scale_to_logical(win_w)/2;
+		int const win_y=h/2-adxplat::ui_scale_to_logical(win_h)/2;
 
 		// pass screen coords
 		POINT p;
@@ -270,7 +271,7 @@ void CAodixCore::instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd)
 		// linux port: resizable vst3 editors get a sizing border
 		DWORD const win_style=WS_SYSMENU | WS_CAPTION | (pi->peffect->editorCanResize() ? WS_THICKFRAME : 0);
 
-		pi->hwnd=CreateWindowEx(WS_EX_TOOLWINDOW,"VSTAodixHost","Aodix - VST Instance Window",win_style,p.x,p.y,win_w,win_h,hwnd,NULL,hinstance_app,NULL);
+		pi->hwnd=CreateWindowEx(WS_EX_TOOLWINDOW | WS_EX_ADX_NATIVE_PIXELS,"VSTAodixHost","Aodix - VST Instance Window",win_style,p.x,p.y,win_w,win_h,hwnd,NULL,hinstance_app,NULL);
 
 		// set window effect parameter
 		SetWindowLongPtr(pi->hwnd,GWLP_USERDATA,(LONG_PTR)pi->peffect);
@@ -298,8 +299,8 @@ void CAodixCore::instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd)
 		// misteriously resized(!)
 		if(nw>0 && nh>0 && (nw!=win_w || nh!=win_h))
 		{
-			p.x=w/2-nw/2;
-			p.y=h/2-nh/2;
+			p.x=w/2-adxplat::ui_scale_to_logical(nw)/2;
+			p.y=h/2-adxplat::ui_scale_to_logical(nh)/2;
 			ClientToScreen(hwnd,&p);
 			SetWindowPos(pi->hwnd,NULL,p.x,p.y,nw,nh,SWP_NOZORDER);
 		}

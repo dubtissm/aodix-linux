@@ -59,6 +59,13 @@ static bool			g_have_pointer=false;
 static bool			g_key_down[256];
 static unsigned int	g_mod_state=0;
 
+// ui scaling: logical coordinates (seen by the application) * num/den = physical pixels
+static int			g_scale_num=1;
+static int			g_scale_den=1;
+
+static int			g_event_origin_x=0;	// logical root origin of the window of the current pointer event
+static int			g_event_origin_y=0;
+
 static input_hook_fn g_input_hook=nullptr;
 static void*		g_input_hook_user=nullptr;
 
@@ -276,7 +283,52 @@ void adxplat::timer_stop(unsigned long id)
 	g_platform_timers.erase(id);
 }
 
-void screen_size(int* w,int* h)
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ui scaling helpers
+
+static inline int floor_div(int a,int b)
+{
+	return a>=0?a/b:-((-a+b-1)/b);
+}
+
+static inline bool is_scaled(const Win32Window* w)
+{
+	return g_scale_num!=g_scale_den && !(w && (w->ex_style & WS_EX_ADX_NATIVE_PIXELS));
+}
+
+// screen positions (shared by all windows)
+static inline int phys_pos(int v)	{ return floor_div(v*g_scale_num,g_scale_den); }
+static inline int log_pos(int v)	{ return floor_div(v*g_scale_den,g_scale_num); }
+
+// window sizes / window local coordinates
+static inline int phys_len(const Win32Window* w,int v)	{ return is_scaled(w)?(v*g_scale_num+g_scale_den-1)/g_scale_den:v; }
+static inline int log_len(const Win32Window* w,int v)	{ return is_scaled(w)?floor_div(v*g_scale_den,g_scale_num):v; }
+
+void adxplat::set_ui_scale(int percent)
+{
+	// environment override for testing: AODIX_UI_SCALE=100|150|200
+	if(const char* e=getenv("AODIX_UI_SCALE"))
+		percent=atoi(e);
+
+	if(percent==150) { g_scale_num=3; g_scale_den=2; }
+	else if(percent==200) { g_scale_num=2; g_scale_den=1; }
+	else { g_scale_num=1; g_scale_den=1; }
+
+	if(g_desktop)
+		screen_size((int*)&g_desktop->rect.right,(int*)&g_desktop->rect.bottom);
+}
+
+int adxplat::ui_scale(void)
+{
+	return g_scale_num*100/g_scale_den;
+}
+
+int adxplat::ui_scale_to_logical(int px)
+{
+	return floor_div(px*g_scale_den,g_scale_num);
+}
+
+static void screen_size_phys(int* w,int* h)
 {
 	if(!g_dpy)
 	{
@@ -286,6 +338,14 @@ void screen_size(int* w,int* h)
 	}
 	*w=DisplayWidth(g_dpy,g_screen);
 	*h=DisplayHeight(g_dpy,g_screen);
+}
+
+// logical screen size
+void screen_size(int* w,int* h)
+{
+	screen_size_phys(w,h);
+	*w=log_pos(*w);
+	*h=log_pos(*h);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -443,19 +503,23 @@ static void free_surface(Win32Window* w)
 
 	if(w->surface)
 	{
-		w->surface->px=nullptr;
-		w->surface->own_pixels=false;
+		// scaled windows draw into their own logical buffer, unscaled ones directly into the ximage
+		if(!w->surface->own_pixels)
+			w->surface->px=nullptr;
 		delete w->surface;
 		w->surface=nullptr;
 	}
 }
 
-static void create_surface(Win32Window* w,int width,int height)
+// width / height: logical surface size. the ximage has the physical (scaled) size.
+static void create_surface(Win32Window* w,int lwidth,int lheight)
 {
 	free_surface(w);
 
-	width=std::max(width,1);
-	height=std::max(height,1);
+	lwidth=std::max(lwidth,1);
+	lheight=std::max(lheight,1);
+	int const width=phys_len(w,lwidth);
+	int const height=phys_len(w,lheight);
 
 	XImage* img=nullptr;
 
@@ -513,12 +577,88 @@ static void create_surface(Win32Window* w,int width,int height)
 
 	w->ximage=img;
 	w->surface=new GdiBitmap();
-	w->surface->w=width;
-	w->surface->h=height;
-	w->surface->stride=img->bytes_per_line/4;
-	w->surface->px=(uint32_t*)img->data;
-	w->surface->own_pixels=false;
+	w->surface->w=lwidth;
+	w->surface->h=lheight;
+	if(is_scaled(w))
+	{
+		w->surface->stride=lwidth;
+		w->surface->px=(uint32_t*)calloc((size_t)lwidth*lheight,4);
+		w->surface->own_pixels=true;
+	}
+	else
+	{
+		w->surface->stride=img->bytes_per_line/4;
+		w->surface->px=(uint32_t*)img->data;
+		w->surface->own_pixels=false;
+	}
 	w->has_dirty=false;
+}
+
+// exact average of two pixels (per channel, rounded down)
+static inline uint32_t px_avg(uint32_t a,uint32_t b)
+{
+	return (a&b)+(((a^b)&0xFEFEFEFEu)>>1);
+}
+
+// copy a logical rectangle of the surface scaled into the ximage. returns the physical rectangle.
+static void scale_to_image(Win32Window* w,int x,int y,int x2,int y2,int* px,int* py,int* px2,int* py2)
+{
+	GdiBitmap* const s=w->surface;
+	XImage* const img=(XImage*)w->ximage;
+	int const dw=img->width;
+	int const dh=img->height;
+	int const dstride=img->bytes_per_line/4;
+	uint32_t* const d=(uint32_t*)img->data;
+	uint32_t const* const src=s->px;
+	int const ss=s->stride;
+
+	if(g_scale_num==2 && g_scale_den==1)
+	{
+		// 200%: every pixel becomes a 2x2 block (crisp)
+		for(int sy=y;sy<y2;sy++)
+		{
+			uint32_t const* sr=src+(size_t)sy*ss;
+			uint32_t* d0=d+(size_t)(sy*2)*dstride;
+			uint32_t* d1=d0+dstride;
+			for(int sx=x;sx<x2;sx++)
+			{
+				uint32_t const c=sr[sx];
+				d0[sx*2]=d0[sx*2+1]=c;
+				d1[sx*2]=d1[sx*2+1]=c;
+			}
+		}
+		*px=x*2; *py=y*2; *px2=x2*2; *py2=y2*2;
+		return;
+	}
+
+	// 150%: every 2x2 block becomes 3x3. corners keep the source pixels, the middle row / column is the average
+	x&=~1; y&=~1;
+	x2=std::min(s->w,(x2+1)&~1);
+	y2=std::min(s->h,(y2+1)&~1);
+	for(int sy=y;sy<y2;sy+=2)
+	{
+		uint32_t const* r0=src+(size_t)sy*ss;
+		uint32_t const* r1=(sy+1<s->h)?r0+ss:r0;
+		int const dy=sy/2*3;
+		for(int sx=x;sx<x2;sx+=2)
+		{
+			int const sx1=(sx+1<s->w)?sx+1:sx;
+			uint32_t const a=r0[sx],b=r0[sx1],c=r1[sx],e=r1[sx1];
+			uint32_t const ab=px_avg(a,b),ce=px_avg(c,e);
+			uint32_t const blk[3][3]={{a,ab,b},{px_avg(a,c),px_avg(ab,ce),px_avg(b,e)},{c,ce,e}};
+			int const dx=sx/2*3;
+			for(int j=0;j<3;j++)
+			{
+				if(dy+j>=dh)
+					break;
+				uint32_t* dr=d+(size_t)(dy+j)*dstride+dx;
+				for(int i=0;i<3 && dx+i<dw;i++)
+					dr[i]=blk[j][i];
+			}
+		}
+	}
+	*px=x/2*3; *py=y/2*3;
+	*px2=std::min(dw,(x2+1)/2*3); *py2=std::min(dh,(y2+1)/2*3);
 }
 
 static GC g_gc=0;
@@ -543,10 +683,16 @@ static void flush_surface(Win32Window* w)
 	if(!g_gc)
 		g_gc=XCreateGC(g_dpy,w->xwin,0,nullptr);
 
+	int px=x,py=y,px2=x2,py2=y2;
+	if(is_scaled(w))
+		scale_to_image(w,x,y,x2,y2,&px,&py,&px2,&py2);
+	if(px2<=px || py2<=py)
+		return;
+
 	if(w->shminfo)
-		XShmPutImage(g_dpy,w->xwin,g_gc,(XImage*)w->ximage,x,y,x,y,x2-x,y2-y,False);
+		XShmPutImage(g_dpy,w->xwin,g_gc,(XImage*)w->ximage,px,py,px,py,px2-px,py2-py,False);
 	else
-		XPutImage(g_dpy,w->xwin,g_gc,(XImage*)w->ximage,x,y,x,y,x2-x,y2-y);
+		XPutImage(g_dpy,w->xwin,g_gc,(XImage*)w->ximage,px,py,px,py,px2-px,py2-py);
 }
 
 void flush_all_surfaces(void)
@@ -666,7 +812,7 @@ static void create_x_window(Win32Window* w,int width,int height,bool popup)
 	attr.save_under=popup?True:False;
 	attr.event_mask=ExposureMask|StructureNotifyMask|KeyPressMask|KeyReleaseMask|ButtonPressMask|ButtonReleaseMask|PointerMotionMask|FocusChangeMask|EnterWindowMask|LeaveWindowMask;
 
-	w->xwin=XCreateWindow(g_dpy,g_root,0,0,width,height,0,g_depth,InputOutput,g_visual,CWBackPixmap|CWBorderPixel|CWColormap|CWOverrideRedirect|CWSaveUnder|CWEventMask,&attr);
+	w->xwin=XCreateWindow(g_dpy,g_root,0,0,phys_len(w,std::max(width,1)),phys_len(w,std::max(height,1)),0,g_depth,InputOutput,g_visual,CWBackPixmap|CWBorderPixel|CWColormap|CWOverrideRedirect|CWSaveUnder|CWEventMask,&attr);
 	w->is_popup=popup;
 
 	if(!popup)
@@ -706,14 +852,14 @@ static void set_wm_normal_hints(Win32Window* wnd,bool has_pos,int x,int y)
 	if(has_pos)
 	{
 		hints->flags|=USPosition|PPosition;
-		hints->x=x;
-		hints->y=y;
+		hints->x=phys_pos(x);
+		hints->y=phys_pos(y);
 	}
 	if(!(wnd->style & WS_THICKFRAME))
 	{
 		hints->flags|=PMinSize|PMaxSize;
-		hints->min_width=hints->max_width=std::max<int>(wnd->rect.right,1);
-		hints->min_height=hints->max_height=std::max<int>(wnd->rect.bottom,1)+wnd->menubar_h;
+		hints->min_width=hints->max_width=phys_len(wnd,std::max<int>(wnd->rect.right,1));
+		hints->min_height=hints->max_height=phys_len(wnd,std::max<int>(wnd->rect.bottom,1)+wnd->menubar_h);
 	}
 	XSetWMNormalHints(g_dpy,wnd->xwin,hints);
 	XFree(hints);
@@ -826,7 +972,7 @@ HWND CreateWindowEx(DWORD ex_style,LPCSTR class_name,LPCSTR window_name,DWORD st
 		// position and (for windows without sizing border) fixed size
 		set_wm_normal_hints(wnd,x!=CW_USEDEFAULT,x,y);
 		if(x!=CW_USEDEFAULT)
-			XMoveWindow(g_dpy,wnd->xwin,x,y);
+			XMoveWindow(g_dpy,wnd->xwin,phys_pos(x),phys_pos(y));
 
 		wnd->visible=false;
 	}
@@ -962,7 +1108,7 @@ BOOL ShowWindow(HWND hwnd,int cmd)
 		{
 			set_net_wm_state(hwnd);
 			int sw=0,sh=0;
-			screen_size(&sw,&sh);
+			screen_size_phys(&sw,&sh);
 			XResizeWindow(g_dpy,hwnd->xwin,sw,sh);
 		}
 		XMapRaised(g_dpy,hwnd->xwin);
@@ -1082,8 +1228,8 @@ static void update_root_origin(Win32Window* top)
 	::Window child;
 	int rx=0,ry=0;
 	XTranslateCoordinates(g_dpy,top->xwin,g_root,0,0,&rx,&ry,&child);
-	top->root_x=rx;
-	top->root_y=ry;
+	top->root_x=log_pos(rx);
+	top->root_y=log_pos(ry);
 	top->root_valid=true;
 }
 
@@ -1146,12 +1292,14 @@ BOOL SetWindowPos(HWND hwnd,HWND,int x,int y,int cx,int cy,UINT flags)
 	if(!hwnd->xwin)
 		return FALSE;
 
+	int const pw=phys_len(hwnd,std::max(cx,1));
+	int const ph=phys_len(hwnd,std::max(cy,1)+hwnd->menubar_h);
 	if(!(flags & SWP_NOMOVE) && !(flags & SWP_NOSIZE))
-		XMoveResizeWindow(g_dpy,hwnd->xwin,x,y,std::max(cx,1),std::max(cy,1)+hwnd->menubar_h);
+		XMoveResizeWindow(g_dpy,hwnd->xwin,phys_pos(x),phys_pos(y),pw,ph);
 	else if(!(flags & SWP_NOMOVE))
-		XMoveWindow(g_dpy,hwnd->xwin,x,y);
+		XMoveWindow(g_dpy,hwnd->xwin,phys_pos(x),phys_pos(y));
 	else if(!(flags & SWP_NOSIZE))
-		XResizeWindow(g_dpy,hwnd->xwin,std::max(cx,1),std::max(cy,1)+hwnd->menubar_h);
+		XResizeWindow(g_dpy,hwnd->xwin,pw,ph);
 
 	if(!(flags & SWP_NOSIZE))
 	{
@@ -1464,8 +1612,8 @@ BOOL GetCursorPos(POINT* p)
 		int rx=0,ry=0,wx=0,wy=0;
 		unsigned int mask=0;
 		XQueryPointer(g_dpy,g_root,&r,&c,&rx,&ry,&wx,&wy,&mask);
-		g_last_root_x=rx;
-		g_last_root_y=ry;
+		g_last_root_x=log_pos(rx);
+		g_last_root_y=log_pos(ry);
 	}
 
 	p->x=g_last_root_x;
@@ -1711,7 +1859,7 @@ Win32Window* create_popup_surface(Win32Window* owner,int x,int y,int w,int h)
 	p->rect.right=w;
 	p->rect.bottom=h;
 	create_x_window(p,w,h,true);
-	XMoveWindow(g_dpy,p->xwin,x,y);
+	XMoveWindow(g_dpy,p->xwin,phys_pos(x),phys_pos(y));
 	XMapRaised(g_dpy,p->xwin);
 	p->mapped=true;
 	p->visible=true;
@@ -1724,7 +1872,7 @@ void move_popup_surface(Win32Window* w,int x,int y,int width,int height)
 {
 	if(!w || !w->xwin)
 		return;
-	XMoveResizeWindow(g_dpy,w->xwin,x,y,width,height);
+	XMoveResizeWindow(g_dpy,w->xwin,phys_pos(x),phys_pos(y),phys_len(w,std::max(width,1)),phys_len(w,std::max(height,1)));
 	if(width!=w->surface->w || height!=w->surface->h)
 	{
 		create_surface(w,width,height);
@@ -1931,8 +2079,8 @@ static void handle_pointer_event(XEvent& ev,Win32Window* top)
 		state=ev.xmotion.state;
 		g_last_root_x=ev.xmotion.x_root;
 		g_last_root_y=ev.xmotion.y_root;
-		top->root_x=ev.xmotion.x_root-ev.xmotion.x;
-		top->root_y=ev.xmotion.y_root-ev.xmotion.y;
+		top->root_x=g_event_origin_x;
+		top->root_y=g_event_origin_y;
 	}
 	else
 	{
@@ -1941,8 +2089,8 @@ static void handle_pointer_event(XEvent& ev,Win32Window* top)
 		state=ev.xbutton.state;
 		g_last_root_x=ev.xbutton.x_root;
 		g_last_root_y=ev.xbutton.y_root;
-		top->root_x=ev.xbutton.x_root-ev.xbutton.x;
-		top->root_y=ev.xbutton.y_root-ev.xbutton.y;
+		top->root_x=g_event_origin_x;
+		top->root_y=g_event_origin_y;
 	}
 	top->root_valid=true;
 	g_have_pointer=true;
@@ -2115,10 +2263,71 @@ static void handle_key_event(XEvent& ev,Win32Window* top)
 	g_queue.back().ch=ch;
 }
 
+// convert the physical coordinates of an x event to logical ones (ui scaling)
+static void scale_x_event(XEvent& ev)
+{
+	if(g_scale_num==g_scale_den)
+	{
+		if(ev.type==MotionNotify) { g_event_origin_x=ev.xmotion.x_root-ev.xmotion.x; g_event_origin_y=ev.xmotion.y_root-ev.xmotion.y; }
+		else if(ev.type==ButtonPress || ev.type==ButtonRelease) { g_event_origin_x=ev.xbutton.x_root-ev.xbutton.x; g_event_origin_y=ev.xbutton.y_root-ev.xbutton.y; }
+		return;
+	}
+
+	Win32Window* const top=find_top_by_xwin(ev.xany.window);
+
+	switch(ev.type)
+	{
+	case MotionNotify:
+		g_event_origin_x=log_pos(ev.xmotion.x_root-ev.xmotion.x);
+		g_event_origin_y=log_pos(ev.xmotion.y_root-ev.xmotion.y);
+		ev.xmotion.x=log_len(top,ev.xmotion.x);
+		ev.xmotion.y=log_len(top,ev.xmotion.y);
+		ev.xmotion.x_root=log_pos(ev.xmotion.x_root);
+		ev.xmotion.y_root=log_pos(ev.xmotion.y_root);
+		break;
+	case ButtonPress:
+	case ButtonRelease:
+		g_event_origin_x=log_pos(ev.xbutton.x_root-ev.xbutton.x);
+		g_event_origin_y=log_pos(ev.xbutton.y_root-ev.xbutton.y);
+		ev.xbutton.x=log_len(top,ev.xbutton.x);
+		ev.xbutton.y=log_len(top,ev.xbutton.y);
+		ev.xbutton.x_root=log_pos(ev.xbutton.x_root);
+		ev.xbutton.y_root=log_pos(ev.xbutton.y_root);
+		break;
+	case EnterNotify:
+	case LeaveNotify:
+		ev.xcrossing.x=log_len(top,ev.xcrossing.x);
+		ev.xcrossing.y=log_len(top,ev.xcrossing.y);
+		ev.xcrossing.x_root=log_pos(ev.xcrossing.x_root);
+		ev.xcrossing.y_root=log_pos(ev.xcrossing.y_root);
+		break;
+	case Expose:
+		if(is_scaled(top))
+		{
+			// grow the rectangle so that it covers all touched logical pixels
+			int const x1=floor_div(ev.xexpose.x*g_scale_den,g_scale_num);
+			int const y1=floor_div(ev.xexpose.y*g_scale_den,g_scale_num);
+			int const x2=((ev.xexpose.x+ev.xexpose.width)*g_scale_den+g_scale_num-1)/g_scale_num;
+			int const y2=((ev.xexpose.y+ev.xexpose.height)*g_scale_den+g_scale_num-1)/g_scale_num;
+			ev.xexpose.x=x1;
+			ev.xexpose.y=y1;
+			ev.xexpose.width=x2-x1;
+			ev.xexpose.height=y2-y1;
+		}
+		break;
+	case ConfigureNotify:
+		ev.xconfigure.width=log_len(top,ev.xconfigure.width);
+		ev.xconfigure.height=log_len(top,ev.xconfigure.height);
+		break;
+	}
+}
+
 static void handle_x_event(XEvent& ev)
 {
 	if(XFilterEvent(&ev,None))
 		return;
+
+	scale_x_event(ev);
 
 	// modal popup menus intercept input
 	if(g_input_hook && (ev.type==ButtonPress || ev.type==ButtonRelease || ev.type==MotionNotify || ev.type==KeyPress || ev.type==KeyRelease))
@@ -2446,8 +2655,8 @@ void dialog_place_and_show(Win32Window* dlg)
 
 	XSizeHints* hints=XAllocSizeHints();
 	hints->flags=PMinSize|PMaxSize|PPosition|USPosition;
-	hints->min_width=hints->max_width=w;
-	hints->min_height=hints->max_height=h;
+	hints->min_width=hints->max_width=phys_len(dlg,w);
+	hints->min_height=hints->max_height=phys_len(dlg,h);
 
 	int sw=0,sh=0;
 	screen_size(&sw,&sh);
@@ -2464,12 +2673,12 @@ void dialog_place_and_show(Win32Window* dlg)
 	}
 	x=std::max(0,std::min(x,sw-w));
 	y=std::max(0,std::min(y,sh-h));
-	hints->x=x;
-	hints->y=y;
+	hints->x=phys_pos(x);
+	hints->y=phys_pos(y);
 	XSetWMNormalHints(g_dpy,dlg->xwin,hints);
 	XFree(hints);
 
 	XChangeProperty(g_dpy,dlg->xwin,a_net_wm_type,XA_ATOM,32,PropModeReplace,(const unsigned char*)&a_net_wm_type_dialog,1);
-	XMoveWindow(g_dpy,dlg->xwin,x,y);
+	XMoveWindow(g_dpy,dlg->xwin,phys_pos(x),phys_pos(y));
 	ShowWindow(dlg,SW_SHOW);
 }
