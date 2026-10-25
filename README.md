@@ -262,7 +262,7 @@ git init -b main
 git fetch ./aodix-git-history.bundle main
 git reset FETCH_HEAD
 git log --oneline          # zeigt die Etappen
-git diff 77e4cf3 -- src/aodix   # alle Änderungen am Original-Aodix-Code
+git diff original -- src/aodix   # alle Änderungen am Original-Aodix-Code
 ```
 
 ## Lizenz
