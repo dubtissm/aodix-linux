@@ -19,7 +19,7 @@ Ziele der Portierung:
 |---|---|---|
 | 1 | 64-bit-Linux-Build, X11-Oberfläche, Projekte laden/speichern | ✅ fertig |
 | 2 | JACK-Audio und JACK-MIDI | ✅ fertig |
-| 3 | Feinschliff der Oberfläche (HiDPI-Skalierung ✅, Zwischenablage, Tastatur-Layouts) | teilweise |
+| 3 | Feinschliff der Oberfläche (HiDPI-Skalierung ✅, Tastatur-Layouts ✅, Zwischenablage) | teilweise |
 | 4 | VST3-Hosting inklusive Plugin-Editoren | ✅ fertig |
 | 5 | Installation, Paketierung, CLAP (optional) | offen |
 

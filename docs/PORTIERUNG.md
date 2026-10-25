@@ -142,6 +142,6 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 ## Nächste Etappen
 
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
-3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ erledigt; offen: Zwischenablage, Tastatur-Layouts prüfen (QWERTZ/AZERTY).
+3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ und ~~Tastatur-Layouts (QWERTY/QWERTZ/AZERTY)~~ erledigt und getestet; offen: Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
 5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`, optional CLAP.
