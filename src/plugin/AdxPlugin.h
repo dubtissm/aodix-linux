@@ -132,6 +132,8 @@ public:
 	virtual bool		editorGetSize(int* width,int* height)=0;
 	virtual bool		editorOpen(unsigned long parent)=0;
 	virtual void		editorClose(void)=0;
+	virtual void		editorResized(int width,int height){(void)width;(void)height;}	// host window was resized
+	virtual bool		editorCanResize(void){return false;}
 
 	// periodic call from the gui thread
 	virtual void		idle(void)=0;

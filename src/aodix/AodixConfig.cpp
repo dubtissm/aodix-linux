@@ -272,6 +272,9 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			// restart midi
 			gl_padx->midi_in_init();
 
+			// linux port: store the configuration right away (survives a crashing plugin or a killed session)
+			gl_padx->config_write();
+
 			// set arrow cursor
 			SetCursor(gl_padx->hcursor_arro);
 

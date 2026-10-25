@@ -52,6 +52,14 @@ LRESULT CALLBACK plug_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 		return 0;
 	}
 
+	// size message (linux port: the window manager resized the frame of a resizable editor)
+	if(message==WM_SIZE)
+	{
+		if(peffect!=NULL && peffect->hasEditor)
+			peffect->editorResized(LOWORD(lparam),HIWORD(lparam));
+		return 0;
+	}
+
 	// key down message
 	if(message==WM_KEYDOWN)
 	{

@@ -473,6 +473,13 @@ void CAodixCore::config_read(void)
 	for(int pi=0;pi<MAX_VST_FOLDERS;pi++)
 		cfg.vst_path[pi][0]=0;
 
+	// linux port: default to the standard vst3 locations
+	char const* home=getenv("HOME");
+	if(home!=NULL && home[0]!=0)
+		snprintf(cfg.vst_path[0],_MAX_PATH,"%s/.vst3",home);
+	strcpy(cfg.vst_path[1],"/usr/lib/vst3");
+	strcpy(cfg.vst_path[2],"/usr/local/lib/vst3");
+
 	// init recent file paths
 	for(int rf=0;rf<NUM_RECENT_FILES;rf++)
 		cfg.recent_file[rf][0]=0;

@@ -44,13 +44,40 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 **Plugins**
 - Statt `AEffect`/`dispatcher` (VST 2) spricht Aodix eine formatunabhängige Schnittstelle
-  `AdxPlugin` (`src/plugin/AdxPlugin.h`). Die VST3-Implementierung folgt in Etappe 4, CLAP kann später
-  daneben gestellt werden.
+  `AdxPlugin` (`src/plugin/AdxPlugin.h`). Die VST3-Implementierung steht in `src/plugin/plugin_vst3.cpp`,
+  CLAP kann später daneben gestellt werden.
 - Die VST-2-Callback-Funktion (`audioMaster`) wurde durch `AdxPluginHost` ersetzt
   (Automation, MIDI-Ausgang, Anzeige aktualisieren, Editorgröße, Transportinformation).
 - Die Plugin-Bibliothek sucht nach `.vst3`-Bundles; ein Bundle mit mehreren Plugins erscheint als Untermenü.
   Die Plugin-Klasse wird über die im Projekt gespeicherte 32-bit-ID ausgewählt.
 - MIDI-Warteschlangen-Überlauf erzeugt keine MessageBox mehr aus dem Audio-Thread (Absturzgefahr).
+- Fehlende Plugins werden wie im Original in den VST-Pfaden gesucht – jetzt nach `.vst3`-Bundles; der
+  „Browse“-Dialog wählt einen Bundle-Ordner. Voreingestellte Suchpfade: `~/.vst3`, `/usr/lib/vst3`,
+  `/usr/local/lib/vst3`.
+
+**VST3-Host** (`plugin_vst3.cpp`, SDK-Teilmenge in `third_party/vst3sdk`, MIT-Lizenz)
+- Module werden über `VST3::Hosting::Module` geladen und nie entladen (manche Plugins vertragen das nicht).
+  Die Klassenliste kommt aus `moduleinfo.json`, sonst aus der Factory.
+- 32-bit-ID für das Projekt: FNV-1a-Hash der 16-Byte-Klassen-ID (das `.adx`-Format hat nur 32 bit Platz).
+- Prozessor und Controller getrennt oder als Einzelkomponente, verbunden über `ConnectionProxy`.
+  Alle Audio-Busse werden aktiviert und zu einer flachen Kanalliste zusammengefasst (Aodix-Pins).
+- Parameter: Aodix arbeitet mit Index 0…n, VST3 mit IDs – Abbildung beim Laden. Änderungen aus Aodix gehen
+  über eine Warteschlange an den Prozessor (Audio-Thread, `IParameterChanges`) und an den Controller (GUI-Thread).
+  Änderungen aus dem Plugin-Editor (`performEdit`) landen in `plugin_automate` – wie `audioMasterAutomate`.
+- MIDI: Note an/aus → VST3-Noten-Ereignisse; CC, Pitchbend, Aftertouch, Programmwechsel → Parameter über
+  `IMidiMapping`. CC 120/123 beenden alle hängenden Noten. MIDI-Ausgabe (Legacy-MIDI-CC-Ereignisse) zurück nach Aodix.
+- Programme: Programmliste über `IUnitInfo` und den Parameter mit `kIsProgramChange`.
+- Zustand: Chunk `"ADX3VST3"` + Komponenten-Zustand + Controller-Zustand.
+- Transport: `ProcessContext` aus Aodix' Zeitinformation (Tempo, PPQ, Takt, Taktart, Cycle).
+- Editor: `IPlugView` mit `X11EmbedWindowID` im Aodix-Instanzfenster. `IPlugFrame` mit `Linux::IRunLoop`;
+  Dateideskriptoren und Timer der Plugins laufen in Aodix' Nachrichtenschleife (GUI-Thread). Größenwünsche
+  des Plugins (`resizeView`) und Größenänderungen durch den Benutzer (bei skalierbaren Editoren) werden
+  weitergereicht; nicht skalierbare Editorfenster haben eine feste Größe.
+
+**Kleinere Korrekturen**
+- Die Konfiguration wird beim Übernehmen sofort gespeichert (nicht erst beim Beenden) – sie überlebt so
+  einen abstürzenden Plugin oder eine beendete Sitzung.
+- „Save“ kopierte den Dateinamen auf sich selbst (undefiniertes Verhalten, von ASan gefunden).
 
 **Audio / MIDI (JACK)**
 - `AodixCoreAsio.cpp` → `AodixCoreAudio.cpp`: gleiche Struktur wie das Original (Audio-Callback füllt die
@@ -76,7 +103,10 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 ## Bekannte Einschränkungen
 
-- Keine Plugins ladbar (→ Etappe 4).
+- Nur VST3 (64-bit Linux). Windows-Plugins, VST 2 und 32-bit-Plugins werden nicht geladen.
+- Alte Windows-Projekte mit VST-2-Plugins: Ein VST3-Nachfolger desselben Plugins hat eine andere ID und ein
+  anderes Zustandsformat; solche Instanzen müssen neu geladen und eingestellt werden.
+- Plugin-Editoren, die nur Wayland oder kein X11-Einbetten können, öffnen sich nicht (unter XWayland läuft X11).
 - Alte Projekte mit **Windows**-Plugins: Patterns, Events, Spuren und Marker werden geladen. Ältere Dateien
   (vor Version 4.2.0.3) enthalten keine Ersatzinformationen für fehlende Plugins; dort bricht Aodix – wie
   das Original – das Laden der Instanzen beim ersten fehlenden Plugin ab.
@@ -94,11 +124,14 @@ python3 tools/make_test_adx.py /tmp/test.adx
 Mit `--thru` sind Master-Eingang 1/2 direkt mit Master-Ausgang 1/2 verbunden – ein Signal an
 `Aodix:in_1` muss dann an `Aodix:out_1` herauskommen (Audio-Test ohne Plugins).
 
+Für den VST3-Host gibt es ein kleines Test-Instrument mit Xlib-Editor in `tests/vst3_test_synth`
+(protokolliert Einbettung, Timer, Klicks und Größenänderungen). Geprüft wurde außerdem mit den
+Beispiel-Plugins des VST3-SDK und unter AddressSanitizer.
+
 ## Nächste Etappen
 
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
 3. **Oberfläche**: Zwischenablage, Tastatur-Layouts prüfen (QWERTZ/AZERTY), Skalierung 1,5× und 2× für
    HiDPI-Bildschirme.
-4. **VST3**: Laden der Bundles (MIT-lizenziertes VST3-SDK 3.8), Prozessor/Controller, Parameter-Queues,
-   Noten- und MIDI-CC-Abbildung, Zustand als Chunk im Projekt, Editor über X11-Einbettung mit `IRunLoop`.
+4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
 5. **Paketierung**: Installationspaket, MIME-Typ für `.adx`, optional CLAP.

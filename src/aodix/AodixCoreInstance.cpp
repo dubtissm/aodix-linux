@@ -267,7 +267,10 @@ void CAodixCore::instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd)
 		ClientToScreen(hwnd,&p);
 
 		// create plugin parent window
-		pi->hwnd=CreateWindowEx(WS_EX_TOOLWINDOW,"VSTAodixHost","Aodix - VST Instance Window",WS_SYSMENU | WS_CAPTION,p.x,p.y,win_w,win_h,hwnd,NULL,hinstance_app,NULL);
+		// linux port: resizable vst3 editors get a sizing border
+		DWORD const win_style=WS_SYSMENU | WS_CAPTION | (pi->peffect->editorCanResize() ? WS_THICKFRAME : 0);
+
+		pi->hwnd=CreateWindowEx(WS_EX_TOOLWINDOW,"VSTAodixHost","Aodix - VST Instance Window",win_style,p.x,p.y,win_w,win_h,hwnd,NULL,hinstance_app,NULL);
 
 		// set window effect parameter
 		SetWindowLongPtr(pi->hwnd,GWLP_USERDATA,(LONG_PTR)pi->peffect);

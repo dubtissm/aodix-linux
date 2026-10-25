@@ -32,12 +32,39 @@ add_library(adxplatform STATIC
 target_include_directories(adxplatform PUBLIC src/platform ${X11_INCLUDE_DIR})
 target_link_libraries(adxplatform PUBLIC ${X11_LIBRARIES} ${X11_Xext_LIB} Threads::Threads)
 
-# plugin hosting
+# subset of the VST3 SDK (MIT license) needed for hosting
+set(VST3SDK ${CMAKE_SOURCE_DIR}/third_party/vst3sdk)
+add_library(vst3hosting STATIC
+	${VST3SDK}/pluginterfaces/base/coreiids.cpp
+	${VST3SDK}/pluginterfaces/base/funknown.cpp
+	${VST3SDK}/pluginterfaces/base/ustring.cpp
+	${VST3SDK}/pluginterfaces/base/conststringtable.cpp
+	${VST3SDK}/public.sdk/source/common/commoniids.cpp
+	${VST3SDK}/public.sdk/source/common/commonstringconvert.cpp
+	${VST3SDK}/public.sdk/source/common/memorystream.cpp
+	${VST3SDK}/public.sdk/source/common/threadchecker_linux.cpp
+	${VST3SDK}/public.sdk/source/vst/vstinitiids.cpp
+	${VST3SDK}/public.sdk/source/vst/hosting/connectionproxy.cpp
+	${VST3SDK}/public.sdk/source/vst/hosting/eventlist.cpp
+	${VST3SDK}/public.sdk/source/vst/hosting/hostclasses.cpp
+	${VST3SDK}/public.sdk/source/vst/hosting/module.cpp
+	${VST3SDK}/public.sdk/source/vst/hosting/module_linux.cpp
+	${VST3SDK}/public.sdk/source/vst/hosting/parameterchanges.cpp
+	${VST3SDK}/public.sdk/source/vst/hosting/pluginterfacesupport.cpp
+	${VST3SDK}/public.sdk/source/vst/moduleinfo/moduleinfoparser.cpp
+	${VST3SDK}/public.sdk/source/vst/utility/stringconvert.cpp
+)
+target_include_directories(vst3hosting PUBLIC ${VST3SDK})
+target_compile_definitions(vst3hosting PUBLIC RELEASE=1)
+target_compile_options(vst3hosting PRIVATE -w)
+target_link_libraries(vst3hosting PUBLIC ${CMAKE_DL_LIBS} Threads::Threads)
+
+# plugin hosting (VST3)
 add_library(adxplugin STATIC
-	src/plugin/plugin_loader.cpp
+	src/plugin/plugin_vst3.cpp
 )
 target_include_directories(adxplugin PUBLIC src/plugin)
-target_link_libraries(adxplugin PUBLIC ${CMAKE_DL_LIBS})
+target_link_libraries(adxplugin PUBLIC vst3hosting adxplatform)
 
 # aodix
 add_executable(aodix

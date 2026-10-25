@@ -4,6 +4,7 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "AodixCore.h"
+#include <unistd.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // instance fallback data struct definition
@@ -431,7 +432,13 @@ void CAodixCore::import_search_file(char* pfolder,char* pfilename,char* pmatchfi
 		// check no dots
 		if(ffd.cFileName[0]!='.')
 		{
-			if(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+			// linux port: vst3 plugins are bundle directories, match them by name (do not descend into them)
+			if((ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && adx_plugin_is_candidate(ffd.cFileName,true))
+			{
+				if(_stricmp(ffd.cFileName,pfilename)==0)
+					sprintf(pmatchfile,"%s/%s",pfolder,ffd.cFileName);
+			}
+			else if(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
 				// configure subpath string
 				char subfindpath[_MAX_PATH];
@@ -457,15 +464,9 @@ void CAodixCore::import_search_file(char* pfolder,char* pfilename,char* pmatchfi
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilename)
 {
-	// check if current path exist
-	FILE* pf=fopen(pfilename,"rb");
-
-	// success file opening (file existing in passed string)
-	if(pf!=NULL)
-	{
-		fclose(pf);
+	// check if current path exist (linux port: plugins are bundle directories, so test with access())
+	if(pfilename[0]!=0 && access(pfilename,R_OK)==0)
 		return 1;
-	}
 
 	// file doesnt exist in current path, extract filetitle
 	char filetitle[_MAX_PATH];
@@ -502,13 +503,13 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 		// verbose failed relocation
 		if(MessageBox(hwnd,buf,"Aodix - VST Host",MB_YESNO | MB_ICONWARNING)==IDYES)
 		{
-			if(arg_file_dialog_open(hinstance_app,hwnd,"Choose VST Plugin",pfilename,"DLL Files (*.dll)\0*.dll\0\0","dll",cfg.vst_path[0],1,0))
+			// linux port: a vst3 plugin is a bundle directory, so choose a folder
+			char chosen[_MAX_PATH];
+			strcpy(chosen,cfg.vst_path[0]);
+			if(adxplat::choose_folder(hwnd,"Choose VST3 Plugin Bundle (*.vst3)",chosen,_MAX_PATH) && adx_plugin_is_candidate(chosen,true))
 			{
-				if(pf=fopen(pfilename,"rb"))
-				{
-					fclose(pf);
-					return 1;
-				}
+				strcpy(pfilename,chosen);
+				return 1;
 			}
 		}
 	}

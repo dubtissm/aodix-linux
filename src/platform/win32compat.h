@@ -735,6 +735,7 @@ namespace adxplat
 	typedef void (*fd_callback)(int fd,void* user);
 	void		add_fd_watch(int fd,fd_callback cb,void* user);
 	void		remove_fd_watch(int fd,void* user);
+	void		remove_fd_watches(void* user);
 
 	// built-in file / folder chooser (falls back from zenity / kdialog)
 	bool		choose_file(HWND owner,const char* title,char* path,int path_size,const char* filter,bool save,const char* default_ext,const char* initial_dir);

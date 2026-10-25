@@ -20,12 +20,12 @@ Ziele der Portierung:
 | 1 | 64-bit-Linux-Build, X11-Oberfläche, Projekte laden/speichern | ✅ fertig |
 | 2 | JACK-Audio und JACK-MIDI | ✅ fertig |
 | 3 | Feinschliff der Oberfläche (Zwischenablage, Tastatur-Layouts, HiDPI) | offen |
-| 4 | VST3-Hosting inklusive Plugin-Editoren | offen |
+| 4 | VST3-Hosting inklusive Plugin-Editoren | ✅ fertig |
 | 5 | Installation, Paketierung, CLAP (optional) | offen |
 
 Die komplette Oberfläche läuft (Sequencer, Routing, Menüs, Dialoge), Projekte werden geladen und
-gespeichert, Audio und MIDI laufen über JACK, Bounce schreibt WAV-Dateien. Es können noch **keine Plugins**
-geladen werden (VST3 folgt in Etappe 4) – bis dahin ist nur der Master-Eingang als Klangquelle verfügbar.
+gespeichert, Audio und MIDI laufen über JACK, Bounce schreibt WAV-Dateien, und 64-bit-**VST3**-Plugins
+werden geladen – mit Parametern, Programmen, MIDI, Zustand im Projekt und eingebettetem Plugin-Editor.
 
 ## Audio und MIDI (JACK)
 
@@ -43,6 +43,30 @@ Laufzeit geladen.
   Quellen automatisch (unter jack2 ggf. `a2jmidid -e` für ALSA-MIDI-Geräte starten).
 - Wird der JACK-Server beendet, meldet Aodix das; nach dem Neustart von JACK den Treiber unter
   *File → Configuration* erneut übernehmen.
+
+## VST3-Plugins
+
+- **Suchpfade:** Voreingestellt sind die Standardorte `~/.vst3`, `/usr/lib/vst3` und `/usr/local/lib/vst3`.
+  Weitere Ordner lassen sich unter *File → Configuration → VST Plugins* eintragen (Unterordner werden
+  durchsucht). Ein Bundle mit mehreren Plugins (z. B. mda-vst3) erscheint in der Bibliothek als Untermenü.
+- **Laden:** wie im Original per Doppelklick auf einen leeren Instanz-Platz; Doppelklick auf eine geladene
+  Instanz öffnet den Plugin-Editor. Ist *Instance To Master Autolink* aktiv, wird eine neue Instanz direkt mit
+  dem Master-Ausgang verbunden.
+- **MIDI:** Noten, Controller, Pitchbend, Aftertouch und Programmwechsel werden in VST3-Ereignisse bzw.
+  Parameter übersetzt (über das `IMidiMapping` des Plugins). MIDI-Ausgaben eines Plugins kommen wie im
+  Original im Routing an.
+- **Parameter und Automation:** Knopfbewegungen im Plugin-Editor erscheinen in der Parameterliste und
+  können aufgenommen werden. Programme kommen aus der Programmliste des Plugins (falls vorhanden).
+- **Projekte:** Der vollständige Plugin-Zustand (Prozessor + Controller) wird im `.adx` gespeichert. Die Plugin-
+  Klasse wird über eine aus der VST3-Klassen-ID abgeleitete 32-bit-ID wiedergefunden, das Bundle notfalls
+  über seinen Namen in den Suchpfaden (Projekte lassen sich also auf einen anderen Rechner mitnehmen).
+- **Editoren:** Die Plugin-Oberfläche wird in das Aodix-Instanzfenster eingebettet (X11). Plugins, die ihre
+  Größe ändern wollen oder frei skalierbar sind, werden unterstützt.
+- Windows-Plugins (`.dll`) und VST 2 werden nicht geladen.
+
+Getestet mit den Beispiel-Plugins des VST3-SDK (u. a. mda JX10, ADelay) und einem eigenen Test-Instrument
+mit Editor (`tests/vst3_test_synth`). Kommerzielle Plugins wie u-he BazilleCM oder TetraOP benutzen dieselben
+Schnittstellen; Rückmeldungen dazu sind willkommen.
 
 ## Bauen
 
@@ -84,7 +108,9 @@ verwendet Aodix einen eingebauten Dateidialog.
 src/aodix/      Original-Programmcode von Aodix (nur dort geändert, wo die Portierung es erfordert)
 src/argulib/    Arguru-Hilfsbibliothek (Original)
 src/platform/   Win32-Kompatibilitätsschicht auf X11 (Zeichnen, Fenster, Menüs, Dialoge)
-src/plugin/     Plugin-Schnittstelle (AdxPlugin), später VST3-/CLAP-Implementierung
+src/plugin/     Plugin-Schnittstelle (AdxPlugin) und VST3-Host (plugin_vst3.cpp)
+third_party/    benötigter Teil des VST3-SDK 3.8 (MIT-Lizenz)
+tests/          Test-Plugin für den VST3-Host
 resources/      Skins, Hilfe, Icon, Desktop-Eintrag
 docs/           Dateiformat, Portierungsnotizen
 ```
@@ -110,4 +136,5 @@ git diff 77e4cf3 -- src/aodix   # alle Änderungen am Original-Aodix-Code
 MIT-Lizenz wie das Original (siehe `LICENSE`). Aodix wurde von Juan Antonio Arguelles Rius („Arguru“)
 und Zafer Kantar entwickelt, die Grafiken stammen von Paul Merchant und Marc De Haar; weitere Arbeiten von
 J. van't Hoog (Aodix Enhanced). Die eingebettete Oberflächenschrift ist aus DejaVu Sans Condensed
-gerendert (freie Bitstream-Vera-/DejaVu-Lizenz).
+gerendert (freie Bitstream-Vera-/DejaVu-Lizenz). Der mitgelieferte Teil des VST3-SDK von Steinberg steht
+unter der MIT-Lizenz (`third_party/vst3sdk/LICENSE.txt`); VST ist eine Marke der Steinberg Media Technologies GmbH.

@@ -30,7 +30,8 @@ void CAodixCore::export_adx_pin(ADX_PIN* pin_array,int num_pins,FILE* pfile)
 		fwrite(&pp->num_wires,sizeof(int),1,pfile);
 
 		// write wire data
-		fwrite(pp->pwire,sizeof(ADX_WIRE),pp->num_wires,pfile);
+		if(pp->num_wires>0)
+			fwrite(pp->pwire,sizeof(ADX_WIRE),pp->num_wires,pfile);
 	}
 }
 
@@ -69,8 +70,9 @@ void CAodixCore::export_adx_file(HWND const hwnd,char* filename)
 		// enter critical section
 		audio_enter_cs();
 
-		// update last file saved
-		strcpy(user_last_file,filename);
+		// update last file saved (linux port: "save" passes user_last_file itself, overlapping strcpy is undefined)
+		if(filename!=user_last_file)
+			strcpy(user_last_file,filename);
 
 		// update recent files
 		recent_files_push(filename);

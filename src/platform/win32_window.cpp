@@ -3,6 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "win32_internal.h"
 #include "resources_data.h"
+#include "adxplat_runloop.h"
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -238,6 +239,41 @@ void adxplat::add_fd_watch(int fd,fd_callback cb,void* user)
 void adxplat::remove_fd_watch(int fd,void* user)
 {
 	g_fd_watches.erase(std::remove_if(g_fd_watches.begin(),g_fd_watches.end(),[&](const FdWatch& w){return w.fd==fd && w.user==user;}),g_fd_watches.end());
+}
+
+void adxplat::remove_fd_watches(void* user)
+{
+	g_fd_watches.erase(std::remove_if(g_fd_watches.begin(),g_fd_watches.end(),[&](const FdWatch& w){return w.user==user;}),g_fd_watches.end());
+}
+
+// timers for plugin run loops: windows style timers without window, identified by id
+struct PlatformTimer
+{
+	adxplat::timer_callback	cb;
+	void*					user;
+};
+static std::map<UINT_PTR,PlatformTimer> g_platform_timers;
+static UINT_PTR g_next_platform_timer=0x7F000000;
+
+static void platform_timer_proc(HWND,UINT,UINT_PTR id,DWORD)
+{
+	auto it=g_platform_timers.find(id);
+	if(it!=g_platform_timers.end())
+		it->second.cb(it->second.user);
+}
+
+unsigned long adxplat::timer_start(unsigned int interval_ms,timer_callback cb,void* user)
+{
+	UINT_PTR const id=g_next_platform_timer++;
+	g_platform_timers[id]={cb,user};
+	SetTimer(nullptr,id,interval_ms,platform_timer_proc);
+	return id;
+}
+
+void adxplat::timer_stop(unsigned long id)
+{
+	KillTimer(nullptr,id);
+	g_platform_timers.erase(id);
 }
 
 void screen_size(int* w,int* h)
@@ -660,6 +696,30 @@ static void create_x_window(Win32Window* w,int width,int height,bool popup)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// window manager size hints: top level windows without WS_THICKFRAME (e.g. plugin editor frames) get a fixed size
+static void set_wm_normal_hints(Win32Window* wnd,bool has_pos,int x,int y)
+{
+	if(!wnd || !wnd->xwin || wnd->parent || wnd->is_popup || wnd->dlg)
+		return;
+	XSizeHints* hints=XAllocSizeHints();
+	hints->flags=0;
+	if(has_pos)
+	{
+		hints->flags|=USPosition|PPosition;
+		hints->x=x;
+		hints->y=y;
+	}
+	if(!(wnd->style & WS_THICKFRAME))
+	{
+		hints->flags|=PMinSize|PMaxSize;
+		hints->min_width=hints->max_width=std::max<int>(wnd->rect.right,1);
+		hints->min_height=hints->max_height=std::max<int>(wnd->rect.bottom,1)+wnd->menubar_h;
+	}
+	XSetWMNormalHints(g_dpy,wnd->xwin,hints);
+	XFree(hints);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 static Win32Window* new_window_struct(void)
 {
 	Win32Window* w=new Win32Window();
@@ -763,17 +823,10 @@ HWND CreateWindowEx(DWORD ex_style,LPCSTR class_name,LPCSTR window_name,DWORD st
 		if(ex_style & WS_EX_TOOLWINDOW)
 			XChangeProperty(g_dpy,wnd->xwin,a_net_wm_type,XA_ATOM,32,PropModeReplace,(const unsigned char*)&a_net_wm_type_normal,1);
 
-		// position
+		// position and (for windows without sizing border) fixed size
+		set_wm_normal_hints(wnd,x!=CW_USEDEFAULT,x,y);
 		if(x!=CW_USEDEFAULT)
-		{
-			XSizeHints* hints=XAllocSizeHints();
-			hints->flags=USPosition|PPosition;
-			hints->x=x;
-			hints->y=y;
-			XSetWMNormalHints(g_dpy,wnd->xwin,hints);
-			XFree(hints);
 			XMoveWindow(g_dpy,wnd->xwin,x,y);
-		}
 
 		wnd->visible=false;
 	}
@@ -1107,6 +1160,8 @@ BOOL SetWindowPos(HWND hwnd,HWND,int x,int y,int cx,int cy,UINT flags)
 		hwnd->rect.bottom=std::max(cy,1);
 		create_surface(hwnd,hwnd->rect.right,hwnd->rect.bottom+hwnd->menubar_h);
 		hwnd->invalid=true;
+		if(!(hwnd->style & WS_THICKFRAME))
+			set_wm_normal_hints(hwnd,!(flags & SWP_NOMOVE),x,y);
 	}
 
 	if(!(flags & SWP_NOZORDER) || ((flags & SWP_NOMOVE) && (flags & SWP_NOSIZE)))
