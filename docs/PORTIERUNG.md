@@ -110,6 +110,39 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   Richtungen (mit und ohne laufendes Audio), Editor mit Größenwunsch, Zustand speichern/laden, Reihenfolge
   beim Beenden, AddressSanitizer.
 
+**LV2-Host** (`plugin_lv2.cpp`)
+- Die RDF-Beschreibungen liest **lilv**, das wie libjack erst zur Laufzeit geladen wird (`dlopen("liblilv-0.so.0")`,
+  eigene Deklarationen der benötigten Funktionen; keine Build-Abhängigkeit). Die LV2-Header (ISC-Lizenz) liegen
+  in `third_party/lv2`. Die lilv-Welt wird beim ersten Aufbau der Bibliothek im GUI-Thread angelegt
+  (`lilv_world_load_all`: `$LV2_PATH` bzw. die Standardorte) und bis zum Programmende behalten.
+- `plugin_registry.cpp` erkennt LV2 am Pfad (`*.lv2`, das Bundle-Verzeichnis). Als Plugin-ID dient ein
+  32-bit-FNV-Hash der Plugin-URI; geladen wird das Plugin mit diesem Hash, egal wo sein Bundle liegt
+  (deshalb überspringt `import_localize_vst_dll` die Suche für `.lv2`-Pfade).
+- Host-Features: `urid:map`/`unmap` (global, mit Mutex), `options` (Blocklängen, `sequenceSize`, Samplerate,
+  `ui:updateRate`), `bufsz:boundedBlockLength`, `worker:schedule` (ein gemeinsamer Worker-Thread; Anfragen und
+  Antworten über lockfreie Ringpuffer, `work_response` und `end_run` im Audio-Thread), `log`. Plugins, die ein
+  anderes Pflicht-Feature verlangen, werden mit Meldung abgelehnt.
+- Ports: Audio-Ports pro Block an Aodix' Puffer angeschlossen; Steuer-Eingänge → Aodix-Parameter (Bereich,
+  `toggled`, `integer`/`enumeration`, `logarithmic`, `sampleRate`; `freeWheeling`-Ports ausgeblendet), Werte
+  atomar wie bei LADSPA; Atom-Eingang für MIDI (Ereignisse mit Sample-Offset) und `time:Position` (gesendet bei
+  Start/Stopp, Tempowechsel und Sprung); Atom-Ausgänge: MIDI an Aodix (`plugin_midi_out`), alle Ereignisse an die
+  Oberfläche. CV-Ports werden mit Stille bzw. einem Puffer verbunden.
+- Zustand: Chunk `"ADXLV2S1"` + lilv-Zustand als Turtle (`lilv_state_new_from_instance` / `lilv_state_to_string`,
+  Port-Werte und der eigene Zustand des Plugins); Laden mit `lilv_state_new_from_string` + `lilv_state_restore`.
+  Bei geänderter Samplerate wird das Plugin mit seinem Zustand neu instanziiert.
+- Oberflächen: `ui:X11UI` mit `ui:parent`, `ui:resize` (in beide Richtungen), `ui:portMap`, `instance-access`,
+  `data-access`, `options`; das Idle-Interface wird per Timer (~30 Hz) aufgerufen. Steuerwerte gehen bei Änderung
+  per `port_event` an die Oberfläche, Bedienungen in der Oberfläche als Parameter (und Automation) an Aodix bzw.
+  als Atom-Nachricht (`atom:eventTransfer`) an das Plugin. Größen, die Aodix dem Fenster selbst gegeben hat,
+  werden nicht als Benutzer-Größenänderung an die Oberfläche zurückgegeben (wie bei CLAP).
+- Bibliothek: eigenes Untermenü „LV2“ (alphabetisch, Bundles mit mehreren Plugins als Untermenü), keine
+  Ordner-Einstellung.
+- Geprüft mit einem eigenen Test-Instrument (`tests/lv2_test_synth`: alle Port-Arten, Worker, Zustand, MIDI-Echo,
+  `time:Position`, X11-Oberfläche mit Idle-Interface und Größenänderung) und den LV2-Beispiel-Plugins
+  (eg-amp, eg-metro, eg-midigate, eg-fifths, eg-params): Laden, Noten, Parameter in beide Richtungen,
+  Zustand speichern/laden (auch mit verschobenem Bundle), Beenden mit offenem Editor, AddressSanitizer,
+  ThreadSanitizer.
+
 **LADSPA-Host** (`plugin_ladspa.cpp`)
 - Eigene Schnittstellendefinitionen nach der öffentlichen LADSPA-1.1-Spezifikation (ABI-kompatibel zu
   `ladspa.h`, damit das Projekt vollständig MIT-lizenziert bleibt). `plugin_registry.cpp` verteilt `scan`/`load`
@@ -195,7 +228,10 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 ## Bekannte Einschränkungen
 
-- VST3, CLAP und LADSPA (64-bit Linux). Windows-Plugins, VST 2, LV2, DSSI und 32-bit-Plugins werden nicht geladen.
+- VST3, CLAP, LV2 und LADSPA (64-bit Linux). Windows-Plugins, VST 2, DSSI und 32-bit-Plugins werden nicht geladen.
+- LV2: nur X11-Oberflächen (keine GTK-/Qt-Oberflächen, kein suil); keine Presets aus dem Bundle im Programm-Menü,
+  kein `patch:`-Parameter-Protokoll in der Parameterliste (Plugins wie eg-params sind über ihre eigene
+  Oberfläche bedienbar); neue Plugins erscheinen nach einem Neustart.
 - CLAP: keine Preset-Browser-, MPE- oder Note-Expression-Unterstützung; Plugin-Presets über die Plugin-Oberfläche.
 - Alte Windows-Projekte mit VST-2-Plugins: Ein VST3-Nachfolger desselben Plugins hat eine andere ID und ein
   anderes Zustandsformat; solche Instanzen müssen neu geladen und eingestellt werden.
@@ -230,4 +266,4 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 2. ~~**JACK**~~ erledigt (Audio bis 32 Ports, MIDI-Eingang, Bounce ohne Trennung).
 3. **Oberfläche**: ~~Skalierung 1,5× und 2×~~ und ~~Tastatur-Layouts (QWERTY/QWERTZ/AZERTY)~~ erledigt und getestet; offen: Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
-5. **Paketierung**: Installationspaket, MIME-Typ für `.adx` (CLAP und LADSPA sind bereits erledigt).
+5. **Paketierung**: Installationspaket, MIME-Typ für `.adx` (CLAP, LV2 und LADSPA sind bereits erledigt).

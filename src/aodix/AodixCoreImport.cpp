@@ -468,6 +468,11 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 	if(pfilename[0]!=0 && access(pfilename,R_OK)==0)
 		return 1;
 
+	// linux port: lv2 plugins are found again by their uri (lilv knows all installed bundles), the stored bundle path is
+	// only a hint
+	if(adx_plugin_is_lv2(pfilename))
+		return 1;
+
 	// file doesnt exist in current path, extract filetitle
 	char filetitle[_MAX_PATH];
 	filetitle[0]=0;

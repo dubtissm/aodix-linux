@@ -5,6 +5,9 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "AodixCore.h"
 
+#include <algorithm>
+#include <strings.h>
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 WNDPROC gl_wp_orig_edit_proc;
 
@@ -622,6 +625,63 @@ void CAodixCore::gui_vst_build_lib(void)
 		DestroyMenu(hmenu_clap);
 	}
 
+	// linux port: lv2 plugins (found by lilv in the standard lv2 places) in their own sub menu, bundles with several plugins
+	// get a sub menu of their own
+	std::vector<AdxPluginDesc> lv2;
+	adx_lv2_list(lv2);
+	std::stable_sort(lv2.begin(),lv2.end(),[](const AdxPluginDesc& a,const AdxPluginDesc& b){return strcasecmp(a.name.c_str(),b.name.c_str())<0;});
+
+	HMENU const hmenu_lv2=CreatePopupMenu();
+	int num_lv2=0;
+	std::vector<std::string> lv2_done;
+	for(size_t i=0;i<lv2.size() && vst_lib.num_dlls<MAX_VST_LIB_ENTRIES;i++)
+	{
+		std::string const& bundle=lv2[i].path;
+		if(std::find(lv2_done.begin(),lv2_done.end(),bundle)!=lv2_done.end())
+			continue;
+		lv2_done.push_back(bundle);
+
+		std::vector<size_t> members;
+		for(size_t j=i;j<lv2.size();j++)
+			if(lv2[j].path==bundle)
+				members.push_back(j);
+
+		HMENU target_menu=hmenu_lv2;
+		if(members.size()>1)
+		{
+			// bundle name without directory and ".lv2"
+			std::string label=bundle.substr(bundle.find_last_of('/')+1);
+			if(label.size()>4 && label.compare(label.size()-4,4,".lv2")==0)
+				label.resize(label.size()-4);
+			target_menu=CreatePopupMenu();
+			if(num_lv2>0 && (num_lv2&0x1F)==0)
+				AppendMenu(hmenu_lv2,MFT_STRING | MF_POPUP | MF_MENUBARBREAK,(UINT_PTR)target_menu,label.c_str());
+			else
+				AppendMenu(hmenu_lv2,MFT_STRING | MF_POPUP,(UINT_PTR)target_menu,label.c_str());
+			num_lv2++;
+		}
+
+		int sub_count=0;
+		for(size_t m=0;m<members.size() && vst_lib.num_dlls<MAX_VST_LIB_ENTRIES;m++)
+		{
+			AdxPluginDesc const& d=lv2[members[m]];
+			gui_vst_add_lib_item(target_menu,(members.size()>1)?sub_count++:num_lv2++,IDM_VST_LIB+vst_lib.num_dlls,(char*)d.name.c_str());
+			snprintf(vst_lib.dll_path[vst_lib.num_dlls],_MAX_PATH,"%s",d.path.c_str());
+			vst_lib.dll_id[vst_lib.num_dlls]=d.uniqueID;
+			vst_lib.num_dlls++;
+		}
+	}
+	if(num_lv2>0)
+	{
+		if(num_before_clap>0 && num_clap==0)
+			AppendMenu(hmenu_vst_lib,MF_SEPARATOR,0,NULL);
+		AppendMenu(hmenu_vst_lib,MFT_STRING | MF_POPUP,(UINT_PTR)hmenu_lv2,"LV2");
+	}
+	else
+	{
+		DestroyMenu(hmenu_lv2);
+	}
+
 	// linux port: ladspa plugins from the standard ladspa folders in their own sub menu
 	std::vector<std::string> ladspa_dirs;
 	adx_ladspa_paths(ladspa_dirs);
@@ -637,7 +697,7 @@ void CAodixCore::gui_vst_build_lib(void)
 
 	if(num_ladspa>0)
 	{
-		if(vst_lib.num_dlls>0 && num_clap==0)
+		if(num_before_clap>0 && num_clap==0 && num_lv2==0)
 			AppendMenu(hmenu_vst_lib,MF_SEPARATOR,0,NULL);
 		AppendMenu(hmenu_vst_lib,MFT_STRING | MF_POPUP,(UINT_PTR)hmenu_ladspa,"LADSPA");
 	}

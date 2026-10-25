@@ -163,6 +163,12 @@ bool		adx_plugin_is_ladspa(const char* path);
 // the existing LADSPA folders ($LADSPA_PATH, ~/.ladspa, /usr/local/lib/ladspa, /usr/lib/ladspa, ...)
 void		adx_ladspa_paths(std::vector<std::string>& dirs);
 
+// true if a path is an LV2 bundle (".lv2"); LV2 plugins are found through lilv in the standard LV2 places
+bool		adx_plugin_is_lv2(const char* path);
+
+// all installed LV2 plugins (path = bundle directory); empty if lilv is not installed
+void		adx_lv2_list(std::vector<AdxPluginDesc>& out);
+
 // list the plugins contained in a bundle / file
 int			adx_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
 
@@ -175,4 +181,6 @@ AdxPlugin*	vst3_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* ho
 int			ladspa_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
 int			clap_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
 AdxPlugin*	clap_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);
+int			lv2_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
+AdxPlugin*	lv2_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);
 AdxPlugin*	ladspa_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);

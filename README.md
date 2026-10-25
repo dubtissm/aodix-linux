@@ -8,7 +8,7 @@ Ziele der Portierung:
 
 - natives 64-bit-Linux-Programm (X11, unter Wayland über XWayland)
 - **JACK** statt ASIO für Audio und MIDI
-- **VST3**- und **CLAP**-Plugins (64-bit Linux) sowie **LADSPA**-Effekte
+- **VST3**-, **CLAP**- und **LV2**-Plugins (64-bit Linux) sowie **LADSPA**-Effekte
 - alte `.adx`-Projekte bleiben lesbar und werden im selben Format gespeichert
 
 ![Aodix unter Linux](docs/screenshot-stage1.png)
@@ -111,6 +111,23 @@ Plugin-Bibliothek im Untermenü **CLAP**. Gesucht wird in den vier Ordnern unter
 
 Getestet mit u-he **Bazille** (CLAP) inklusive Oberfläche und Änderung der GUI-Skalierung im Plugin.
 
+## LV2-Plugins
+
+LV2-Plugins erscheinen in der Plugin-Bibliothek im Untermenü **LV2**, alphabetisch sortiert; Bundles mit
+mehreren Plugins bekommen ein eigenes Untermenü. Eine Ordner-Einstellung gibt es nicht: Aodix findet die
+Plugins wie andere LV2-Hosts über die Bibliothek **lilv** in den Standardorten (`$LV2_PATH`, sonst `~/.lv2`,
+`/usr/local/lib/lv2`, `/usr/lib/lv2`).
+
+- **Voraussetzung:** `liblilv-0.so.0` (Paket `liblilv-0-0` bzw. `lilv`, auf den meisten Systemen mit Audio-Software
+  schon installiert). Aodix lädt die Bibliothek erst zur Laufzeit; fehlt sie, gibt es einfach kein LV2-Menü.
+- Instrumente und Effekte, MIDI (auch MIDI-Ausgabe des Plugins), Parameter aus den Steuer-Ports (mit Bereich,
+  logarithmisch, ganzzahlig, an/aus), Automation, Tempo und Transport (`time:Position`), Hintergrund-Arbeit der
+  Plugins (Worker), Zustand im Projekt, Mehrkern-Verarbeitung.
+- **Oberflächen:** X11-Oberflächen (`ui:X11UI`) werden eingebettet, mit Größenänderung. Plugins, die nur eine
+  GTK- oder Qt-Oberfläche haben, werden über die Aodix-Parameterliste bedient.
+- **Projekte:** Gespeichert werden Bundle-Pfad und URI des Plugins; liegt das Bundle später woanders, findet
+  Aodix das Plugin über die URI wieder. Neu installierte LV2-Plugins erscheinen nach einem Neustart von Aodix.
+
 ## LADSPA-Plugins
 
 Neben VST3 lädt Aodix auch LADSPA-Effekte (64-bit). Sie stehen in der Plugin-Bibliothek im Untermenü
@@ -173,10 +190,10 @@ Größeneinstellung. Zum Ausprobieren ohne Konfiguration: `AODIX_UI_SCALE=150 ./
 src/aodix/      Original-Programmcode von Aodix (nur dort geändert, wo die Portierung es erfordert)
 src/argulib/    Arguru-Hilfsbibliothek (Original)
 src/platform/   Win32-Kompatibilitätsschicht auf X11 (Zeichnen, Fenster, Menüs, Dialoge)
-src/plugin/     Plugin-Schnittstelle (AdxPlugin), Hosts für VST3, CLAP und LADSPA (plugin_*.cpp)
+src/plugin/     Plugin-Schnittstelle (AdxPlugin), Hosts für VST3, CLAP, LV2 und LADSPA (plugin_*.cpp)
                 (Mehrkern-Verarbeitung: src/aodix/AodixCoreDspGraph.cpp, AodixDspPool.cpp)
-third_party/    benötigter Teil des VST3-SDK 3.8 und die CLAP-Header 1.2.2 (beide MIT-Lizenz)
-tests/          Test-Plugins für den VST3- und den CLAP-Host
+third_party/    benötigter Teil des VST3-SDK 3.8, die CLAP-Header 1.2.2 (beide MIT) und die LV2-Header (ISC)
+tests/          Test-Plugins für den VST3-, CLAP- und LV2-Host
 resources/      Skins, Hilfe, Icon, Desktop-Eintrag
 docs/           Dateiformat, Portierungsnotizen
 ```
