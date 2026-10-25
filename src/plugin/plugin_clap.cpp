@@ -276,6 +276,12 @@ private:
 
 	// editor
 	bool							gui_created;
+	std::atomic<uint64_t>			pending_resize;			// width<<32 | height requested from another thread
+	std::atomic<bool>				gui_destroy_requested;	// the plugin lost its gui (closed with was_destroyed)
+
+	// activation changes requested outside the main thread (e.g. jack sample rate callback), done in idle()
+	std::atomic<double>				deferred_rate;
+	std::atomic<int>				deferred_active;		// -1 = none
 	struct TimerCtx { ClapPlugin* self; clap_id id; };
 	std::map<clap_id,TimerCtx*>		timers;
 	std::vector<int>				fds;
@@ -314,17 +320,24 @@ struct ClapHostExt
 
 	// gui
 	static void CLAP_ABI gui_resize_hints_changed(const clap_host_t*) {}
+	// [thread-safe]: the aodix window may only be touched in the gui thread, other threads are served in idle().
+	// the host must not call set_size() here (not allowed for non-resizable editors, e.g. u-he plugins terminate)
 	static bool CLAP_ABI gui_request_resize(const clap_host_t* h,uint32_t w,uint32_t hh)
 	{
 		ClapPlugin* cp=p(h);
-		cp->host->plugin_resize_editor(cp,(int)w,(int)hh);
-		if(cp->gui_created && cp->ext_gui->set_size)
-			cp->ext_gui->set_size(cp->plugin,w,hh);
+		if(w==0 || hh==0)
+			return false;
+		if(std::this_thread::get_id()==g_main_thread)
+			cp->host->plugin_resize_editor(cp,(int)w,(int)hh);
+		else
+		{
+			cp->pending_resize.store(((uint64_t)w<<32)|hh);
+		}
 		return true;
 	}
 	static bool CLAP_ABI gui_request_show(const clap_host_t*) { return false; }
 	static bool CLAP_ABI gui_request_hide(const clap_host_t*) { return false; }
-	static void CLAP_ABI gui_closed(const clap_host_t* h,bool was_destroyed) { if(was_destroyed) p(h)->gui_created=false; }
+	static void CLAP_ABI gui_closed(const clap_host_t* h,bool was_destroyed) { if(was_destroyed) p(h)->gui_destroy_requested=true; }
 
 	// timers
 	static void timer_cb(void* user)
@@ -446,6 +459,10 @@ ClapPlugin::ClapPlugin(const ClapModule* m,const clap_plugin_descriptor_t* d,Adx
 	callback_requested=false;
 	rescan_params=false;
 	gui_created=false;
+	pending_resize=0;
+	gui_destroy_requested=false;
+	deferred_rate=0.0;
+	deferred_active=-1;
 	program_name="Default";
 
 	memset(&host_struct,0,sizeof(host_struct));
@@ -672,6 +689,11 @@ void ClapPlugin::setSampleRate(double rate)
 {
 	if(rate<=0.0)
 		return;
+	if(std::this_thread::get_id()!=g_main_thread)
+	{
+		deferred_rate=rate;
+		return;
+	}
 	bool const was_active=active;
 	if(was_active && rate!=sample_rate)
 		setActive(false);
@@ -682,6 +704,12 @@ void ClapPlugin::setSampleRate(double rate)
 
 void ClapPlugin::setActive(bool a)
 {
+	if(std::this_thread::get_id()!=g_main_thread)
+	{
+		// clap activation belongs to the main thread
+		deferred_active=a?1:0;
+		return;
+	}
 	if(!plugin || a==active)
 		return;
 
@@ -1059,6 +1087,24 @@ void ClapPlugin::idle(void)
 	if(callback_requested.exchange(false))
 		plugin->on_main_thread(plugin);
 
+	// activation changes requested from other threads
+	double const dr=deferred_rate.exchange(0.0);
+	if(dr>0.0)
+		setSampleRate(dr);
+	int const da=deferred_active.exchange(-1);
+	if(da>=0)
+		setActive(da!=0);
+
+	// editor requests made from other threads
+	uint64_t const rs=pending_resize.exchange(0);
+	if(rs && gui_created)
+		host->plugin_resize_editor(this,(int)(rs>>32),(int)(rs&0xFFFFFFFFu));
+	if(gui_destroy_requested.exchange(false) && gui_created)
+	{
+		ext_gui->destroy(plugin);
+		gui_created=false;
+	}
+
 	if(rescan_params.exchange(false))
 	{
 		refresh_param_values();
@@ -1100,7 +1146,11 @@ void ClapPlugin::idle(void)
 			}
 			proc_work.clear();
 			midi_out.clear();
+
+			// while the plugin is active, flush belongs to the audio thread: with the busy lock held this thread is it
+			tl_audio_thread=true;
 			ext_params->flush(plugin,&in_list,&out_list);
+			tl_audio_thread=false;
 			busy.unlock();
 		}
 	}
@@ -1117,8 +1167,6 @@ bool ClapPlugin::editorGetSize(int* width,int* height)
 		if(!ext_gui->create(plugin,CLAP_WINDOW_API_X11,false))
 			return false;
 		gui_created=true;
-		if(ext_gui->set_scale)
-			ext_gui->set_scale(plugin,1.0);
 	}
 	uint32_t w=0,h=0;
 	if(!ext_gui->get_size(plugin,&w,&h) || w==0 || h==0)

@@ -186,7 +186,13 @@ static void on_fd(const clap_plugin_t* p,int,clap_posix_fd_flags_t)
 		{
 			tlog("click %d %d button %d",e.xbutton.x,e.xbutton.y,e.xbutton.button);
 			if(e.xbutton.button==1) { s->gain=e.xbutton.x/(double)s->w; s->gui_edit=true; draw(s); }
-			else if(e.xbutton.button==3 && s->host_gui) { bool ok=s->host_gui->request_resize(s->host,s->w+100,s->h+50); tlog("request_resize -> %d",ok); }
+			else if(e.xbutton.button==3 && s->host_gui)
+			{
+				unsigned const nw=s->w+100,nh=s->h+50;
+				bool ok=s->host_gui->request_resize(s->host,nw,nh);
+				tlog("request_resize -> %d",ok);
+				if(ok) { s->w=nw; s->h=nh; XResizeWindow(s->dpy,s->win,nw,nh); draw(s); }
+			}
 		}
 	}
 }
@@ -207,12 +213,14 @@ static void g_destroy(const clap_plugin_t* p)
 }
 static bool g_scale(const clap_plugin_t*,double) { return true; }
 static bool g_size(const clap_plugin_t* p,uint32_t* w,uint32_t* h) { *w=S(p)->w; *h=S(p)->h; return true; }
-static bool g_can_resize(const clap_plugin_t*) { return true; }
+static bool g_can_resize(const clap_plugin_t*) { return getenv("ADXTEST_FIXED_GUI")==nullptr; }
 static bool g_hints(const clap_plugin_t*,clap_gui_resize_hints_t* h) { memset(h,0,sizeof(*h)); h->can_resize_horizontally=h->can_resize_vertically=true; return true; }
 static bool g_adjust(const clap_plugin_t*,uint32_t* w,uint32_t* h) { if(*w<200) *w=200; if(*h<100) *h=100; return true; }
 static bool g_set_size(const clap_plugin_t* p,uint32_t w,uint32_t h)
 {
-	Synth* s=S(p); s->w=w; s->h=h; tlog("set_size %u %u",w,h);
+	Synth* s=S(p);
+	if(getenv("ADXTEST_FIXED_GUI")) { tlog("HOST MISBEHAVING: set_size on a non-resizable gui"); return false; }
+	s->w=w; s->h=h; tlog("set_size %u %u",w,h);
 	if(s->dpy) { XResizeWindow(s->dpy,s->win,w,h); draw(s); }
 	return true;
 }
