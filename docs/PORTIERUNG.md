@@ -60,6 +60,9 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   Die Klassenliste kommt aus `moduleinfo.json`, sonst aus der Factory.
 - 32-bit-ID für das Projekt: FNV-1a-Hash der 16-Byte-Klassen-ID (das `.adx`-Format hat nur 32 bit Platz).
 - Prozessor und Controller getrennt oder als Einzelkomponente, verbunden über `ConnectionProxy`.
+- Busse: Haupt-Ein-/Ausgänge, die das Plugin mono anlegt, werden vor dem Aktivieren per `setBusArrangements`
+  auf Stereo angefragt (JUCE-Plugins mit flexiblem Layout, z. B. Signalizer, starten sonst mono); lehnt das
+  Plugin ab, bleibt sein Layout. Geprüft mit `ADXTEST_FLEX=1` im Test-Instrument.
   Alle Audio-Busse werden aktiviert und zu einer flachen Kanalliste zusammengefasst (Aodix-Pins).
 - Parameter: Aodix arbeitet mit Index 0…n, VST3 mit IDs – Abbildung beim Laden. Änderungen aus Aodix gehen
   über eine Warteschlange an den Prozessor (Audio-Thread, `IParameterChanges`) und an den Controller (GUI-Thread).
@@ -217,7 +220,7 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 **Version und Credits**
 - Programmversion 4.2.1.x (`project()` in `CMakeLists.txt`, als `AODIX_VERSION_STRING` im Code), Fenstertitel
-  „Aodix 4.2.1.1 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
+  „Aodix 4.2.1.2 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
   denn das Format ist unverändert und Aodix 4.2.0.3 unter Windows lehnt Dateien ab 4300 ab.
 - About-Dialog (breiter, eine Zeile mehr): Arguelles Rius & Kantar (bis 4.2.0.1), J. van't Hoog (bis 4.2.0.3),
   Linux-Version und Weiterentwicklung: Marcus Honnacker via Claude Opus 5.5.

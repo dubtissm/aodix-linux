@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.2.1.2 (2026-10-25)
+
+- VST3: plugins with a flexible channel layout that start with mono busses (for example JUCE plugins such as
+  Signalizer) are asked for stereo main inputs and outputs, as other hosts do. Plugins that only support mono
+  keep their layout.
+
 ## 4.2.1.1 (2026-10-25)
 
 - PipeWire without `pw-jack`: if no JACK server is reachable, Aodix loads PipeWire's JACK library itself, so

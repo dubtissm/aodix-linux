@@ -244,6 +244,7 @@ public:
 	void		setSampleRate(double rate) override;
 	void		setBlockSize(int frames) override {(void)frames;}	// max block size is fixed to the aodix maximum
 	void		setActive(bool active) override;
+	void		negotiate_stereo(void);
 
 	float		getParameter(int index) override;
 	void		setParameter(int index,float value) override;
@@ -367,6 +368,38 @@ tresult PLUGIN_API PlugFrame::resizeView(IPlugView* view,ViewRect* new_size)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// ask for stereo main busses where the plugin starts with mono ones (only kept if the plugin accepts)
+void Vst3Plugin::negotiate_stereo(void)
+{
+	if(!processor || !component)
+		return;
+	std::vector<SpeakerArrangement> arr[2];
+	bool change=false;
+	for(int dir=0;dir<2;dir++)
+	{
+		BusDirection const bd=dir?kOutput:kInput;
+		int32 const n=component->getBusCount(kAudio,bd);
+		for(int32 b=0;b<n;b++)
+		{
+			SpeakerArrangement sa=0;
+			if(processor->getBusArrangement(bd,b,sa)!=kResultTrue)
+				return;
+			BusInfo bi;
+			if(component->getBusInfo(kAudio,bd,b,bi)==kResultTrue && bi.busType==kMain && SpeakerArr::getChannelCount(sa)==1)
+			{
+				sa=SpeakerArr::kStereo;
+				change=true;
+			}
+			arr[dir].push_back(sa);
+		}
+	}
+	if(!change)
+		return;
+	tresult const r=processor->setBusArrangements(arr[0].empty()?nullptr:arr[0].data(),(int32)arr[0].size(),arr[1].empty()?nullptr:arr[1].data(),(int32)arr[1].size());
+	fprintf(stderr,"aodix: vst3: stereo main busses %s\n",r==kResultTrue?"accepted":"rejected, keeping the plugin's layout");
+}
+
 bool Vst3Plugin::init(VST3::Hosting::Module::Ptr mod,const VST3::Hosting::ClassInfo& info,std::string& error)
 {
 	module=mod;
@@ -443,6 +476,11 @@ bool Vst3Plugin::init(VST3::Hosting::Module::Ptr mod,const VST3::Hosting::ClassI
 			controller->setComponentState(&stream);
 		}
 	}
+
+	// busses: plugins with a flexible channel layout (e.g. JUCE plugins like Signalizer) may start with mono main
+	// busses until the host asks for something else - aodix asks for stereo, like other hosts do. a plugin that only
+	// supports mono rejects the arrangement and keeps its busses
+	negotiate_stereo();
 
 	// busses: activate all audio busses and the first event busses
 	numInputs=0;

@@ -41,11 +41,27 @@ public:
 	{
 		tresult r=AudioEffect::initialize(ctx);
 		if(r!=kResultOk) return r;
-		addAudioOutput(STR16("Out"),SpeakerArr::kStereo);
+		// ADXTEST_FLEX=1: mono input and output that also accept stereo (like JUCE plugins with flexible layouts)
+		if(getenv("ADXTEST_FLEX"))
+		{
+			addAudioInput(STR16("In"),SpeakerArr::kMono);
+			addAudioOutput(STR16("Out"),SpeakerArr::kMono);
+		}
+		else
+			addAudioOutput(STR16("Out"),SpeakerArr::kStereo);
 		addEventInput(STR16("Events"),16);
 		return kResultOk;
 	}
 	tresult PLUGIN_API setupProcessing(ProcessSetup& s) SMTG_OVERRIDE{sr=s.sampleRate;return AudioEffect::setupProcessing(s);}
+	tresult PLUGIN_API setBusArrangements(SpeakerArrangement* in,int32 ni,SpeakerArrangement* out,int32 no) SMTG_OVERRIDE
+	{
+		// accept mono or stereo per bus
+		for(int32 i=0;i<ni;i++) if(SpeakerArr::getChannelCount(in[i])>2) return kResultFalse;
+		for(int32 i=0;i<no;i++) if(SpeakerArr::getChannelCount(out[i])>2) return kResultFalse;
+		tresult const r=AudioEffect::setBusArrangements(in,ni,out,no);
+		tlog("setBusArrangements in=%d out=%d -> %d",ni?SpeakerArr::getChannelCount(in[0]):0,no?SpeakerArr::getChannelCount(out[0]):0,(int)r);
+		return r;
+	}
 	tresult PLUGIN_API process(ProcessData& d) SMTG_OVERRIDE
 	{
 		if(d.inputParameterChanges)
@@ -74,7 +90,7 @@ public:
 		}
 		if(d.numOutputs<1 || d.numSamples<=0) return kResultOk;
 		float* l=d.outputs[0].channelBuffers32[0];
-		float* r=d.outputs[0].channelBuffers32[1];
+		float* r=d.outputs[0].numChannels>1?d.outputs[0].channelBuffers32[1]:l;
 		double const inc=440.0*pow(2.0,(note-69)/12.0)/sr;
 		for(int32 s=0;s<d.numSamples;s++)
 		{
@@ -82,7 +98,7 @@ public:
 			phase+=inc; if(phase>=1) phase-=1;
 			l[s]=r[s]=v;
 		}
-		d.outputs[0].silenceFlags=on?0:3;
+		d.outputs[0].silenceFlags=on?0:((1ull<<d.outputs[0].numChannels)-1);
 		return kResultOk;
 	}
 	tresult PLUGIN_API setState(IBStream* st) SMTG_OVERRIDE{float g;int32 n;if(st->read(&g,4,&n)==kResultOk&&n==4)gain=g;return kResultOk;}
