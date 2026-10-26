@@ -234,6 +234,13 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   Wartezeit (UTF8_STRING, sonst STRING). Sehr große Inhalte (INCR) werden nicht gelesen. Die Event-Zwischenablage
   des Sequencers ist davon unabhängig (intern, wie im Original).
 
+**Fensterposition**
+- Das Hauptfenster merkt sich Lage, Größe und Maximiert-Zustand (das Original startete immer maximiert).
+  `win_state`/`win_geom` in `Aodix.cfg` (aus reservierten Bytes; physische Pixel, damit es nach einer Änderung
+  der Skalierung passt). Die Plattformschicht merkt sich bei jedem `ConfigureNotify` die letzte nicht maximierte
+  Geometrie (Rahmenposition über `_NET_FRAME_EXTENTS`, Zustand über `_NET_WM_STATE`); gespeichert wird beim
+  Schließen. Liegt die gespeicherte Position außerhalb des Bildschirms, wird das Fenster zentriert.
+
 **Kleinere Korrekturen**
 - Die Konfiguration wird beim Übernehmen sofort gespeichert (nicht erst beim Beenden) – sie überlebt so
   einen abstürzenden Plugin oder eine beendete Sitzung.

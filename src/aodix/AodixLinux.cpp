@@ -152,3 +152,70 @@ bool adx_project_close_write(FILE* pfile,const char* path)
 		fprintf(stderr,"aodix: '%s': project could not be written\n",path);
 	return ok;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// main window placement (stored in physical pixels, so it fits after changing the ui scaling)
+static int geom_get(const unsigned char* g,int i)
+{
+	return (int16_t)(uint16_t)(g[i*2] | (g[i*2+1]<<8));
+}
+
+static void geom_set(unsigned char* g,int i,int v)
+{
+	v=v<-32768?-32768:(v>32767?32767:v);
+	g[i*2]=(unsigned char)(v & 0xFF);
+	g[i*2+1]=(unsigned char)((v>>8) & 0xFF);
+}
+
+bool CAodixCore::window_placement_restore(int* x,int* y,int* w,int* h)
+{
+	// returns true for a normal (not maximized) window; x/y/w/h get the stored geometry in any case (if known)
+	if(cfg.win_state!=1 && cfg.win_state!=2)
+		return false;
+	int px=geom_get(cfg.win_geom,0);
+	int py=geom_get(cfg.win_geom,1);
+	int pw=geom_get(cfg.win_geom,2);
+	int ph=geom_get(cfg.win_geom,3);
+	if(pw<200 || ph<150)
+		return false;
+
+	// keep the window on the screen (e.g. after removing a monitor)
+	int sw=0,sh=0;
+	adxplat::screen_size_physical(&sw,&sh);
+	if(sw>0 && sh>0)
+	{
+		if(pw>sw) pw=sw;
+		if(ph>sh) ph=sh;
+		if(px>sw-100 || py>sh-100 || px+pw<100 || py<-50)
+		{
+			px=(sw-pw)/2;
+			py=(sh-ph)/2;
+		}
+	}
+
+	*x=adxplat::ui_scale_to_logical(px);
+	*y=adxplat::ui_scale_to_logical(py);
+	*w=adxplat::ui_scale_to_logical(pw);
+	*h=adxplat::ui_scale_to_logical(ph);
+	return cfg.win_state==1;
+}
+
+void CAodixCore::window_placement_save(HWND hwnd)
+{
+	if(cfg.fullscreen)
+		return;
+	int x,y,w,h;
+	bool maximized=false;
+	if(!adxplat::get_window_placement(hwnd,&x,&y,&w,&h,&maximized))
+	{
+		// never seen in normal state: keep the old geometry, remember the maximized state only
+		if(cfg.win_state==1 || cfg.win_state==2)
+			cfg.win_state=2;
+		return;
+	}
+	geom_set(cfg.win_geom,0,x);
+	geom_set(cfg.win_geom,1,y);
+	geom_set(cfg.win_geom,2,w);
+	geom_set(cfg.win_geom,3,h);
+	cfg.win_state=maximized?2:1;
+}

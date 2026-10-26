@@ -130,6 +130,9 @@ LRESULT CALLBACK main_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 		// close window
 		if(MessageBox(hwnd,"Are You Sure?","Aodix - Close",MB_YESNO | MB_ICONQUESTION)==IDYES)
 		{
+			// linux port: remember the window placement (written with the configuration at exit)
+			gl_padx->window_placement_save(hwnd);
+
 			// close asio
 			gl_padx->audio_close(hwnd);
 

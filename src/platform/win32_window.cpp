@@ -902,6 +902,9 @@ static Win32Window* new_window_struct(void)
 	w->mapped=false;
 	w->want_fullscreen=false;
 	w->want_maximized=false;
+	w->track_placement=false;
+	w->have_normal=false;
+	w->normal_x=w->normal_y=w->normal_w=w->normal_h=0;
 	w->xcursor_current=0;
 	w->ctl=nullptr;
 	w->dlg=nullptr;
@@ -1054,6 +1057,90 @@ BOOL DestroyWindow(HWND hwnd)
 		return FALSE;
 	destroy_recursive(hwnd);
 	return TRUE;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// window placement (main window)
+static bool x_window_maximized(::Window xw)
+{
+	Atom type;
+	int format;
+	unsigned long n=0,rest;
+	unsigned char* data=nullptr;
+	bool mv=false,mh=false;
+	if(XGetWindowProperty(g_dpy,xw,a_net_wm_state,0,64,False,XA_ATOM,&type,&format,&n,&rest,&data)==Success && data)
+	{
+		Atom const* a=(Atom const*)data;
+		for(unsigned long i=0;i<n;i++)
+		{
+			if(a[i]==a_net_wm_state_max_v) mv=true;
+			if(a[i]==a_net_wm_state_max_h) mh=true;
+			if(a[i]==a_net_wm_state_fullscreen) mv=mh=true;
+		}
+	}
+	if(data)
+		XFree(data);
+	return mv && mh;
+}
+
+static void record_normal_placement(Win32Window* w)
+{
+	if(!w->track_placement || !w->xwin || !w->mapped || x_window_maximized(w->xwin))
+		return;
+	int rx=0,ry=0;
+	::Window child;
+	if(!XTranslateCoordinates(g_dpy,w->xwin,g_root,0,0,&rx,&ry,&child))
+		return;
+	// frame position = client position minus the frame extents of the window manager
+	long left=0,top=0;
+	Atom type;
+	int format;
+	unsigned long n=0,rest;
+	unsigned char* data=nullptr;
+	static Atom a_extents=XInternAtom(g_dpy,"_NET_FRAME_EXTENTS",False);
+	if(XGetWindowProperty(g_dpy,w->xwin,a_extents,0,4,False,XA_CARDINAL,&type,&format,&n,&rest,&data)==Success && data && n==4)
+	{
+		left=((long*)data)[0];
+		top=((long*)data)[2];
+	}
+	if(data)
+		XFree(data);
+	XWindowAttributes wa;
+	if(!XGetWindowAttributes(g_dpy,w->xwin,&wa))
+		return;
+	w->normal_x=rx-(int)left;
+	w->normal_y=ry-(int)top;
+	w->normal_w=wa.width;
+	w->normal_h=wa.height-phys_len(w,w->menubar_h);
+	w->have_normal=true;
+}
+
+void adxplat::track_window_placement(HWND hwnd)
+{
+	if(is_valid_window(hwnd))
+		hwnd->track_placement=true;
+}
+
+bool adxplat::get_window_placement(HWND hwnd,int* x,int* y,int* w,int* h,bool* maximized)
+{
+	if(!is_valid_window(hwnd) || !hwnd->xwin)
+		return false;
+	bool const maxed=x_window_maximized(hwnd->xwin);
+	if(!maxed)
+		record_normal_placement(hwnd);
+	if(!hwnd->have_normal)
+		return false;
+	*x=hwnd->normal_x;
+	*y=hwnd->normal_y;
+	*w=hwnd->normal_w;
+	*h=hwnd->normal_h;
+	*maximized=maxed;
+	return true;
+}
+
+void adxplat::screen_size_physical(int* w,int* h)
+{
+	screen_size_phys(w,h);
 }
 
 static void set_net_wm_state(Win32Window* w)
@@ -2582,6 +2669,8 @@ static void handle_x_event(XEvent& ev)
 				invalidate_children(top);
 				post_internal(top,WM_SIZE,0,MAKELPARAM(top->rect.right,top->rect.bottom));
 			}
+			if(top->track_placement)
+				record_normal_placement(top);
 			break;
 		}
 

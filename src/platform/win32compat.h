@@ -748,6 +748,15 @@ namespace adxplat
 	void		set_clipboard_text(const char* utf8,bool primary);
 	char*		get_clipboard_text(bool primary);
 
+	// window placement of the main window (physical pixels: frame position, client size without the menu bar).
+	// track_window_placement starts remembering the last normal (not maximized) geometry; get_window_placement
+	// returns it together with the current maximized state (false if nothing is known yet)
+	void		track_window_placement(HWND hwnd);
+	bool		get_window_placement(HWND hwnd,int* x,int* y,int* w,int* h,bool* maximized);
+
+	// physical screen size
+	void		screen_size_physical(int* w,int* h);
+
 	// ui scaling (100, 150 or 200 percent). must be set before the first window is created.
 	// all coordinates seen by the application are logical; only windows with WS_EX_ADX_NATIVE_PIXELS use physical sizes.
 	void		set_ui_scale(int percent);

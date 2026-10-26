@@ -160,6 +160,9 @@ struct Win32Window
 	bool						mapped;
 	bool						want_fullscreen;
 	bool						want_maximized;
+	bool						track_placement;	// linux port: remember the normal (not maximized) geometry (main window)
+	bool						have_normal;
+	int							normal_x,normal_y,normal_w,normal_h;	// frame position, client size without menu bar (physical px)
 	unsigned long				xcursor_current;
 	// built-in controls and dialogs
 	ControlData*				ctl;

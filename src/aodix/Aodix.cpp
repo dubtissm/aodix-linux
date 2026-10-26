@@ -140,18 +140,25 @@ int main(int argc,char** argv)
 	char buf[256];
 	sprintf(buf,"Aodix %s (Linux)",AODIX_VERSION_STRING);
 
+	// linux port: window placement of the last session (the original always started maximized)
+	int win_x=CW_USEDEFAULT,win_y=0,win_w=CW_USEDEFAULT,win_h=0;
+	bool win_maximized=true;
+	if(!gl_padx->cfg.fullscreen)
+		win_maximized=!gl_padx->window_placement_restore(&win_x,&win_y,&win_w,&win_h);
+
 	// create window
 	if (gl_padx->cfg.fullscreen)
 		gl_hwnd_main=CreateWindow("MWndAodix",buf,WS_POPUP,CW_USEDEFAULT,0,CW_USEDEFAULT,0,NULL,NULL,hInstance,NULL);
 	else
-		gl_hwnd_main=CreateWindow("MWndAodix",buf,WS_OVERLAPPEDWINDOW,CW_USEDEFAULT,0,CW_USEDEFAULT,0,NULL,NULL,hInstance,NULL);
+		gl_hwnd_main=CreateWindow("MWndAodix",buf,WS_OVERLAPPEDWINDOW,win_x,win_y,win_w,win_h,NULL,NULL,hInstance,NULL);
 
 	// return false if window creation failed
 	if(gl_hwnd_main==NULL)
 		return FALSE;
 
 	// show and update window
-	ShowWindow(gl_hwnd_main,SW_MAXIMIZE);
+	adxplat::track_window_placement(gl_hwnd_main);
+	ShowWindow(gl_hwnd_main,win_maximized?SW_MAXIMIZE:SW_SHOWNORMAL);
 	UpdateWindow(gl_hwnd_main);
 
 	// init audio (linux port: jack is initialized first, the midi input is a port of the jack client)

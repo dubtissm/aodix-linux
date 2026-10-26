@@ -98,8 +98,13 @@ struct ADX_CONFIG
 	unsigned char pw_buffer_size;
 	unsigned char pw_sample_rate;
 
+	// linux port: main window placement. win_state: 0 = unknown (start maximized), 1 = normal, 2 = maximized;
+	// win_geom: frame x, frame y, client width, client height (physical pixels, int16 little endian, unaligned)
+	unsigned char win_state;
+	unsigned char win_geom[8];
+
 	// reserved fields
-	char reserved2[50];
+	char reserved2[41];
 
 	// registration info
 	char user_name[32];
@@ -527,6 +532,10 @@ public:
 	void audio_close(HWND const hwnd);
 	bool audio_is_inited(void);
 	void audio_get_driver_name(int const id,char* buf,int const num_chars);
+
+	// linux port: main window placement (AodixLinux.cpp)
+	bool window_placement_restore(int* x,int* y,int* w,int* h);
+	void window_placement_save(HWND hwnd);
 	int32_t audio_init_list(void);
 	void audio_fill_pin_menu(HMENU const hmenu,int const fill_inputs,int const init_id);
 	void audio_control_panel(void);

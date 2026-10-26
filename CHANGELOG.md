@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The main window remembers its size, position and maximized state (the original always started maximized).
+
 ## 4.2.1.2 (2026-10-25)
 
 - VST3: plugins with a flexible channel layout that start with mono busses (for example JUCE plugins such as
