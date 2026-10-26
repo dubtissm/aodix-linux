@@ -11,7 +11,7 @@ kombiniert mit einem modularen Routing von Plugin-Instanzen. Dies ist eine nativ
 gleiche Oberfläche, gleiche Bedienung und gleiches Projektformat wie das Original, mit Audio über
 JACK/PipeWire und den heutigen Linux-Plugin-Formaten.
 
-![Aodix unter Linux mit der Oberfläche von u-he Bazille](docs/screenshots/main-window-bazille.png)
+![Aodix 4.2.1.3 unter Linux: Event-Sequencer mit der Oberfläche von u-he Bazille](docs/screenshots/event_sequencer.png)
 
 ## Funktionen
 
@@ -99,6 +99,11 @@ Pro Audioblock:
 1. Synth A, Synth B und Synth C rechnen **gleichzeitig**.
 2. Hall A startet, sobald Synth A fertig ist, Delay B, sobald Synth B fertig ist – ebenfalls parallel.
 3. Sind Hall A, Delay B und Synth C fertig, rechnet das Mastering-Plugin allein.
+
+![Routing-Ansicht mit parallelen Plugin-Ketten](docs/screenshots/vst_routing.png)
+
+*Ein echtes Projekt in der Routing-Ansicht: Six Sines, TyrellN6, Bazille und Zebra laufen mit ihren Effektketten
+parallel; EQ und Kompressor, an denen die Ketten zusammenlaufen, warten nur auf ihre eigenen Eingänge.*
 
 Ein Plugin am Ende der Kette kostet also nur seine eigene Rechenzeit; alles davor wird weiter auf die Kerne
 verteilt. Eine einzige lange Kette ohne Verzweigung (Synth → Effekt 1 → Effekt 2 → Mastering) lässt sich nicht

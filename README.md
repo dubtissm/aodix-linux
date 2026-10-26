@@ -10,7 +10,7 @@
 modular routing of plugin instances. This is a native 64-bit Linux version – same interface, same workflow and
 the same project format as the original, with JACK/PipeWire audio and today's Linux plugin formats.
 
-![Aodix on Linux with the u-he Bazille editor](docs/screenshots/main-window-bazille.png)
+![Aodix 4.2.1.3 on Linux: event sequencer with the u-he Bazille editor](docs/screenshots/event_sequencer.png)
 
 ## Features
 
@@ -96,6 +96,11 @@ Per audio block:
 1. Synth A, Synth B and Synth C are processed **at the same time**.
 2. Reverb A starts as soon as Synth A is done, Delay B as soon as Synth B is done – also in parallel.
 3. When Reverb A, Delay B and Synth C are finished, the mastering plugin runs on its own.
+
+![Routing view with parallel plugin chains](docs/screenshots/vst_routing.png)
+
+*A real project in the routing view: Six Sines, TyrellN6, Bazille and Zebra run in parallel with their effect
+chains; the EQ and the compressor where the chains meet only wait for their own inputs.*
 
 A plugin at the end of the chain therefore costs only its own processing time; everything before it is still
 spread over the cores. A single long chain without branches (Synth → Effect 1 → Effect 2 → Mastering) cannot be
