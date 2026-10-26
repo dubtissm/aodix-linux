@@ -18,8 +18,13 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 	// linux port: parallel dsp (midi capture buffers per instance, threads are started in dsp_configure_threads)
 	dsp_num_nodes=0;
 	dsp_parallel=false;
+	dsp_slot_workers=-1;
+	dsp_mode_blocks=0;
 	for(int i=0;i<MAX_INSTANCES;i++)
+	{
 		dsp_instance_cost[i]=0.0f;
+		dsp_instance_slot[i]=-1;
+	}
 	dsp_midi_capture=(ADX_MIDI_CAPTURE*)calloc(MAX_INSTANCES,sizeof(ADX_MIDI_CAPTURE));
 	dsp_node_mix.reserve(4096);
 	dsp_node_midi.reserve(1024);

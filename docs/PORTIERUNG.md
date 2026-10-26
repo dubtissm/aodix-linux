@@ -184,6 +184,14 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - Parallel wird nur gerechnet, wenn es sich lohnt: Die Rechenzeit jeder Instanz wird geglättet gemessen;
   aus Gesamtzeit, kritischem Pfad und geschätzten Kosten fürs Aufwecken (40 µs) wird pro Block entschieden.
   War der letzte Block parallel, werden die Worker gleich zu Beginn von `dsp_work()` geweckt.
+- Feste Threads (seit 4.2.1.3): Jede Instanz wird immer im selben Thread gerechnet („Slot“: 0 = JACK-Thread,
+  1…n = Worker, eigene Warteschlange und Semaphor pro Worker). Neue Instanzen kommen in den Thread mit der
+  geringsten gemessenen Last. Grund: u-he-Plugins mit eingeschalteter „Multicore“-Option (Bazille) blieben hängen,
+  wenn der aufrufende Thread von Block zu Block wechselte. Der Wechsel zwischen serieller und paralleler
+  Verarbeitung (der Instanzen in andere Threads verschiebt) erfolgt erst, wenn die andere Betriebsart eine halbe
+  Sekunde lang gewünscht ist. Echtzeit-Priorität für die Worker über `jack_acquire_real_time_scheduling`
+  (PipeWire: RTKit), sonst `pthread_setschedparam`. Geprüft: bitgleiche Bounces 1/2/4 Threads, gleicher Gewinn
+  (6,3 s → 3,6 s auf 2 Kernen), höchstens ein Thread-Wechsel pro Instanz, ThreadSanitizer ohne Befund.
 - Einstellung `dsp_threads` in `Aodix.cfg` (0 = automatisch), Auswahl „DSP Threads“ im Konfigurationsdialog
   (wirkt sofort, der Dialog ist dafür eine Zeile höher). Testweise: `AODIX_DSP_THREADS=n`.
 - Geprüft: gerenderte WAV-Dateien von Original und neuem Code mit 1, 2, 3, 4 und 8 Threads sind bitgleich
@@ -220,7 +228,7 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 **Version und Credits**
 - Programmversion 4.2.1.x (`project()` in `CMakeLists.txt`, als `AODIX_VERSION_STRING` im Code), Fenstertitel
-  „Aodix 4.2.1.2 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
+  „Aodix 4.2.1.3 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
   denn das Format ist unverändert und Aodix 4.2.0.3 unter Windows lehnt Dateien ab 4300 ab.
 - About-Dialog (breiter, eine Zeile mehr): Arguelles Rius & Kantar (bis 4.2.0.1), J. van't Hoog (bis 4.2.0.3),
   Linux-Version und Weiterentwicklung: Marcus Honnacker via Claude Opus 5.5.

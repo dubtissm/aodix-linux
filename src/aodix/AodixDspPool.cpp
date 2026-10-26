@@ -39,28 +39,36 @@ static inline long long now_us(void)
 AdxDspPool::AdxDspPool()
 {
 	quit=false;
-	sleepers=0;
-	sem_init(&wake,0,0);
+	num_slots=1;
+	slots=new Worker[1];
+	sem_init(&slots[0].wake,0,0);
+	slots[0].sleeping=false;
+	slots[0].queue=nullptr;
+	slots[0].head=slots[0].tail=0;
 	node_capacity=0;
 	node_pending=nullptr;
-	queue=nullptr;
 	job_succ_off=nullptr;
 	job_succ=nullptr;
+	job_slot=nullptr;
 	job_fn=nullptr;
 	job_ctx=nullptr;
 	remaining=0;
 	queue_lock.clear();
-	queue_head=queue_tail=0;
 	job_mxcsr=get_fp_mode();
 	rt_priority=0;
+	rt_acquire=nullptr;
 }
 
 AdxDspPool::~AdxDspPool()
 {
 	set_workers(0);
-	sem_destroy(&wake);
+	for(int i=0;i<num_slots;i++)
+	{
+		sem_destroy(&slots[i].wake);
+		delete[] slots[i].queue;
+	}
+	delete[] slots;
 	delete[] node_pending;
-	delete[] queue;
 }
 
 int AdxDspPool::cpu_count(void)
@@ -78,18 +86,32 @@ void AdxDspPool::set_workers(int num_workers)
 
 	// stop current workers
 	quit=true;
-	for(size_t i=0;i<threads.size();i++)
-		sem_post(&wake);
+	for(int i=1;i<num_slots;i++)
+		sem_post(&slots[i].wake);
 	for(std::thread& t:threads)
 		t.join();
 	threads.clear();
 	quit=false;
 
-	// drain stale wake ups
-	while(sem_trywait(&wake)==0) {}
+	// new slots (queues sized for the current node capacity)
+	for(int i=0;i<num_slots;i++)
+	{
+		sem_destroy(&slots[i].wake);
+		delete[] slots[i].queue;
+	}
+	delete[] slots;
+	num_slots=num_workers+1;
+	slots=new Worker[num_slots];
+	for(int i=0;i<num_slots;i++)
+	{
+		sem_init(&slots[i].wake,0,0);
+		slots[i].sleeping=false;
+		slots[i].queue=node_capacity>0?new int[node_capacity]:nullptr;
+		slots[i].head=slots[i].tail=0;
+	}
 
-	for(int i=0;i<num_workers;i++)
-		threads.emplace_back(&AdxDspPool::worker_main,this);
+	for(int i=1;i<num_slots;i++)
+		threads.emplace_back(&AdxDspPool::worker_main,this,i);
 }
 
 void AdxDspPool::set_realtime_priority(int priority)
@@ -111,22 +133,25 @@ void AdxDspPool::unlock(void)
 
 void AdxDspPool::push(int node)
 {
+	int const sl=job_slot[node];
+	Worker& w=slots[sl];
 	lock();
-	queue[queue_tail++]=node;
+	w.queue[w.tail++]=node;
 	unlock();
 
-	// wake a sleeping worker
-	if(sleepers.load(std::memory_order_acquire)>0)
-		sem_post(&wake);
+	// wake the worker of this slot if it sleeps
+	if(sl>0 && w.sleeping.load(std::memory_order_seq_cst))
+		sem_post(&w.wake);
 }
 
-bool AdxDspPool::pop(int* node)
+bool AdxDspPool::pop(int slot,int* node)
 {
+	Worker& w=slots[slot];
 	bool ok=false;
 	lock();
-	if(queue_head<queue_tail)
+	if(w.head<w.tail)
 	{
-		*node=queue[queue_head++];
+		*node=w.queue[w.head++];
 		ok=true;
 	}
 	unlock();
@@ -148,15 +173,15 @@ void AdxDspPool::run_node(int node)
 	remaining.fetch_sub(1,std::memory_order_acq_rel);
 }
 
-// work while there is something left in the current job
-void AdxDspPool::drain(bool may_sleep)
+// work on the nodes of this slot while the current job is not finished
+void AdxDspPool::drain(int slot,bool may_sleep)
 {
 	int spins=0;
 	long long idle_since=0;
 	while(remaining.load(std::memory_order_acquire)>0)
 	{
 		int node;
-		if(pop(&node))
+		if(pop(slot,&node))
 		{
 			run_node(node);
 			spins=0;
@@ -164,7 +189,7 @@ void AdxDspPool::drain(bool may_sleep)
 			continue;
 		}
 
-		// nothing ready right now: another thread is still working on a predecessor
+		// nothing ready for this slot right now: another thread is still working on a predecessor
 		cpu_relax();
 		if(may_sleep && (++spins&63)==0)
 		{
@@ -190,10 +215,26 @@ void AdxDspPool::apply_thread_settings(void)
 	if(prio!=applied_priority)
 	{
 		applied_priority=prio;
-		sched_param sp;
-		memset(&sp,0,sizeof(sp));
-		sp.sched_priority=prio>0?prio:0;
-		if(pthread_setschedparam(pthread_self(),prio>0?SCHED_FIFO:SCHED_OTHER,&sp)!=0 && prio>0)
+		bool ok=false;
+		if(prio>0 && rt_acquire)
+		{
+			// through the audio system (pipewire: rtkit, which may limit the priority)
+			int const tries[]={prio,20,10,5};
+			for(int t:tries)
+				if(t<=prio && rt_acquire(pthread_self(),t)==0)
+				{
+					ok=true;
+					break;
+				}
+		}
+		if(!ok)
+		{
+			sched_param sp;
+			memset(&sp,0,sizeof(sp));
+			sp.sched_priority=prio>0?prio:0;
+			ok=pthread_setschedparam(pthread_self(),prio>0?SCHED_FIFO:SCHED_OTHER,&sp)==0;
+		}
+		if(!ok && prio>0)
 		{
 			static std::atomic<bool> warned(false);
 			if(!warned.exchange(true))
@@ -202,37 +243,43 @@ void AdxDspPool::apply_thread_settings(void)
 	}
 }
 
-void AdxDspPool::worker_main(void)
+void AdxDspPool::worker_main(int slot)
 {
+	Worker& w=slots[slot];
 	while(!quit.load(std::memory_order_acquire))
 	{
-		// sleep until there is work
-		sleepers.fetch_add(1,std::memory_order_acq_rel);
-		bool skip_wait=false;
+		// sleep until a node of this slot is ready (or a prewake)
+		w.sleeping.store(true,std::memory_order_seq_cst);
 		lock();
-		skip_wait=queue_head<queue_tail;
+		bool const skip_wait=w.head<w.tail;
 		unlock();
 		if(!skip_wait)
-			while(sem_wait(&wake)!=0) {}
-		sleepers.fetch_sub(1,std::memory_order_acq_rel);
+			while(sem_wait(&w.wake)!=0) {}
+		w.sleeping.store(false,std::memory_order_seq_cst);
 
 		if(quit.load(std::memory_order_acquire))
 			break;
 
 		apply_thread_settings();
-		drain(true);
+		drain(slot,true);
 
-		// keep looking for the next job a little while (offline rendering, short gaps between blocks)
+		// keep looking for nodes of the next job a little while (offline rendering, short gaps between blocks)
 		long long const t0=now_us();
 		int spins=0;
 		while(!quit.load(std::memory_order_relaxed))
 		{
 			if(remaining.load(std::memory_order_acquire)>0)
 			{
-				apply_thread_settings();
-				drain(true);
-				spins=0;
-				continue;
+				lock();
+				bool const mine=w.head<w.tail;
+				unlock();
+				if(mine)
+				{
+					apply_thread_settings();
+					drain(slot,true);
+					spins=0;
+					continue;
+				}
 			}
 			cpu_relax();
 			if((++spins&63)==0 && now_us()-t0>SPIN_BEFORE_SLEEP_US)
@@ -244,20 +291,34 @@ void AdxDspPool::worker_main(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void AdxDspPool::prewake(void)
 {
-	int n=sleepers.load(std::memory_order_acquire);
-	if(n>(int)threads.size())
-		n=(int)threads.size();
-	for(int i=0;i<n;i++)
-		sem_post(&wake);
+	for(int i=1;i<num_slots;i++)
+		if(slots[i].sleeping.load(std::memory_order_acquire))
+			sem_post(&slots[i].wake);
 }
 
-void AdxDspPool::execute(int num_nodes,const int* pending,const int* succ_off,const int* succ,work_fn fn,void* ctx,bool parallel)
+void AdxDspPool::grow(int num_nodes)
+{
+	// under the queue lock: an idle worker may still be looking into its queue
+	lock();
+	delete[] node_pending;
+	node_capacity=num_nodes+64;
+	node_pending=new std::atomic<int>[node_capacity];
+	for(int i=0;i<num_slots;i++)
+	{
+		delete[] slots[i].queue;
+		slots[i].queue=new int[node_capacity];
+		slots[i].head=slots[i].tail=0;
+	}
+	unlock();
+}
+
+void AdxDspPool::execute(int num_nodes,const int* pending,const int* succ_off,const int* succ,const int* slot,work_fn fn,void* ctx,bool parallel)
 {
 	if(num_nodes<=0)
 		return;
 
 	// no workers: process in order on the calling thread (the node numbering is a valid processing order)
-	if(!parallel || threads.empty() || num_nodes==1)
+	if(!parallel || threads.empty() || num_nodes==1 || !slot)
 	{
 		for(int n=0;n<num_nodes;n++)
 			fn(ctx,n);
@@ -266,48 +327,38 @@ void AdxDspPool::execute(int num_nodes,const int* pending,const int* succ_off,co
 
 	// grow buffers (only happens when more instances are used than ever before)
 	if(num_nodes>node_capacity)
-	{
-		// under the queue lock: an idle worker may still be looking into the queue of the previous job
-		lock();
-		delete[] node_pending;
-		delete[] queue;
-		node_capacity=num_nodes+64;
-		node_pending=new std::atomic<int>[node_capacity];
-		queue=new int[node_capacity];
-		queue_head=queue_tail=0;
-		unlock();
-	}
+		grow(num_nodes);
 
 	// set up the job
 	job_succ_off=succ_off;
 	job_succ=succ;
+	job_slot=slot;
 	job_fn=fn;
 	job_ctx=ctx;
 	job_mxcsr.store(get_fp_mode(),std::memory_order_relaxed);
-	int num_ready=0;
 	for(int n=0;n<num_nodes;n++)
-	{
 		node_pending[n].store(pending[n],std::memory_order_relaxed);
-		if(pending[n]==0)
-			num_ready++;
-	}
 	remaining.store(num_nodes,std::memory_order_release);
 
+	bool ready[65];
 	lock();
-	queue_head=queue_tail=0;
+	for(int i=0;i<num_slots;i++)
+		slots[i].head=slots[i].tail=0;
 	for(int n=0;n<num_nodes;n++)
 		if(pending[n]==0)
-			queue[queue_tail++]=n;
+		{
+			Worker& w=slots[slot[n]];
+			w.queue[w.tail++]=n;
+		}
+	for(int i=0;i<num_slots && i<65;i++)
+		ready[i]=slots[i].head<slots[i].tail;
 	unlock();
 
-	// wake workers for the nodes that are ready now (the calling thread takes one itself)
-	int wake_count=num_ready-1;
-	int const sl=sleepers.load(std::memory_order_acquire);
-	if(wake_count>sl)
-		wake_count=sl;
-	for(int i=0;i<wake_count;i++)
-		sem_post(&wake);
+	// wake the workers that have nodes ready now
+	for(int i=1;i<num_slots && i<65;i++)
+		if(ready[i] && slots[i].sleeping.load(std::memory_order_seq_cst))
+			sem_post(&slots[i].wake);
 
 	// take part in the work until everything is done
-	drain(false);
+	drain(0,false);
 }

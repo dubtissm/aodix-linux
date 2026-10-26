@@ -1,8 +1,13 @@
 # Changelog
 
-## Unreleased
+## 4.2.1.3 (2026-10-26)
 
 - The main window remembers its size, position and maximized state (the original always started maximized).
+- Multi-core processing: every plugin instance is now always processed on the same thread. Plugins with their own
+  helper threads (u-he "Multicore", e.g. Bazille) could hang when the calling thread changed from block to block.
+  Switching between serial and parallel processing now happens at most every half second.
+- The DSP worker threads get real-time priority through the audio system (under PipeWire via RTKit), so the
+  warning about missing rtprio limits no longer appears on most systems.
 
 ## 4.2.1.2 (2026-10-25)
 

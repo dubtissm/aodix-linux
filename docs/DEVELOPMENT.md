@@ -81,7 +81,9 @@ git diff original -- src/aodix     # every change made to the original Aodix cod
 The original processes instances one after another in "bubble" passes. Aodix computes this order per block,
 builds a dependency graph from audio and MIDI wires and runs independent instances in a small real-time thread
 pool. Every instance pulls its inputs in exactly the original order, so the output is bit-identical. Parallel
-processing is only used when the measured plugin load makes it worthwhile.
+processing is only used when the measured plugin load makes it worthwhile. Each instance has a fixed thread
+(plugins with own helper threads, like u-he's Multicore, hang when the calling thread keeps changing); switching
+between serial and parallel processing is held back for half a second.
 
 ## UI scaling in short
 

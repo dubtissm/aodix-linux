@@ -135,6 +135,9 @@ void CAodixCore::instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,in
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::instance_free(ADX_INSTANCE* pi)
 {
+	// linux port: a new plugin in this slot gets a new dsp thread
+	dsp_instance_slot[pi-instance]=-1;
+
 	// delete vst instance
 	if(pi->peffect!=NULL)
 	{

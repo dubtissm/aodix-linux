@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(aodix VERSION 4.2.1.2 LANGUAGES C CXX)
+project(aodix VERSION 4.2.1.3 LANGUAGES C CXX)
 add_compile_definitions(AODIX_VERSION_STRING="${PROJECT_VERSION}")
 
 set(CMAKE_CXX_STANDARD 17)

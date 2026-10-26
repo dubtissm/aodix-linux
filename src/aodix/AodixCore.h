@@ -608,6 +608,10 @@ public:
 	ADX_MIDI_CAPTURE*				dsp_midi_capture;
 	float							dsp_instance_cost[MAX_INSTANCES];	// measured processing time per instance (microseconds, smoothed)
 	bool							dsp_parallel;						// current block is processed in parallel
+	int								dsp_instance_slot[MAX_INSTANCES];	// fixed thread of each instance (0 = jack thread, -1 = none yet)
+	int								dsp_node_slot[MAX_INSTANCES];		// thread of each node of the current block
+	int								dsp_slot_workers;					// worker count the slots were assigned for
+	int								dsp_mode_blocks;					// blocks the other processing mode has been wanted in a row
 	float dsp_output_vumeter[NUM_DSP_OUTPUTS];
 	float dsp_cpu_cost;
 	int32_t  dsp_block_size;

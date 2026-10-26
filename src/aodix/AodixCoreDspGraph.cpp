@@ -395,8 +395,9 @@ void CAodixCore::dsp_route_and_process(int* hpc)
 	}
 
 	// 3. process (in parallel where the routing allows it and where it pays off)
-	dsp_parallel=false;
-	if(dsp_pool.workers()>0 && nn>1)
+	bool want_parallel=false;
+	int const workers=dsp_pool.workers();
+	if(workers>0 && nn>1)
 	{
 		// total work and longest dependency chain (critical path) from the measured instance costs
 		float finish[MAX_INSTANCES];
@@ -417,12 +418,62 @@ void CAodixCore::dsp_route_and_process(int* hpc)
 					start[dsp_node_succ[k]]=finish[n];
 		}
 
-		float const per_thread=total/float(dsp_pool.workers()+1);
+		float const per_thread=total/float(workers+1);
 		float const estimate=(critical>per_thread?critical:per_thread)+DSP_PARALLEL_OVERHEAD_US;
-		dsp_parallel=(total-estimate)>DSP_PARALLEL_MIN_GAIN_US;
+		want_parallel=(total-estimate)>DSP_PARALLEL_MIN_GAIN_US;
 	}
 
-	dsp_pool.execute(nn,dsp_node_pending,dsp_node_succ_off,dsp_node_succ.data(),dsp_node_work_cb,this,dsp_parallel);
+	// switching between serial and parallel processing moves instances to other threads, so it only happens when the
+	// other mode has been wanted for about half a second (plugins with own helper threads dislike thread changes)
+	if(want_parallel!=dsp_parallel)
+	{
+		int const hold=(int)(cfg.audio_driver_sample_rate*0.5)/(dsp_block_size>0?dsp_block_size:256);
+		if(++dsp_mode_blocks>=hold || workers==0 || nn<=1)
+		{
+			dsp_parallel=want_parallel;
+			dsp_mode_blocks=0;
+		}
+	}
+	else
+		dsp_mode_blocks=0;
+	if(workers==0 || nn<=1)
+		dsp_parallel=false;
+
+	// fixed threads: an instance keeps its thread; new instances go to the thread with the least work
+	if(dsp_parallel)
+	{
+		if(dsp_slot_workers!=workers)
+		{
+			for(int i=0;i<MAX_INSTANCES;i++)
+				dsp_instance_slot[i]=-1;
+			dsp_slot_workers=workers;
+		}
+		float load[65];
+		for(int t=0;t<=workers && t<65;t++)
+			load[t]=0.0f;
+		for(int n=0;n<nn;n++)
+		{
+			int const sl=dsp_instance_slot[dsp_node_instance[n]];
+			if(sl>=0 && sl<=workers)
+				load[sl]+=dsp_instance_cost[dsp_node_instance[n]];
+		}
+		for(int n=0;n<nn;n++)
+		{
+			int const si=dsp_node_instance[n];
+			if(dsp_instance_slot[si]<0 || dsp_instance_slot[si]>workers)
+			{
+				int best=0;
+				for(int t=1;t<=workers;t++)
+					if(load[t]<load[best])
+						best=t;
+				dsp_instance_slot[si]=best;
+				load[best]+=dsp_instance_cost[si]>1.0f?dsp_instance_cost[si]:1.0f;
+			}
+			dsp_node_slot[n]=dsp_instance_slot[si];
+		}
+	}
+
+	dsp_pool.execute(nn,dsp_node_pending,dsp_node_succ_off,dsp_node_succ.data(),dsp_node_slot,dsp_node_work_cb,this,dsp_parallel);
 
 	// 4. mix into the master outputs, in processing order (as the original did after each process call)
 	for(int sn=0;sn<nn;sn++)

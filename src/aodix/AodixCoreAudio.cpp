@@ -97,6 +97,7 @@ struct JACK_API
 	uint32_t		(*midi_get_event_count)(void* buffer);
 	int				(*midi_event_get)(jack_midi_event_t* event,void* buffer,uint32_t index);
 	int				(*client_real_time_priority)(jack_client_t*);	// optional
+	int				(*acquire_real_time_scheduling)(pthread_t,int);	// optional
 };
 
 static JACK_API	jack;
@@ -234,6 +235,7 @@ static bool jack_bind(void* lib)
 	*(void**)&jack.midi_get_event_count=sym("jack_midi_get_event_count");
 	*(void**)&jack.midi_event_get=sym("jack_midi_event_get");
 	*(void**)&jack.client_real_time_priority=dlsym(jack.lib,"jack_client_real_time_priority");
+	*(void**)&jack.acquire_real_time_scheduling=dlsym(jack.lib,"jack_acquire_real_time_scheduling");
 
 	if(!ok)
 	{
@@ -776,6 +778,7 @@ void CAodixCore::audio_init(HWND const hwnd)
 
 		// dsp worker threads get the real-time priority of the jack process thread
 		int const rt_prio=jack.client_real_time_priority?jack.client_real_time_priority(pdi->client):-1;
+		dsp_pool.set_realtime_function(jack.acquire_real_time_scheduling);
 		dsp_pool.set_realtime_priority(rt_prio>0?rt_prio:0);
 	}
 	// note: the number of ports is only changed when the client is opened (ports are never unregistered
