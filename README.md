@@ -10,7 +10,7 @@
 modular routing of plugin instances. This is a native 64-bit Linux version – same interface, same workflow and
 the same project format as the original, with JACK/PipeWire audio and today's Linux plugin formats.
 
-![Aodix on Linux](docs/screenshots/main-window.png)
+![Aodix on Linux with the u-he Bazille editor](docs/screenshots/main-window-bazille.png)
 
 ## Features
 
@@ -23,10 +23,6 @@ the same project format as the original, with JACK/PipeWire audio and today's Li
 - **Projects:** opens original `.adx` files; saves compressed `.adxl` (about 10 KB instead of 2.9 MB) or
   `.adx` for Aodix on Windows
 - Clipboard in all text fields, Debian package with menu entry, icon and file types
-
-| Routing | Plugin editor |
-|---|---|
-| ![Routing view](docs/screenshots/routing.png) | ![Plugin editor](docs/screenshots/plugin-editor.png) |
 
 ## Installation
 
@@ -58,6 +54,8 @@ systems) or a JACK server (jack2). LV2 plugins need `liblilv-0-0`.
   master input/output, just like in the original.
 - **MIDI input:** port `Aodix:midi_in`; with *Open MIDI In Devices* Aodix connects hardware MIDI sources.
 - **Help:** *Help → Content* opens the original manual.
+
+![Configuration dialog](docs/screenshots/extended_configuration_dialog.png)
 
 Settings are stored in `~/.config/aodix/Aodix.cfg`.
 

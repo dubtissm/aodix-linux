@@ -11,7 +11,7 @@ kombiniert mit einem modularen Routing von Plugin-Instanzen. Dies ist eine nativ
 gleiche Oberfläche, gleiche Bedienung und gleiches Projektformat wie das Original, mit Audio über
 JACK/PipeWire und den heutigen Linux-Plugin-Formaten.
 
-![Aodix unter Linux](docs/screenshots/main-window.png)
+![Aodix unter Linux mit der Oberfläche von u-he Bazille](docs/screenshots/main-window-bazille.png)
 
 ## Funktionen
 
@@ -24,10 +24,6 @@ JACK/PipeWire und den heutigen Linux-Plugin-Formaten.
 - **Projekte:** öffnet originale `.adx`-Dateien; speichert komprimiert als `.adxl` (rund 10 KB statt 2,9 MB)
   oder als `.adx` für Aodix unter Windows
 - Zwischenablage in allen Textfeldern, Debian-Paket mit Menüeintrag, Icon und Dateitypen
-
-| Routing | Plugin-Oberfläche |
-|---|---|
-| ![Routing-Ansicht](docs/screenshots/routing.png) | ![Plugin-Oberfläche](docs/screenshots/plugin-editor.png) |
 
 ## Installation
 
@@ -60,6 +56,8 @@ JACK-Server (jack2) benötigt. LV2-Plugins brauchen `liblilv-0-0`.
   Instanzen und dem Master-Ein- und -Ausgang, wie im Original.
 - **MIDI-Eingang:** Port `Aodix:midi_in`; mit *Open MIDI In Devices* verbindet Aodix Hardware-MIDI-Quellen.
 - **Hilfe:** *Help → Content* öffnet das Original-Handbuch.
+
+![Konfigurationsdialog](docs/screenshots/extended_configuration_dialog.png)
 
 Die Einstellungen liegen in `~/.config/aodix/Aodix.cfg`.
 
