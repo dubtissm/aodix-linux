@@ -80,6 +80,29 @@ printf '@audio - rtprio 95\n@audio - memlock unlimited\n' | sudo tee /etc/securi
 On Debian-based systems with jack2, `sudo dpkg-reconfigure jackd2` (answer "yes" to real-time) sets up the same.
 `ulimit -r` shows the allowed priority (0 = none). Aodix works without it, but may produce dropouts under load.
 
+### How multi-core processing works
+
+Aodix distributes **individual plugin instances**, not whole branches. An instance starts as soon as all
+instances whose audio or MIDI wires lead into it are finished; instances that do not depend on each other run at
+the same time on different cores.
+
+```
+Synth A → Reverb A ─┐
+Synth B → Delay B ──┼→ Mastering → Output
+Synth C ────────────┘
+```
+
+Per audio block:
+1. Synth A, Synth B and Synth C are processed **at the same time**.
+2. Reverb A starts as soon as Synth A is done, Delay B as soon as Synth B is done – also in parallel.
+3. When Reverb A, Delay B and Synth C are finished, the mastering plugin runs on its own.
+
+A plugin at the end of the chain therefore costs only its own processing time; everything before it is still
+spread over the cores. A single long chain without branches (Synth → Effect 1 → Effect 2 → Mastering) cannot be
+parallelized – Aodix detects this and simply processes on one core, because waking more threads would only cost
+time. The result sounds exactly the same as single-core processing (bit-identical). The number of threads is set
+in *File → Configuration → DSP Threads* ("Automatic" uses all cores; "1" switches parallel processing off).
+
 ## Tested with
 
 u-he Bazille (VST3 and CLAP, including editor and GUI scaling), u-he TetraOP, Signalizer, TAL plugins,

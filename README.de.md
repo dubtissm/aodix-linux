@@ -83,6 +83,30 @@ Auf Debian-basierten Systemen mit jack2 richtet `sudo dpkg-reconfigure jackd2` (
 dasselbe ein. `ulimit -r` zeigt die erlaubte Priorität (0 = keine). Aodix läuft auch ohne, kann unter Last aber
 Aussetzer haben.
 
+### So funktioniert die Mehrkern-Verarbeitung
+
+Aodix verteilt **einzelne Plugin-Instanzen**, nicht ganze Zweige. Eine Instanz rechnet, sobald alle Instanzen
+fertig sind, deren Audio- oder MIDI-Kabel in sie hineinführen; Instanzen, die nicht voneinander abhängen, laufen
+gleichzeitig auf verschiedenen Kernen.
+
+```
+Synth A → Hall A ──┐
+Synth B → Delay B ─┼→ Mastering → Output
+Synth C ───────────┘
+```
+
+Pro Audioblock:
+1. Synth A, Synth B und Synth C rechnen **gleichzeitig**.
+2. Hall A startet, sobald Synth A fertig ist, Delay B, sobald Synth B fertig ist – ebenfalls parallel.
+3. Sind Hall A, Delay B und Synth C fertig, rechnet das Mastering-Plugin allein.
+
+Ein Plugin am Ende der Kette kostet also nur seine eigene Rechenzeit; alles davor wird weiter auf die Kerne
+verteilt. Eine einzige lange Kette ohne Verzweigung (Synth → Effekt 1 → Effekt 2 → Mastering) lässt sich nicht
+parallelisieren – das erkennt Aodix und rechnet dann einfach auf einem Kern, weil das Aufwecken weiterer Threads
+nur Zeit kosten würde. Das Ergebnis klingt genau wie bei der Verarbeitung auf einem Kern (bitgleich). Die Anzahl
+der Threads stellt man unter *File → Configuration → DSP Threads* ein („Automatic“ nutzt alle Kerne, „1“ schaltet
+die Parallelverarbeitung ab).
+
 ## Getestet mit
 
 u-he Bazille (VST3 und CLAP, mit Oberfläche und GUI-Skalierung), u-he TetraOP, Signalizer, TAL-Plugins,
