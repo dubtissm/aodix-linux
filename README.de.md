@@ -70,6 +70,21 @@ daher ist schon ein leeres Projekt 2,9 MB groß. `.adxl` ist derselbe Inhalt, gz
 `gunzip -c projekt.adxl > projekt.adx` ergibt wieder eine originale `.adx`. *Save As* ohne Endung speichert
 `.adxl`, mit der Endung `.adx` unkomprimiert; *Save* behält das Format der geöffneten Datei.
 
+### Echtzeit-Priorität
+
+Damit es keine Aussetzer gibt, laufen Aodix' Verarbeitungs-Threads mit Echtzeit-Priorität. Unter PipeWire holt
+Aodix sie automatisch über RTKit. Erscheint im Terminal *„dsp worker threads could not get real-time priority“*,
+Echtzeit für den eigenen Benutzer freischalten und danach ab- und wieder anmelden:
+
+```bash
+sudo usermod -aG audio $USER
+printf '@audio - rtprio 95\n@audio - memlock unlimited\n' | sudo tee /etc/security/limits.d/95-audio.conf
+```
+
+Auf Debian-basierten Systemen mit jack2 richtet `sudo dpkg-reconfigure jackd2` (Echtzeit mit „Ja“ bestätigen)
+dasselbe ein. `ulimit -r` zeigt die erlaubte Priorität (0 = keine). Aodix läuft auch ohne, kann unter Last aber
+Aussetzer haben.
+
 ## Getestet mit
 
 u-he Bazille (VST3 und CLAP, mit Oberfläche und GUI-Skalierung), u-he TetraOP, Signalizer, TAL-Plugins,
