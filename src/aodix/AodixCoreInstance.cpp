@@ -39,8 +39,10 @@ void CAodixCore::instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,in
 	pi->mout_pin.pwire=NULL;
 	pi->mout_pin.num_wires=0;
 
-	// set dll path
-	snprintf(pi->dll_path,sizeof(pi->dll_path),"%s",filename);
+	// set dll path (linux port: when a project is loaded, filename is pi->dll_path itself; snprintf onto its own source
+	// cleared the first character, so projects were saved with an empty path)
+	if(filename!=pi->dll_path)
+		snprintf(pi->dll_path,sizeof(pi->dll_path),"%s",filename);
 
 	int const pre_i=pi->peffect->numInputs;
 	int const pre_o=pi->peffect->numOutputs;

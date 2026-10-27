@@ -218,10 +218,20 @@ void CAodixCore::import_adx_file(HWND const hwnd,char* filename)
 					{
 						if(pi->dll_path[c])
 						{
-							// attempt to repair path
-							strcpy(pi->dll_path,pi->dll_path+c);
+							// attempt to repair path (linux port: memmove, the areas overlap)
+							memmove(pi->dll_path,pi->dll_path+c,strlen(pi->dll_path+c)+1);
 							break;
 						}
+					}
+
+					// linux port: aodix linux 4.2.1.0-4.2.1.3 lost the leading '/' of the path (it was cleared when the
+					// project was loaded and saved again): "home/user/.vst3/x.vst3" -> "/home/user/.vst3/x.vst3"
+					if(pi->dll_path[0]!=0 && pi->dll_path[0]!='/' && strchr(pi->dll_path,'/')!=NULL && strchr(pi->dll_path,'\\')==NULL)
+					{
+						char fixed[_MAX_PATH];
+						snprintf(fixed,sizeof(fixed),"/%s",pi->dll_path);
+						if(access(fixed,R_OK)==0 || adx_plugin_is_lv2(fixed))
+							strcpy(pi->dll_path,fixed);
 					}
 				}
 

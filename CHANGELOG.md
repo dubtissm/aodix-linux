@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.2.1.4 (2026-10-27)
+
+- Fixed: projects that were loaded and saved again lost the leading `/` of their plugin paths, so the plugins had
+  to be located again on the next load (with garbled file names in the message). Such projects are repaired
+  automatically when they are opened.
+
 ## 4.2.1.3 (2026-10-26)
 
 - The main window remembers its size, position and maximized state (the original always started maximized).

@@ -228,7 +228,7 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 
 **Version und Credits**
 - Programmversion 4.2.1.x (`project()` in `CMakeLists.txt`, als `AODIX_VERSION_STRING` im Code), Fenstertitel
-  „Aodix 4.2.1.3 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
+  „Aodix 4.2.1.4 (Linux)“. In die Projektdateien schreibt Aodix weiter die Formatversion 4203 (`aodix_version`),
   denn das Format ist unverändert und Aodix 4.2.0.3 unter Windows lehnt Dateien ab 4300 ab.
 - About-Dialog (breiter, eine Zeile mehr): Arguelles Rius & Kantar (bis 4.2.0.1), J. van't Hoog (bis 4.2.0.3),
   Linux-Version und Weiterentwicklung: Marcus Honnacker via Claude Opus 5.5.
@@ -250,6 +250,10 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   Schließen. Liegt die gespeicherte Position außerhalb des Bildschirms, wird das Fenster zentriert.
 
 **Kleinere Korrekturen**
+- Plugin-Pfad beim Laden eines Projekts: `instance_dll()` kopierte den Pfad mit `snprintf` auf sich selbst (Quelle =
+  Ziel `pi->dll_path`); glibc löscht dabei zuerst das erste Zeichen, gespeicherte Projekte hatten danach einen Pfad
+  ohne führenden `/` (4.2.1.0–4.2.1.3). Behoben in 4.2.1.4; solche Pfade werden beim Laden repariert, und die
+  Reparatur alter 4.2.0.1-Pfade nutzt `memmove` statt eines überlappenden `strcpy`.
 - Die Konfiguration wird beim Übernehmen sofort gespeichert (nicht erst beim Beenden) – sie überlebt so
   einen abstürzenden Plugin oder eine beendete Sitzung.
 - „Save“ kopierte den Dateinamen auf sich selbst (undefiniertes Verhalten, von ASan gefunden).
