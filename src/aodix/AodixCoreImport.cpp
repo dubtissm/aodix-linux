@@ -544,7 +544,7 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 	{
 		// format failed plugin location
 		char buf[256];
-		sprintf(buf,"Unable to locate Instance %.2X Plugin '%s'\nWould you like to browse for it?",index,filetitle);
+		snprintf(buf,sizeof(buf),"Unable to locate Instance %.2X Plugin '%.120s'\nWould you like to browse for it?",index,filetitle);
 
 		// verbose failed relocation
 		if(MessageBox(hwnd,buf,"Aodix - VST Host",MB_YESNO | MB_ICONWARNING)==IDYES)
