@@ -250,6 +250,10 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
   Schließen. Liegt die gespeicherte Position außerhalb des Bildschirms, wird das Fenster zentriert.
 
 **Kleinere Korrekturen**
+- Plugin nicht am gespeicherten Pfad: `import_localize_vst_dll()` sucht seit 4.2.1.5 zuerst in der Plugin-Bibliothek
+  (alle VST3-, CLAP- und LADSPA-Einträge) nach der gespeicherten 32-bit-ID, bevorzugt im selben Format; erst danach
+  folgen die Suche nach dem Dateinamen und die Dateiauswahl. Findet verschobene Plugins und Pfade, die frühere
+  Versionen beschädigt haben.
 - Programmende: Die VST3-Module lagen in einem statischen Cache, dessen Destruktor beim `exit()` lief – nach den
   globalen Objekten der Plugins (ihre Destruktoren werden beim `dlopen` später registriert und daher früher
   ausgeführt). `ModuleExit` griff so auf zerstörte Objekte zu (Absturz bei dubtility), und der SIGSEGV-Handler von

@@ -6,6 +6,9 @@
   global objects had already been destroyed. VST3 `ModuleExit` could then crash (seen with dubtility); crash
   handlers of other plugins (Signalizer) reacted by writing files with garbage names into the current directory.
   Aodix now releases the libraries (VST3 `ModuleExit`, CLAP `deinit`) explicitly before it exits.
+- A plugin that is not found at its stored path is now looked up by its unique ID in the plugin library before
+  Aodix asks for it. This finds moved plugins and repairs projects whose plugin paths were damaged by earlier
+  versions.
 
 ## 4.2.1.4 (2026-10-27)
 

@@ -483,6 +483,31 @@ int CAodixCore::import_localize_vst_dll(HWND const hwnd,int index,char* pfilenam
 	if(adx_plugin_is_lv2(pfilename))
 		return 1;
 
+	// linux port: look the plugin up by its unique id in the plugin library (all vst3, clap, ladspa folders). this finds
+	// moved plugins and paths damaged by aodix linux 4.2.1.0-4.2.1.3; a plugin of the same format is preferred
+	if(instance_eff_id_currently_loading!=0)
+	{
+		bool const want_clap=adx_plugin_is_clap(pfilename);
+		bool const want_ladspa=adx_plugin_is_ladspa(pfilename);
+		int found=-1;
+		for(int l=0;l<vst_lib.num_dlls;l++)
+		{
+			if(vst_lib.dll_id[l]!=instance_eff_id_currently_loading)
+				continue;
+			bool const same=adx_plugin_is_clap(vst_lib.dll_path[l])==want_clap && adx_plugin_is_ladspa(vst_lib.dll_path[l])==want_ladspa;
+			if(found<0 || same)
+				found=l;
+			if(same)
+				break;
+		}
+		if(found>=0 && access(vst_lib.dll_path[found],R_OK)==0)
+		{
+			fprintf(stderr,"aodix: instance %.2X: plugin found by its id: %s\n",index,vst_lib.dll_path[found]);
+			snprintf(pfilename,_MAX_PATH,"%s",vst_lib.dll_path[found]);
+			return 1;
+		}
+	}
+
 	// file doesnt exist in current path, extract filetitle
 	char filetitle[_MAX_PATH];
 	filetitle[0]=0;
