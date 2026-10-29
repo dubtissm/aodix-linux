@@ -110,7 +110,7 @@ in *File → Configuration → DSP Threads* ("Automatic" uses all cores; "1" swi
 
 ## Tested with
 
-u-he Bazille (VST3 and CLAP, including editor and GUI scaling), u-he TetraOP, Signalizer, TAL plugins,
+u-he Bazille (VST3 and CLAP, including editor and GUI scaling), Signalizer, TAL plugins,
 LoudMax (LADSPA), the swh LADSPA collection, LV2 effects, and the example plugins of the VST3 SDK.
 
 ## Known limitations

@@ -114,7 +114,7 @@ die Parallelverarbeitung ab).
 
 ## Getestet mit
 
-u-he Bazille (VST3 und CLAP, mit Oberfläche und GUI-Skalierung), u-he TetraOP, Signalizer, TAL-Plugins,
+u-he Bazille (VST3 und CLAP, mit Oberfläche und GUI-Skalierung), Signalizer, TAL-Plugins,
 LoudMax (LADSPA), der swh-LADSPA-Sammlung, LV2-Effekten und den Beispiel-Plugins des VST3-SDK.
 
 ## Bekannte Einschränkungen
