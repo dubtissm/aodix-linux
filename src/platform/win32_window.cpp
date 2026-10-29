@@ -1474,6 +1474,16 @@ HMENU GetMenu(HWND hwnd)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // painting
+void repaint_all_windows(void)
+{
+	for(Win32Window* w:g_windows)
+		if(w && !w->destroyed)
+			w->invalid=true;
+	for(Win32Window* w:g_top_levels)
+		if(w && !w->destroyed && w->menu)
+			repaint_menubar(w);
+}
+
 BOOL InvalidateRect(HWND hwnd,const RECT*,BOOL)
 {
 	if(!is_valid_window(hwnd))

@@ -41,6 +41,33 @@ GdiFont* stock_font(int kind)
 	return g_stock_fonts[kind];
 }
 
+adxplat::UiColors adxplat::default_ui_colors(void)
+{
+	UiColors c;
+	c.face=0x00C8D0D4;
+	c.hilight=0x00FFFFFF;
+	c.light=0x00C8D0D4;
+	c.shadow=0x00808080;
+	c.dkshadow=0x00404040;
+	c.window=0x00FFFFFF;
+	c.text=0x00000000;
+	c.graytext=0x00808080;
+	c.sel=0x006A240A;
+	c.seltext=0x00FFFFFF;
+	return c;
+}
+
+adxplat::UiColors g_ui_colors=adxplat::default_ui_colors();
+
+void adxplat::set_ui_colors(const UiColors& colors)
+{
+	g_ui_colors=colors;
+	for(int i=0;i<32;i++)
+		if(g_sys_brushes[i])
+			g_sys_brushes[i]->color=GetSysColor(i);
+	repaint_all_windows();
+}
+
 DWORD GetSysColor(int index)
 {
 	if(index==COLOR_BTNFACE)

@@ -307,23 +307,13 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 							int inst_div_24 = (pe->da0*0xAAB)>>16;
 							int inst_mod_24 = pe->da0 - inst_div_24*24;
 							int hue = (inst_mod_24<<4) | ((inst_div_24&1)<<3) | ((inst_div_24&2)<<1) | ((inst_div_24&4)>>1) | ((inst_div_24&8)>>3);
-							if (hue < 64) // B -> M
-								color = 0x804040 + hue;
-							else if (hue < 128) // M -> R
-								color = 0x804080 - (hue-64)*0x010000;
-							else if (hue < 192) // R -> Y
-								color = 0x404080 + (hue-128)*0x000100;
-							else if (hue < 256) // Y -> G
-								color = 0x408080 - (hue-192);
-							else if (hue < 320) // G -> C
-								color = 0x408040 + (hue-256)*0x010000;
-							else // C -> B
-								color = 0x808040 - (hue-320)*0x000100;
-							back_color=color+0x202020;
+							// linux port: colors from the theme (classic theme = original formula)
+							color=adx_theme_note_color(hue);
+							back_color=adx_color_add(color,gl_adx_theme.note_back_add);
 						}
 						else
 						{
-							color=0x806060;
+							color=gl_adx_theme.note_plain;
 							back_color=color;
 						}
 
@@ -332,7 +322,7 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 
 						// paint tracker event
 						sprintf(buf_a,"%s %.2X %.2X %.2X %.2X",note_name[pe->da2],pe->da0,pe->da1,pe->da2,pe->da3);
-						paint_event(hdc,e_x,e_y,TRACK_WIDTH,e_h,0x00808080+clipped_vel*0x00010101,back_color,buf_a);
+						paint_event(hdc,e_x,e_y,TRACK_WIDTH,e_h,adx_color_add(gl_adx_theme.note_text,clipped_vel*0x00010101),back_color,buf_a);
 
 						// paint event in pr
 						if(pe->trk==user_trk)
@@ -344,8 +334,8 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 							// paint piano roll event
 							if(pr_ni>=0 && pr_ni<pr_vn)
 							{
-								arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH+4+pr_ex,e_y,user_pr_note_width,e_h,0x0);
-								arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH+5+pr_ex,e_y+1,user_pr_note_width-2,e_h-2,color+clipped_vel*0x010101);
+								arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH+4+pr_ex,e_y,user_pr_note_width,e_h,gl_adx_theme.pianoroll_frame);
+								arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH+5+pr_ex,e_y+1,user_pr_note_width-2,e_h-2,adx_color_add(color,clipped_vel*0x010101));
 							}
 						}
 					}
@@ -354,10 +344,10 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 					if(pe->typ==EVT_PAT)
 					{
 						sprintf(buf_a,"Pat %.2X %.2X %.2X %.2X",pe->da0,pe->da1,pe->da2,pe->da3);
-						paint_event(hdc,e_x,e_y,TRACK_WIDTH,e_h,0x00FFFFFF,0x00608060,buf_a);
+						paint_event(hdc,e_x,e_y,TRACK_WIDTH,e_h,gl_adx_theme.pattern_text,gl_adx_theme.pattern,buf_a);
 
 						// pattern event label
-						SetTextColor(hdc,0x00FFFFFF);
+						SetTextColor(hdc,gl_adx_theme.pattern_text);
 						strcpy(buf_a,project.pattern[pe->da0].name);
 						buf_a[15]=0;
 						TextOut(hdc,e_x+3,e_y+16,buf_a,strlen(buf_a));
@@ -365,7 +355,7 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 
 					// jump event
 					if(pe->typ==EVT_JMP)
-						paint_event(hdc,e_x,e_y,TRACK_WIDTH,e_h,0x00FFFFFF,0x00404040,"Jmp           ");
+						paint_event(hdc,e_x,e_y,TRACK_WIDTH,e_h,gl_adx_theme.jump_text,gl_adx_theme.jump,"Jmp           ");
 
 					// midi automation event
 					if(pe->typ==EVT_MID)
@@ -377,21 +367,21 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 						else
 							name="Mid";
 						sprintf(buf_a,"%s %.2X %.2X %.2X %.2X",name,pe->da0,pe->da1,pe->da2,pe->da3);
-						paint_event(hdc,e_x,e_y,TRACK_WIDTH,NR_EVENT_HEIGHT,0x00FFFFFF,0x00606080,buf_a);
+						paint_event(hdc,e_x,e_y,TRACK_WIDTH,NR_EVENT_HEIGHT,gl_adx_theme.midi_text,gl_adx_theme.midi,buf_a);
 					}
 
 					// vst automation event
 					if(pe->typ==EVT_AUT)
 					{
 						sprintf(buf_a,"Aut %.2X %.2X %.2X %.2X",pe->da0,pe->da1,pe->da2,pe->da3);
-						paint_event(hdc,e_x,e_y,TRACK_WIDTH,NR_EVENT_HEIGHT,0x00FFFFFF,0x00404040+pe->da3/2,buf_a);
+						paint_event(hdc,e_x,e_y,TRACK_WIDTH,NR_EVENT_HEIGHT,gl_adx_theme.automation_text,adx_color_add(gl_adx_theme.automation,pe->da3/2),buf_a);
 					}
 
 					// tempo automation event
 					if(pe->typ==EVT_TMP)
 					{
 						sprintf(buf_a,"Tmp %.2X %.2X %.2X %.2X",pe->da0,pe->da1,pe->da2,pe->da3);
-						paint_event(hdc,e_x,e_y,TRACK_WIDTH,NR_EVENT_HEIGHT,0x00FFFFFF,0x00404040+pe->da0/2,buf_a);
+						paint_event(hdc,e_x,e_y,TRACK_WIDTH,NR_EVENT_HEIGHT,gl_adx_theme.tempo_text,adx_color_add(gl_adx_theme.tempo,pe->da0/2),buf_a);
 					}
 				}
 			}

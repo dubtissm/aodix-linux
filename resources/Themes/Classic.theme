@@ -1,0 +1,50 @@
+# Aodix color theme: Classic
+# The original colors of Aodix 4 (also used when no theme is selected).
+#
+# Copy this file, change the colors and choose it in File > Configuration > Color Theme.
+# Format: one "name = #RRGGBB" per line; lines starting with # or ; are comments.
+# Names that are missing keep their Classic color.
+# The sequencer background, grid and knobs come from the skin bitmaps (Skin Bitmaps Path).
+
+# --- note events -------------------------------------------------------------------
+# With "note colors" switched on, each instrument gets its own color on a color wheel
+# running through these six anchors (1 -> 2 -> ... -> 6 -> 1).
+note_hue_1          = #404080   # blue
+note_hue_2          = #804080   # magenta
+note_hue_3          = #804040   # red
+note_hue_4          = #808040   # yellow
+note_hue_5          = #408040   # green
+note_hue_6          = #408080   # cyan
+# added to the instrument color for the block background in the tracker
+note_back_add       = #202020
+# note blocks when note colors are switched off
+note_plain          = #606080
+# note text at velocity 0; the velocity brightens it (up to +#7F7F7F)
+note_text           = #808080
+# frame around notes in the piano roll (the note itself is the instrument color plus velocity)
+pianoroll_frame     = #000000
+
+# --- other events (block / text) ---------------------------------------------------
+pattern             = #608060
+pattern_text        = #FFFFFF
+jump                = #404040
+jump_text           = #FFFFFF
+midi                = #806060
+midi_text           = #FFFFFF
+# automation and tempo blocks get redder with the value (value/2 is added to red)
+automation          = #404040
+automation_text     = #FFFFFF
+tempo               = #404040
+tempo_text          = #FFFFFF
+
+# --- menus, dialogs and controls ---------------------------------------------------
+menu_face           = #D4D0C8   # menu bar, menus, dialog background
+menu_text           = #000000
+menu_text_disabled  = #808080
+menu_selection      = #0A246A   # highlighted menu entry, selected list entry / text
+menu_selection_text = #FFFFFF
+menu_edge_light     = #FFFFFF   # 3D edges: light side
+menu_edge_face      = #D4D0C8
+menu_edge_shadow    = #808080   # 3D edges: shadow side
+menu_edge_dark      = #404040
+field_background    = #FFFFFF   # text fields, lists, check boxes

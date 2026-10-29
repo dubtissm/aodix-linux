@@ -6,13 +6,53 @@
 #include "AodixCore.h"
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void conf_browse_folder(HWND const hwnd,char* buf)
+// linux port: a chosen path below the program resources (Skins/..., Themes/...) is stored relative, like the defaults
+static void conf_relative_resource(char* path,const char* top)
+{
+	char base[_MAX_PATH];
+	adx_resolve_resource_path(top,base);
+	size_t const n=strlen(base);
+	if(strncmp(path,base,n)==0 && (path[n]=='/' || path[n]==0))
+	{
+		char rel[_MAX_PATH];
+		snprintf(rel,_MAX_PATH,"%s%s",top,path+n);
+		strcpy(path,rel);
+	}
+}
+
+void conf_browse_folder(HWND const hwnd,char* buf,bool skin=false)
 {
 	// linux port: native folder chooser (zenity / kdialog) or the built-in one; paths in the home folder are shown as ~/...
 	char path[_MAX_PATH];
 	adx_expand_path(buf,path,_MAX_PATH);
+
+	// relative skin path: start in the resolved folder
+	if(skin && path[0] && path[0]!='/')
+	{
+		char resolved[_MAX_PATH];
+		adx_resolve_resource_path(path,resolved);
+		strcpy(path,resolved);
+	}
 	if(adxplat::choose_folder(hwnd,"Select Directory",path,_MAX_PATH))
+	{
+		if(skin)
+			conf_relative_resource(path,"Skins");
 		adx_compact_path(path,buf,_MAX_PATH);
+	}
+}
+
+void conf_browse_theme(HWND const hwnd,char* buf)
+{
+	// start in the folder of the current theme, or in the shipped themes
+	char path[_MAX_PATH];
+	adx_expand_path(buf[0]?buf:"Themes/Classic.theme",path,_MAX_PATH);
+	char resolved[_MAX_PATH];
+	adx_resolve_resource_path(path,resolved);
+	if(adxplat::choose_file(hwnd,"Select Color Theme",resolved,_MAX_PATH,"Color Themes (*.theme)\0*.theme\0All Files (*.*)\0*\0\0",false,"theme",nullptr))
+	{
+		conf_relative_resource(resolved,"Themes");
+		adx_compact_path(resolved,buf,_MAX_PATH);
+	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -102,6 +142,9 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 		// set skin path
 		SetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,gl_padx->cfg.skin_path);
+
+		// linux port: color theme file (empty = built-in classic colors)
+		SetDlgItemText(hdlg,IDC_THEME_PATH_EDIT,gl_padx->cfg.theme_path);
 
 		// get kbd layout combo pointer
 		HWND const hwnd_kbd_comb=GetDlgItem(hdlg,IDC_KBD_LAYOUT_COMBO);
@@ -253,8 +296,17 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		if(lw_par==IDC_SKIN_PATH_BUTTON)
 		{
 			GetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,buf,_MAX_PATH);
-			conf_browse_folder(hdlg,buf);
+			conf_browse_folder(hdlg,buf,true);
 			SetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,buf);
+			return TRUE;
+		}
+
+		// linux port: color theme file chooser
+		if(lw_par==IDC_THEME_PATH_BUTTON)
+		{
+			GetDlgItemText(hdlg,IDC_THEME_PATH_EDIT,buf,_MAX_PATH);
+			conf_browse_theme(hdlg,buf);
+			SetDlgItemText(hdlg,IDC_THEME_PATH_EDIT,buf);
 			return TRUE;
 		}
 
@@ -308,6 +360,11 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 			// set new skin path
 			GetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,gl_padx->cfg.skin_path,_MAX_PATH);
+
+			// linux port: set and apply the color theme
+			GetDlgItemText(hdlg,IDC_THEME_PATH_EDIT,gl_padx->cfg.theme_path,_MAX_PATH);
+			adx_theme_load(gl_padx->cfg.theme_path);
+			InvalidateRect(gl_hwnd_main,NULL,FALSE);
 
 			// refresh library
 			gl_padx->gui_vst_build_lib();

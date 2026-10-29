@@ -11,7 +11,7 @@ cmake --build build -j
 ./build/aodix [project.adxl]
 ```
 
-Skins and help are copied next to the executable, so Aodix runs straight from the build folder.
+Skins, themes and help are copied next to the executable, so Aodix runs straight from the build folder.
 `cmake --install build` installs the program, skins, help, desktop entry, icons and the MIME types for
 `.adx`/`.adxl` (`resources/aodix-mime.xml`).
 
@@ -54,7 +54,7 @@ src/plugin/     plugin interface (AdxPlugin.h) and hosts: plugin_vst3/clap/lv2/l
 third_party/    parts of the VST3 SDK 3.8 (MIT), CLAP headers 1.2.2 (MIT), LV2 headers (ISC)
 tests/          test plugins for the VST3, CLAP and LV2 hosts
 tools/          test project generator, project rewiring, font generators
-resources/      skins, help, icons, desktop entry, MIME types
+resources/      skins, color themes, help, icons, desktop entry, MIME types
 ```
 
 The history starts with the unchanged original source code (tag `original`):

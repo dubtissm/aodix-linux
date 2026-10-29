@@ -503,6 +503,7 @@ void CAodixCore::config_read(void)
 	strcpy(cfg.clap_path[0],"~/.clap");
 	strcpy(cfg.clap_path[1],"/usr/lib/clap");
 	strcpy(cfg.clap_path[2],"/usr/local/lib/clap");
+	strcpy(cfg.theme_path,"Themes/Classic.theme");
 
 	// init recent file paths
 	for(int rf=0;rf<NUM_RECENT_FILES;rf++)
@@ -564,7 +565,7 @@ void CAodixCore::config_read(void)
 			fprintf(stderr,"aodix: configuration file '%s' is incomplete\n",cfg_fil);
 
 		// file of an older version (it may even contain the structure padding that now overlaps the first clap path)
-		if(got<sizeof(ADX_CONFIG))
+		if(got<offsetof(ADX_CONFIG,theme_path))
 		{
 			for(int pi=0;pi<MAX_CLAP_FOLDERS;pi++)
 				cfg.clap_path[pi][0]=0;
@@ -580,6 +581,10 @@ void CAodixCore::config_read(void)
 				strcpy(cfg.vst_path[pi],compact);
 			}
 		}
+
+		// file without theme path (before 4.2.1.6)
+		if(got<sizeof(ADX_CONFIG))
+			strcpy(cfg.theme_path,"Themes/Classic.theme");
 		fclose(pfile);
 
 		// linux port: windows style skin path from an older config

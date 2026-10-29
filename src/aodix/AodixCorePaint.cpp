@@ -156,13 +156,15 @@ void CAodixCore::paint_event(HDC const hdc,int const x,int const y,int const w,i
 	// background
 	arg_gdi_paint_solid_rect(hdc,x,y,w,h,back_color);
 
-	// big event frame
-	arg_gdi_paint_solid_rect(hdc,x,y,1,1,back_color+ARG_GDI_3D_CLR_OFFSET+ARG_GDI_3D_CLR_OFFSET);
-	arg_gdi_paint_solid_rect(hdc,x+1,y,w-2,1,back_color+ARG_GDI_3D_CLR_OFFSET);
-	arg_gdi_paint_solid_rect(hdc,x,y+1,1,h-2,back_color+ARG_GDI_3D_CLR_OFFSET);
-	arg_gdi_paint_solid_rect(hdc,x+1,y+h-1,w-2,1,back_color-ARG_GDI_3D_CLR_OFFSET);
-	arg_gdi_paint_solid_rect(hdc,x+w-1,y+1,1,h-2,back_color-ARG_GDI_3D_CLR_OFFSET);
-	arg_gdi_paint_solid_rect(hdc,x+w-1,y+h-1,1,1,back_color-ARG_GDI_3D_CLR_OFFSET-ARG_GDI_3D_CLR_OFFSET);
+	// big event frame (linux port: per channel saturated, so bright theme colors do not wrap around)
+	COLORREF const c_hi=adx_color_add(back_color,ARG_GDI_3D_CLR_OFFSET);
+	COLORREF const c_lo=adx_color_sub(back_color,ARG_GDI_3D_CLR_OFFSET);
+	arg_gdi_paint_solid_rect(hdc,x,y,1,1,adx_color_add(c_hi,ARG_GDI_3D_CLR_OFFSET));
+	arg_gdi_paint_solid_rect(hdc,x+1,y,w-2,1,c_hi);
+	arg_gdi_paint_solid_rect(hdc,x,y+1,1,h-2,c_hi);
+	arg_gdi_paint_solid_rect(hdc,x+1,y+h-1,w-2,1,c_lo);
+	arg_gdi_paint_solid_rect(hdc,x+w-1,y+1,1,h-2,c_lo);
+	arg_gdi_paint_solid_rect(hdc,x+w-1,y+h-1,1,1,adx_color_sub(c_lo,ARG_GDI_3D_CLR_OFFSET));
 
 	// paint event text
 	SetTextColor(hdc,text_color);

@@ -1,0 +1,36 @@
+# Aodix color theme: Dark
+# Dark menus and dialogs, muted event blocks. Works best with a dark skin.
+# See Classic.theme for the description of every color.
+
+note_hue_1          = #3A4A78
+note_hue_2          = #6A3E78
+note_hue_3          = #7A3E3E
+note_hue_4          = #76683A
+note_hue_5          = #3E6A44
+note_hue_6          = #3A6A72
+note_back_add       = #181818
+note_plain          = #4A4A66
+note_text           = #909090
+pianoroll_frame     = #101010
+
+pattern             = #46684A
+pattern_text        = #F0F0F0
+jump                = #383838
+jump_text           = #F0F0F0
+midi                = #6A4A4A
+midi_text           = #F0F0F0
+automation          = #383838
+automation_text     = #F0F0F0
+tempo               = #383838
+tempo_text          = #F0F0F0
+
+menu_face           = #3A3C40
+menu_text           = #E2E2E2
+menu_text_disabled  = #7C8088
+menu_selection      = #2E62A0
+menu_selection_text = #FFFFFF
+menu_edge_light     = #5C6066
+menu_edge_face      = #3A3C40
+menu_edge_shadow    = #222326
+menu_edge_dark      = #121314
+field_background    = #2A2C30

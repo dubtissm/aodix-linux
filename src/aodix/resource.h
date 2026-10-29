@@ -60,6 +60,8 @@
 #define IDC_CLAP_PATH_BUTTON4           1042
 #define IDC_PW_BUFFER_COMBO             1043
 #define IDC_PW_RATE_COMBO               1044
+#define IDC_THEME_PATH_EDIT             1045
+#define IDC_THEME_PATH_BUTTON           1046
 #define ID_FILE_NEW40001                40001
 #define ID_FILE_OPEN40002               40002
 #define ID_FILE_SAVEAS                  40003

@@ -1,0 +1,36 @@
+# Aodix color theme: Vivid
+# Brighter, more saturated event blocks; menus in a lighter, neutral grey.
+# See Classic.theme for the description of every color.
+
+note_hue_1          = #3050B0
+note_hue_2          = #A040B0
+note_hue_3          = #B03838
+note_hue_4          = #A89030
+note_hue_5          = #309848
+note_hue_6          = #3090A8
+note_back_add       = #202020
+note_plain          = #5A5AA0
+note_text           = #808080
+pianoroll_frame     = #000000
+
+pattern             = #4C9A54
+pattern_text        = #FFFFFF
+jump                = #505058
+jump_text           = #FFFFFF
+midi                = #A05858
+midi_text           = #FFFFFF
+automation          = #4A4A58
+automation_text     = #FFFFFF
+tempo               = #4A4A58
+tempo_text          = #FFFFFF
+
+menu_face           = #E4E4E4
+menu_text           = #000000
+menu_text_disabled  = #8A8A8A
+menu_selection      = #3069C0
+menu_selection_text = #FFFFFF
+menu_edge_light     = #FFFFFF
+menu_edge_face      = #E4E4E4
+menu_edge_shadow    = #9A9A9A
+menu_edge_dark      = #505050
+field_background    = #FFFFFF

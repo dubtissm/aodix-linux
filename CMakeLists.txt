@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(aodix VERSION 4.2.1.5 LANGUAGES C CXX)
+project(aodix VERSION 4.2.1.6 LANGUAGES C CXX)
 add_compile_definitions(AODIX_VERSION_STRING="${PROJECT_VERSION}")
 
 set(CMAKE_CXX_STANDARD 17)
@@ -85,6 +85,7 @@ add_executable(aodix
 	src/aodix/AodixCoreDsp.cpp
 	src/aodix/AodixCoreDspGraph.cpp
 	src/aodix/AodixDspPool.cpp
+	src/aodix/AodixTheme.cpp
 	src/aodix/AodixCoreEdit.cpp
 	src/aodix/AodixCoreExport.cpp
 	src/aodix/AodixCoreGui.cpp
@@ -119,12 +120,14 @@ target_link_libraries(aodix PRIVATE adxplatform adxplugin ZLIB::ZLIB)
 add_custom_command(TARGET aodix POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/Skins $<TARGET_FILE_DIR:aodix>/Skins
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/HTMLHelp $<TARGET_FILE_DIR:aodix>/HTMLHelp
+	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/Themes $<TARGET_FILE_DIR:aodix>/Themes
 )
 
 include(GNUInstallDirs)
 install(TARGETS aodix RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(DIRECTORY resources/Skins DESTINATION ${CMAKE_INSTALL_DATADIR}/aodix)
 install(DIRECTORY resources/HTMLHelp DESTINATION ${CMAKE_INSTALL_DATADIR}/aodix)
+install(DIRECTORY resources/Themes DESTINATION ${CMAKE_INSTALL_DATADIR}/aodix)
 install(FILES resources/aodix.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
 install(FILES resources/aodix-mime.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages RENAME aodix.xml)
 install(FILES resources/aodix.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/32x32/apps)

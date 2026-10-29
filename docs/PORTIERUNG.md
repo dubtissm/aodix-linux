@@ -296,7 +296,12 @@ Alle Änderungen sind in der Git-Historie gegen das Original nachvollziehbar. Im
 - Fehlerkorrektur aus dem Original: „Render Cue Range“ im Bounce-Dialog erzeugte ohne Stop-Marker eine leere Datei.
 
 **System**
-- Konfiguration in `~/.config/aodix/Aodix.cfg`, Skins/Hilfe relativ zum Programm oder in `share/aodix`.
+- Konfiguration in `~/.config/aodix/Aodix.cfg`, Skins/Hilfe/Themes relativ zum Programm oder in `share/aodix`.
+- Farbthemen (4.2.1.6, `AodixTheme.cpp`): die im Original fest kodierten Event-Farben (Noten-Farbrad mit sechs
+  Ankern, je 64 Stufen linear interpoliert – mit den Classic-Ankern bitgleich zur Originalformel) und die
+  Menü-/Dialogfarben der Plattformschicht (`CLR_*` → `adxplat::set_ui_colors`) kommen aus `*.theme`-Dateien.
+  Additionen auf Farben sind pro Kanal gesättigt, damit helle Themes nicht überlaufen. `theme_path` ist an
+  `ADX_CONFIG` angehängt.
 - HTML-Hilfe (statt `.chm`) und Website werden mit `xdg-open` geöffnet.
 - Pfadtrenner `\` → `/`; Dateiendungen werden nicht mehr in Kleinbuchstaben umgeschrieben (Linux-Dateisysteme
   unterscheiden Groß-/Kleinschreibung).

@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.2.1.6 (2026-10-29)
+
+- Color themes: the colors of the event blocks (notes with their instrument colors, pattern, jump, MIDI,
+  automation and tempo events) and of menus, dialogs and controls, which the original had hard coded, are now
+  read from a text file (`*.theme`, one `name = #RRGGBB` per line). Choose it in *File → Configuration →
+  Color Theme*; it is applied right away. Included: *Classic* (exactly the original colors), *Dark* and *Vivid*
+  in the `Themes` folder.
+- The folder chooser for the skin path now starts in the current skin folder; skins and themes below the program
+  folder are stored as relative paths (`Skins/Blue`, `Themes/Dark.theme`).
+
 ## 4.2.1.5 (2026-10-29)
 
 - Fixed: the plugin libraries were released only by static destructors at program exit, after the plugins' own

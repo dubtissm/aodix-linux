@@ -177,6 +177,7 @@ void			client_origin_in_surface(Win32Window* w,int* x,int* y);	// origin of clie
 void			post_internal(HWND hwnd,UINT msg,WPARAM wparam,LPARAM lparam);
 void			invalidate_children(Win32Window* w);
 void			repaint_menubar(Win32Window* w);
+void			repaint_all_windows(void);
 int				menubar_height(HMENU menu);
 void			flush_all_surfaces(void);
 bool			pump_one(bool block);	// process pending X events / timers; returns false when nothing happened (non-blocking)
@@ -211,17 +212,18 @@ void			frame_3d(HDC hdc,int x,int y,int w,int h,bool sunken,bool thick);
 void			draw_text_in(HDC hdc,const RECT& r,const char* text,int font_kind,COLORREF color,int align,bool vcenter);	// align: 0 left, 1 center, 2 right
 void			draw_focus_rect(HDC hdc,int x,int y,int w,int h);
 
-// classic windows colors used by menus and dialogs
-#define CLR_FACE		0x00C8D0D4
-#define CLR_HILIGHT		0x00FFFFFF
-#define CLR_LIGHT		0x00C8D0D4
-#define CLR_SHADOW		0x00808080
-#define CLR_DKSHADOW	0x00404040
-#define CLR_WINDOW		0x00FFFFFF
-#define CLR_TEXT		0x00000000
-#define CLR_GRAYTEXT	0x00808080
-#define CLR_SEL			0x006A240A
-#define CLR_SELTEXT		0x00FFFFFF
+// classic windows colors used by menus and dialogs (changeable with adxplat::set_ui_colors)
+extern adxplat::UiColors g_ui_colors;
+#define CLR_FACE		(g_ui_colors.face)
+#define CLR_HILIGHT		(g_ui_colors.hilight)
+#define CLR_LIGHT		(g_ui_colors.light)
+#define CLR_SHADOW		(g_ui_colors.shadow)
+#define CLR_DKSHADOW	(g_ui_colors.dkshadow)
+#define CLR_WINDOW		(g_ui_colors.window)
+#define CLR_TEXT		(g_ui_colors.text)
+#define CLR_GRAYTEXT	(g_ui_colors.graytext)
+#define CLR_SEL			(g_ui_colors.sel)
+#define CLR_SELTEXT		(g_ui_colors.seltext)
 
 // built-in control classes (win32_controls.cpp)
 void			register_builtin_classes(void);

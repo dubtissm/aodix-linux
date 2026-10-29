@@ -763,6 +763,14 @@ namespace adxplat
 	int			ui_scale(void);
 	int			ui_scale_to_logical(int physical_pixels);
 
+	// colors of menus, dialogs and controls (COLORREF). defaults are the classic windows colors.
+	struct UiColors
+	{
+		COLORREF face,hilight,light,shadow,dkshadow,window,text,graytext,sel,seltext;
+	};
+	UiColors	default_ui_colors(void);
+	void		set_ui_colors(const UiColors& colors);	// repaints all windows
+
 	// set the cursor for a window (persists until changed)
 	void		set_window_cursor(HWND hwnd,HCURSOR cursor);
 

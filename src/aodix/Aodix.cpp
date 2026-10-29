@@ -45,6 +45,9 @@ int main(int argc,char** argv)
 	// get desktop device context
 	HDC const hdc_desktop=GetDC(hwnd_desktop);
 
+	// linux port: color theme (event, block and menu colors)
+	adx_theme_load(gl_padx->cfg.theme_path);
+
 	// linux port: relative skin paths are resolved against the program directory
 	char skin_dir[_MAX_PATH];
 	adx_resolve_resource_path(gl_padx->cfg.skin_path,skin_dir);
