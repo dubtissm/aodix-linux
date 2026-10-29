@@ -23,7 +23,9 @@ JACK/PipeWire und den heutigen Linux-Plugin-Formaten.
 - **Tastatur-Layouts** QWERTY, QWERTZ und AZERTY für die Noteneingabe
 - **Projekte:** öffnet originale `.adx`-Dateien; speichert komprimiert als `.adxl` (rund 10 KB statt 2,9 MB)
   oder als `.adx` für Aodix unter Windows
-- **Farbthemen** für Event-Blöcke, Menüs und Dialoge: Classic, Dark, Vivid oder ein eigenes (einfache Textdatei)
+- **Farbthemen** für Event-Blöcke, Menüs und Dialoge: Classic, Dark, Vivid, Impulse oder ein
+  eigenes (einfache Textdatei)
+- **Skin „Impulse“** mit den Farben und dem Gefühl von Impulse Tracker 2
 - Zwischenablage in allen Textfeldern, Debian-Paket mit Menüeintrag, Icon und Dateitypen
 
 ## Installation
@@ -66,10 +68,11 @@ Die Einstellungen liegen in `~/.config/aodix/Aodix.cfg`.
 
 Die Farben der Event-Blöcke (Noten, Patterns, Jumps, MIDI, Automation, Tempo) sowie von Menüs und Dialogen kommen
 aus einer Theme-Datei, die man unter *File → Configuration → Color Theme* auswählt; sie gilt sofort. Mitgeliefert
-werden *Classic* (die Originalfarben), *Dark* und *Vivid* im Ordner `Themes` (beim Paket `/usr/share/aodix/Themes`).
+werden *Classic* (die Originalfarben), *Dark*, *Vivid* und *Impulse* im Ordner `Themes` (beim Paket `/usr/share/aodix/Themes`).
 Für ein eigenes Theme eine davon kopieren, z. B. nach `~/.config/aodix/Mein.theme`, und die Farben ändern – eine
 Zeile `name = #RRGGBB` pro Farbe, alle Farben sind in `Classic.theme` beschrieben. Hintergrund, Raster und Regler
-des Sequencers kommen aus dem Skin (*Skin Bitmaps Path*).
+des Sequencers kommen aus dem Skin (*Skin Bitmaps Path*). Für den Look von Impulse Tracker 2 den Skin
+`Skins/Impulse` (nach einem Neustart) zusammen mit dem Theme `Themes/Impulse.theme` wählen.
 
 ### Projektdateien (.adx / .adxl)
 

@@ -22,7 +22,9 @@ the same project format as the original, with JACK/PipeWire audio and today's Li
 - **Keyboard layouts** QWERTY, QWERTZ and AZERTY for note entry
 - **Projects:** opens original `.adx` files; saves compressed `.adxl` (about 10 KB instead of 2.9 MB) or
   `.adx` for Aodix on Windows
-- **Color themes** for event blocks, menus and dialogs: Classic, Dark, Vivid, or your own (a simple text file)
+- **Color themes** for event blocks, menus and dialogs: Classic, Dark, Vivid, Impulse, or your own
+  (a simple text file)
+- **Impulse skin** with the colors and feel of Impulse Tracker 2
 - Clipboard in all text fields, Debian package with menu entry, icon and file types
 
 ## Installation
@@ -64,10 +66,11 @@ Settings are stored in `~/.config/aodix/Aodix.cfg`.
 
 The colors of the event blocks (notes, patterns, jumps, MIDI, automation, tempo) and of menus and dialogs come
 from a theme file, chosen in *File → Configuration → Color Theme* and applied right away. Aodix ships *Classic*
-(the original colors), *Dark* and *Vivid* in its `Themes` folder (`/usr/share/aodix/Themes` for the package).
+(the original colors), *Dark*, *Vivid* and *Impulse* in its `Themes` folder (`/usr/share/aodix/Themes` for the package).
 For your own theme, copy one of them, e.g. to `~/.config/aodix/My.theme`, and change the colors – one
 `name = #RRGGBB` per line, every color is described in `Classic.theme`. The sequencer background, grid and knobs
-come from the skin (*Skin Bitmaps Path*).
+come from the skin (*Skin Bitmaps Path*). For the Impulse Tracker 2 look, choose the skin `Skins/Impulse`
+(after a restart) together with the theme `Themes/Impulse.theme`.
 
 ### Project files (.adx / .adxl)
 

@@ -1,0 +1,38 @@
+# Aodix color theme: Impulse
+# Colors of Impulse Tracker 2: green and yellow text on black, tan menus with brown 3D edges.
+# Made for the "Impulse" skin (Skins/Impulse). See Classic.theme for the description of every color.
+
+# dark instrument colors, so the green note text stays readable
+note_hue_1          = #20284A
+note_hue_2          = #3E2048
+note_hue_3          = #4A1C20
+note_hue_4          = #403A18
+note_hue_5          = #1C3A1E
+note_hue_6          = #1C3A40
+note_back_add       = #101010
+note_plain          = #102A12
+# green, brighter with the velocity (like IT's pattern text)
+note_text           = #44A048
+pianoroll_frame     = #000000
+
+pattern             = #3C2C1C
+pattern_text        = #FCFC54
+jump                = #4C0C18
+jump_text           = #FCFC54
+midi                = #1C2440
+midi_text           = #E8E8C8
+automation          = #241C14
+automation_text     = #FCFC54
+tempo               = #241C14
+tempo_text          = #FCFC54
+
+menu_face           = #C09C7A
+menu_text           = #000000
+menu_text_disabled  = #7C5844
+menu_selection      = #000000
+menu_selection_text = #FCFC54
+menu_edge_light     = #E8E8C8
+menu_edge_face      = #C09C7A
+menu_edge_shadow    = #7C5844
+menu_edge_dark      = #3C2818
+field_background    = #E0D4B8

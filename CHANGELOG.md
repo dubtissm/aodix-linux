@@ -7,6 +7,9 @@
   read from a text file (`*.theme`, one `name = #RRGGBB` per line). Choose it in *File → Configuration →
   Color Theme*; it is applied right away. Included: *Classic* (exactly the original colors), *Dark* and *Vivid*
   in the `Themes` folder.
+- New skin *Impulse* with the matching theme *Impulse*: the colors and feel of Impulse Tracker 2 (tan panels with
+  brown 3D edges, green and yellow text on black, a bolder DOS-like font, sample displays as background art) on
+  the Aodix layout. Generated from the Blue skin by `tools/make_it2_skin.py`.
 - The folder chooser for the skin path now starts in the current skin folder; skins and themes below the program
   folder are stored as relative paths (`Skins/Blue`, `Themes/Dark.theme`).
 

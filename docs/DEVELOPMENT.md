@@ -53,7 +53,7 @@ src/plugin/     plugin interface (AdxPlugin.h) and hosts: plugin_vst3/clap/lv2/l
                 audio/MIDI (JACK/PipeWire): src/aodix/AodixCoreAudio.cpp
 third_party/    parts of the VST3 SDK 3.8 (MIT), CLAP headers 1.2.2 (MIT), LV2 headers (ISC)
 tests/          test plugins for the VST3, CLAP and LV2 hosts
-tools/          test project generator, project rewiring, font generators
+tools/          test project generator, project rewiring, font generators, Impulse skin generator
 resources/      skins, color themes, help, icons, desktop entry, MIME types
 ```
 
