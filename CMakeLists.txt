@@ -116,12 +116,15 @@ add_executable(aodix
 target_compile_options(aodix PRIVATE -Wno-write-strings -Wno-multichar -Wno-unused-parameter -Wno-int-to-pointer-cast -Wno-unused-result -Wno-format-truncation -Wno-format-overflow -Wno-conversion-null)
 target_link_libraries(aodix PRIVATE adxplatform adxplugin ZLIB::ZLIB)
 
-# run from the build directory: copy the skins next to the executable
-add_custom_command(TARGET aodix POST_BUILD
+# run from the build directory: copy skins, themes and help next to the executable.
+# a separate target that runs on every build, so changed resources arrive even when nothing is recompiled
+add_custom_target(aodix_resources ALL
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/Skins $<TARGET_FILE_DIR:aodix>/Skins
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/HTMLHelp $<TARGET_FILE_DIR:aodix>/HTMLHelp
 	COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/resources/Themes $<TARGET_FILE_DIR:aodix>/Themes
+	COMMENT "Copying skins, themes and help"
 )
+add_dependencies(aodix_resources aodix)
 
 include(GNUInstallDirs)
 install(TARGETS aodix RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
