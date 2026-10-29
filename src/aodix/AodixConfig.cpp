@@ -48,7 +48,15 @@ void conf_browse_theme(HWND const hwnd,char* buf)
 	adx_expand_path(buf[0]?buf:"Themes/Classic.theme",path,_MAX_PATH);
 	char resolved[_MAX_PATH];
 	adx_resolve_resource_path(path,resolved);
-	if(adxplat::choose_file(hwnd,"Select Color Theme",resolved,_MAX_PATH,"Color Themes (*.theme)\0*.theme\0All Files (*.*)\0*\0\0",false,"theme",nullptr))
+
+	// pass the folder (choose_file makes it 'folder/'): zenity opens a folder reliably, a file name only on some versions
+	char folder[_MAX_PATH];
+	snprintf(folder,_MAX_PATH,"%s",resolved);
+	char* const slash=strrchr(folder,'/');
+	if(slash && slash!=folder)
+		*slash=0;	// choose_file appends '/'
+	resolved[0]=0;
+	if(adxplat::choose_file(hwnd,"Select Color Theme",resolved,_MAX_PATH,"Color Themes (*.theme)\0*.theme\0All Files (*.*)\0*\0\0",false,"theme",folder))
 	{
 		conf_relative_resource(resolved,"Themes");
 		adx_compact_path(resolved,buf,_MAX_PATH);
