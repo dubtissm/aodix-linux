@@ -1295,6 +1295,16 @@ void ClapPlugin::editorResized(int width,int height)
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // library functions
+void clap_plugin_shutdown(void)
+{
+	// clap_entry.deinit() for every initialized library at program end (the libraries stay loaded)
+	std::lock_guard<std::mutex> lock(g_module_mutex);
+	for(auto& m:g_modules)
+		if(m.second.entry)
+			m.second.entry->deinit();
+	g_modules.clear();
+}
+
 int clap_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out)
 {
 	std::string error;

@@ -223,6 +223,11 @@ int main(int argc,char** argv)
 	// destroy aodix core instance
 	delete gl_padx;
 
+	// linux port: release the plugin libraries now (VST3 ModuleExit, CLAP deinit). Done by static destructors at exit,
+	// the plugins' own globals were already destroyed; a crashing ModuleExit then triggered crash handlers of other
+	// plugins, which wrote files with garbage names into the current directory
+	adx_plugin_shutdown();
+
 	// linux port: close the x server connection
 	adxplat::shutdown();
 

@@ -3,6 +3,7 @@
 #include "public.sdk/source/vst/vsteditcontroller.h"
 #include "public.sdk/source/common/pluginview.h"
 #include "public.sdk/source/main/pluginfactory.h"
+#include "public.sdk/source/main/moduleinit.h"
 #include "pluginterfaces/vst/ivstevents.h"
 #include "pluginterfaces/vst/ivstparameterchanges.h"
 #include "pluginterfaces/gui/iplugview.h"
@@ -30,6 +31,10 @@ static void tlog(const char* fmt,...)
 	va_list ap; va_start(ap,fmt); vfprintf(f,fmt,ap); va_end(ap);
 	fputc('\n',f); fclose(f);
 }
+
+// shutdown order check: ModuleExit has to come while the plugin's own static objects still exist
+static struct StaticProbe { ~StaticProbe(){ tlog("plugin statics destroyed"); } } s_static_probe;
+static Steinberg::ModuleTerminator s_module_exit([]{ tlog("ModuleExit"); });
 
 //------------------------------------------------------------------------------------------------
 class Proc : public AudioEffect

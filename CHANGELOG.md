@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.2.1.5 (2026-10-29)
+
+- Fixed: the plugin libraries were released only by static destructors at program exit, after the plugins' own
+  global objects had already been destroyed. VST3 `ModuleExit` could then crash (seen with dubtility); crash
+  handlers of other plugins (Signalizer) reacted by writing files with garbage names into the current directory.
+  Aodix now releases the libraries (VST3 `ModuleExit`, CLAP `deinit`) explicitly before it exits.
+
 ## 4.2.1.4 (2026-10-27)
 
 - Fixed: projects that were loaded and saved again lost the leading `/` of their plugin paths, so the plugins had

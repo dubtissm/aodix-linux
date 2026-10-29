@@ -169,6 +169,10 @@ bool		adx_plugin_is_lv2(const char* path);
 // all installed LV2 plugins (path = bundle directory); empty if lilv is not installed
 void		adx_lv2_list(std::vector<AdxPluginDesc>& out);
 
+// release the plugin libraries at program end (VST3 ModuleExit, CLAP deinit). call it after all plugin instances are
+// deleted and before main() returns: from a static destructor the plugins' own globals would already be destroyed
+void		adx_plugin_shutdown(void);
+
 // list the plugins contained in a bundle / file
 int			adx_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
 
@@ -176,6 +180,8 @@ int			adx_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
 AdxPlugin*	adx_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);
 
 // format implementations (dispatched by adx_plugin_scan / adx_plugin_load)
+void		vst3_plugin_shutdown(void);
+void		clap_plugin_shutdown(void);
 int			vst3_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);
 AdxPlugin*	vst3_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* host,char* error,int error_size);
 int			ladspa_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out);

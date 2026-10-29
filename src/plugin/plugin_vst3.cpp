@@ -1414,6 +1414,13 @@ static bool scan_classes(const char* path,std::vector<AdxPluginDesc>& out,std::v
 	return true;
 }
 
+void vst3_plugin_shutdown(void)
+{
+	// last references to the modules (all instances are deleted by now): ModuleExit and dlclose happen here, while the
+	// plugins' own static objects still exist (from the static destructor of the cache they would already be gone)
+	module_cache().clear();
+}
+
 int vst3_plugin_scan(const char* path,std::vector<AdxPluginDesc>& out)
 {
 	size_t const before=out.size();

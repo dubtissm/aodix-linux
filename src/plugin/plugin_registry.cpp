@@ -33,3 +33,9 @@ AdxPlugin* adx_plugin_load(const char* path,int32_t wanted_id,AdxPluginHost* hos
 		return ladspa_plugin_load(path,wanted_id,host,error,error_size);
 	return vst3_plugin_load(path,wanted_id,host,error,error_size);
 }
+
+void adx_plugin_shutdown(void)
+{
+	vst3_plugin_shutdown();
+	clap_plugin_shutdown();
+}
