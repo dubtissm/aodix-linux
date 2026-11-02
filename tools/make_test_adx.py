@@ -2,7 +2,7 @@
 # Writes a small Aodix project (.adx) following docs/adx-spec.txt, used to test the project loader.
 import struct, sys
 
-out = sys.argv[1] if len(sys.argv) > 1 else 'test.adx'
+out = next((a for a in sys.argv[1:] if not a.startswith('--')), 'test.adx')
 # --thru: wire master input 1/2 to master output 1/2 (audio pass-through test)
 thru = '--thru' in sys.argv
 ppqn = 192
@@ -41,6 +41,11 @@ for beat in range(8):
 bass = [36, 36, 43, 41]
 for i, n in enumerate(bass):
     events.append((i * ppqn * 2, ppqn * 2 - 10, 0, 3, 0, 1, 3, 0, n, 100))
+# --patcall: pattern 1 holds a note pattern, track 4 of the arrangement calls it (pattern event)
+if '--patcall' in sys.argv:
+    for beat in range(4):
+        events.append((beat * ppqn, ppqn // 2, 1, 0, 0, 1, 4, 0, 60 + beat * 2, 90 + beat * 10))
+    events.append((0, ppqn * 8, 0, 4, 1, 1, 1, 0, 128, 128))
 # a tempo event
 events.append((ppqn * 4, 0, 0, 0, 5, 0, 130, 0, 0, 0))
 

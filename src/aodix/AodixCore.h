@@ -104,8 +104,11 @@ struct ADX_CONFIG
 	unsigned char win_state;
 	unsigned char win_geom[8];
 
+	// linux port: activity bars over the play position (0 = shown, so older configurations show them)
+	unsigned char play_bars_off;
+
 	// reserved fields
-	char reserved2[41];
+	char reserved2[40];
 
 	// registration info
 	char user_name[32];
@@ -626,6 +629,25 @@ public:
 	int	master_transport_sampleframe;
 	int	master_transport_last_y;
 	int	master_midi_vumeter[MAX_TRACKS];
+
+	// linux port: note-on counter and last velocity per track (written by the audio thread, read by the gui)
+	unsigned int	master_midi_note_count[MAX_TRACKS];
+	unsigned char	master_midi_note_velo[MAX_TRACKS];
+
+	// linux port: play position overlay (line + activity bars), drawn by the platform over the window image
+	bool	gui_ov_active;
+	int		gui_ov_play_y;
+	int		gui_ov_seq_y;			// top of the sequencer area
+	int		gui_ov_width;
+	int		gui_ov_first_x;			// x of the first visible track column
+	int		gui_ov_tracks;			// visible tracks
+	unsigned int gui_ov_note_seen[MAX_TRACKS];
+	float	gui_ov_level[MAX_TRACKS];	// bar height 0..1
+	int		gui_ov_last_frame;		// interpolation of the play position between audio blocks
+	double	gui_ov_last_frame_ms;
+	double	gui_ov_last_tick_ms;
+	void	gui_overlay_paint(adxplat::OverlayCanvas* cv);
+	friend void adx_install_overlay(HWND hwnd,CAodixCore* core);
 	int	master_i_x;
 	int	master_i_y;
 	int	master_o_x;
@@ -796,4 +818,7 @@ public:
 	int32_t audio_num_drivers;
 	int32_t audio_num_inputs;
 	int32_t audio_num_outputs;
-};
+};// linux port: installs the play position overlay on the main window (AodixCoreGui.cpp)
+void adx_install_overlay(HWND hwnd,CAodixCore* core);
+
+

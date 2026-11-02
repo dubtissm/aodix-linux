@@ -23,9 +23,19 @@ struct ADX_THEME
 	COLORREF automation,automation_text;	// value/2 is added to the red channel
 	COLORREF tempo,tempo_text;				// tempo/2 is added to the red channel
 
+	// play position line and the activity bars above it
+	bool	 play_line_invert;		// classic: the line inverts what is below it
+	COLORREF play_line;
+	COLORREF bar_low,bar_mid,bar_high;	// bar gradient bottom -> middle -> top
+	int		 bar_alpha;				// 0..255
+
 	// menus, dialogs and controls
 	adxplat::UiColors ui;
 };
+
+// size of the activity bars over the play position
+#define ADX_BAR_HEIGHT		48
+#define ADX_BAR_WIDTH		10
 
 extern ADX_THEME gl_adx_theme;
 
@@ -35,6 +45,9 @@ void		adx_theme_defaults(ADX_THEME* theme);
 // load a theme file (path as stored in the config: empty = built-in classic, relative = next to the program /
 // share/aodix). keys missing in the file keep the classic value. applies the menu colors right away.
 bool		adx_theme_load(const char* path);
+
+// activity bar color at a height position (0 = bottom, 1 = top)
+COLORREF	adx_theme_bar_color(float pos);
 
 // note block color for a hue position (0..383)
 COLORREF	adx_theme_note_color(int hue);

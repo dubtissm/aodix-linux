@@ -503,7 +503,7 @@ static void free_surface(Win32Window* w)
 
 	if(w->surface)
 	{
-		// scaled windows draw into their own logical buffer, unscaled ones directly into the ximage
+		// the surface has its own buffer (see create_surface)
 		if(!w->surface->own_pixels)
 			w->surface->px=nullptr;
 		delete w->surface;
@@ -579,18 +579,12 @@ static void create_surface(Win32Window* w,int lwidth,int lheight)
 	w->surface=new GdiBitmap();
 	w->surface->w=lwidth;
 	w->surface->h=lheight;
-	if(is_scaled(w))
-	{
-		w->surface->stride=lwidth;
-		w->surface->px=(uint32_t*)calloc((size_t)lwidth*lheight,4);
-		w->surface->own_pixels=true;
-	}
-	else
-	{
-		w->surface->stride=img->bytes_per_line/4;
-		w->surface->px=(uint32_t*)img->data;
-		w->surface->own_pixels=false;
-	}
+
+	// the application draws into its own buffer; flush_surface copies (or scales) the dirty part into the ximage and
+	// draws the overlay (play position, activity bars) on top, so the overlay never touches the application's image
+	w->surface->stride=lwidth;
+	w->surface->px=(uint32_t*)calloc((size_t)lwidth*lheight,4);
+	w->surface->own_pixels=true;
 	w->has_dirty=false;
 }
 
@@ -686,13 +680,147 @@ static void flush_surface(Win32Window* w)
 	int px=x,py=y,px2=x2,py2=y2;
 	if(is_scaled(w))
 		scale_to_image(w,x,y,x2,y2,&px,&py,&px2,&py2);
+	else
+	{
+		// unscaled: plain copy of the dirty rows
+		XImage* const img=(XImage*)w->ximage;
+		int const dstride=img->bytes_per_line/4;
+		for(int yy=y;yy<y2;yy++)
+			memcpy((uint32_t*)img->data+(size_t)yy*dstride+x,w->surface->px+(size_t)yy*w->surface->stride+x,(size_t)(x2-x)*4);
+	}
 	if(px2<=px || py2<=py)
 		return;
+
+	// overlay on top of the freshly copied part
+	if(w->overlay_proc)
+	{
+		adxplat::OverlayCanvas cv;
+		cv.window=w;
+		cv.clip_x=px; cv.clip_y=py; cv.clip_x2=px2; cv.clip_y2=py2;
+		client_origin_in_surface(w,&cv.origin_x,&cv.origin_y);
+		w->overlay_proc(w,&cv,w->overlay_user);
+	}
 
 	if(w->shminfo)
 		XShmPutImage(g_dpy,w->xwin,g_gc,(XImage*)w->ximage,px,py,px,py,px2-px,py2-py,False);
 	else
 		XPutImage(g_dpy,w->xwin,g_gc,(XImage*)w->ximage,px,py,px,py,px2-px,py2-py);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// overlay: drawn over the application's image at every flush (adxplat::set_overlay)
+static void mark_surface_dirty(Win32Window* top,const RECT& r)
+{
+	int const x1=std::max<int>(0,r.left),y1=std::max<int>(0,r.top);
+	int const x2=std::min<int>(top->surface?top->surface->w:0,r.right),y2=std::min<int>(top->surface?top->surface->h:0,r.bottom);
+	if(x2<=x1 || y2<=y1)
+		return;
+	if(!top->has_dirty)
+	{
+		top->dirty.left=x1; top->dirty.top=y1; top->dirty.right=x2; top->dirty.bottom=y2;
+		top->has_dirty=true;
+	}
+	else
+	{
+		top->dirty.left=std::min<LONG>(top->dirty.left,x1);
+		top->dirty.top=std::min<LONG>(top->dirty.top,y1);
+		top->dirty.right=std::max<LONG>(top->dirty.right,x2);
+		top->dirty.bottom=std::max<LONG>(top->dirty.bottom,y2);
+	}
+}
+
+void adxplat::set_overlay(HWND hwnd,OverlayProc proc,void* user)
+{
+	if(!is_valid_window(hwnd) || hwnd->parent)
+		return;
+	hwnd->overlay_proc=proc;
+	hwnd->overlay_user=user;
+	if(hwnd->has_overlay_rect)
+		mark_surface_dirty(hwnd,hwnd->overlay_rect);
+	hwnd->has_overlay_rect=false;
+}
+
+void adxplat::overlay_changed(HWND hwnd,const RECT* bounds)
+{
+	if(!is_valid_window(hwnd) || hwnd->parent || !hwnd->surface)
+		return;
+
+	// the old area is copied again from the application's image (removes the old overlay), the new one gets drawn
+	if(hwnd->has_overlay_rect)
+		mark_surface_dirty(hwnd,hwnd->overlay_rect);
+	hwnd->has_overlay_rect=false;
+	if(bounds && bounds->right>bounds->left && bounds->bottom>bounds->top)
+	{
+		int ox,oy;
+		client_origin_in_surface(hwnd,&ox,&oy);
+		RECT r={bounds->left+ox,bounds->top+oy,bounds->right+ox,bounds->bottom+oy};
+		hwnd->overlay_rect=r;
+		hwnd->has_overlay_rect=true;
+		mark_surface_dirty(hwnd,r);
+	}
+}
+
+// logical client rectangle -> physical ximage rectangle, clipped to the part being flushed
+static bool overlay_rect(adxplat::OverlayCanvas* cv,int x,int y,int w,int h,int* px,int* py,int* px2,int* py2)
+{
+	Win32Window* const win=(Win32Window*)cv->window;
+	x+=cv->origin_x; y+=cv->origin_y;
+	int x1=x,y1=y,x2=x+w,y2=y+h;
+	if(is_scaled(win))
+	{
+		x1=phys_pos(x1); y1=phys_pos(y1); x2=phys_pos(x2); y2=phys_pos(y2);
+	}
+	*px=std::max(x1,cv->clip_x); *py=std::max(y1,cv->clip_y);
+	*px2=std::min(x2,cv->clip_x2); *py2=std::min(y2,cv->clip_y2);
+	return *px2>*px && *py2>*py;
+}
+
+static inline uint32_t colorref_to_pixel(COLORREF c)
+{
+	return ((c&0xFF)<<16)|(c&0xFF00)|((c>>16)&0xFF);
+}
+
+void adxplat::overlay_fill(OverlayCanvas* cv,int x,int y,int w,int h,COLORREF color,int alpha)
+{
+	int px,py,px2,py2;
+	if(!overlay_rect(cv,x,y,w,h,&px,&py,&px2,&py2))
+		return;
+	XImage* const img=(XImage*)((Win32Window*)cv->window)->ximage;
+	int const stride=img->bytes_per_line/4;
+	uint32_t const c=colorref_to_pixel(color);
+	alpha=std::max(0,std::min(255,alpha));
+	for(int yy=py;yy<py2;yy++)
+	{
+		uint32_t* d=(uint32_t*)img->data+(size_t)yy*stride;
+		if(alpha>=255)
+		{
+			for(int xx=px;xx<px2;xx++)
+				d[xx]=c;
+			continue;
+		}
+		for(int xx=px;xx<px2;xx++)
+		{
+			uint32_t const s=d[xx];
+			uint32_t const rb=((((c&0xFF00FF)*alpha)+((s&0xFF00FF)*(255-alpha)))>>8)&0xFF00FF;
+			uint32_t const g=((((c&0x00FF00)*alpha)+((s&0x00FF00)*(255-alpha)))>>8)&0x00FF00;
+			d[xx]=rb|g;
+		}
+	}
+}
+
+void adxplat::overlay_invert(OverlayCanvas* cv,int x,int y,int w,int h)
+{
+	int px,py,px2,py2;
+	if(!overlay_rect(cv,x,y,w,h,&px,&py,&px2,&py2))
+		return;
+	XImage* const img=(XImage*)((Win32Window*)cv->window)->ximage;
+	int const stride=img->bytes_per_line/4;
+	for(int yy=py;yy<py2;yy++)
+	{
+		uint32_t* d=(uint32_t*)img->data+(size_t)yy*stride;
+		for(int xx=px;xx<px2;xx++)
+			d[xx]^=0x00FFFFFF;
+	}
 }
 
 void flush_all_surfaces(void)
@@ -895,6 +1023,9 @@ static Win32Window* new_window_struct(void)
 	w->ximage=nullptr;
 	w->shminfo=nullptr;
 	w->has_dirty=false;
+	w->overlay_proc=nullptr;
+	w->overlay_user=nullptr;
+	w->has_overlay_rect=false;
 	w->root_x=0;
 	w->root_y=0;
 	w->root_valid=false;

@@ -37,6 +37,16 @@ automation_text     = #FFFFFF
 tempo               = #404040
 tempo_text          = #FFFFFF
 
+# --- play position ----------------------------------------------------------------
+# the line: "invert" (inverts what is below it, like the original) or a color
+play_line           = invert
+# activity bars above the line: a note in a track shoots its bar up (bottom -> middle -> top)
+bar_low             = #00C000
+bar_mid             = #E0E000
+bar_high            = #E00000
+# opacity of the bars in percent
+bar_opacity         = 85
+
 # --- menus, dialogs and controls ---------------------------------------------------
 menu_face           = #D4D0C8   # menu bar, menus, dialog background
 menu_text           = #000000

@@ -9,6 +9,9 @@
 // then in <prefix>/share/aodix. 'out' must hold _MAX_PATH characters.
 void adx_resolve_resource_path(const char* rel,char* out);
 
+// monotonic clock in milliseconds
+double adx_now_ms(void);
+
 // "~/..." -> "$HOME/..." (plugin folders in the configuration may start with ~)
 void adx_expand_path(const char* in,char* out,int out_size);
 

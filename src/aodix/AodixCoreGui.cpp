@@ -253,28 +253,31 @@ void CAodixCore::gui_timer(HWND const hwnd)
 	if(user_page==0)
 		paint_track_midi_vumeters(hdc,TRACK_WIDTH+user_pr_width,seq_area_y-30,seq_visi_t);
 
-	// transport playback position
+	// transport playback position (linux port: drawn as an overlay over the window image, so it never has to be
+	// erased from the sequencer picture; the position is interpolated between audio blocks for a steady movement)
+	double const now_ms=adx_now_ms();
+	double const frame_dt=(gui_ov_last_tick_ms>0.0)?std::min(0.1,(now_ms-gui_ov_last_tick_ms)*0.001):0.016;
+	gui_ov_last_tick_ms=now_ms;
+
 	if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && user_page==0)
 	{
-		// sequencer clip region
-		arg_gdi_set_clip_rgn(hdc,0,seq_area_y,w,seq_area_h);
+		// interpolated sample position: the audio thread advances in whole blocks
+		int const frame=master_transport_sampleframe;
+		if(frame!=gui_ov_last_frame)
+		{
+			gui_ov_last_frame=frame;
+			gui_ov_last_frame_ms=now_ms;
+		}
+		double const ahead=std::min(double(dsp_block_size),(now_ms-gui_ov_last_frame_ms)*0.001*cfg.audio_driver_sample_rate);
+		int const smooth_pos=seq_sample_to_pos(frame+int(ahead));
 
-		// invert player transport rect
-		int const i_ty=seq_cent_y+(play_pos-pp->usr_pos)/pp->usr_ppp;
+		// play position line
+		int const i_ty=seq_cent_y+(smooth_pos-pp->usr_pos)/pp->usr_ppp;
 
-		// only paint bar if y screen position has changed
+		// scroll page follow view if live active
 		if(i_ty!=master_transport_last_y)
 		{
-			// clear last inversion
-			arg_gdi_paint_invert_rect(hdc,0,master_transport_last_y,w,2);
-
-			// paint play invert-bar pos
-			arg_gdi_paint_invert_rect(hdc,0,i_ty,w,2);
-
-			// register last screen-y position
 			master_transport_last_y=i_ty;
-
-			// scroll page follow view if live active
 			if(cfg.rec_live && i_ty>h)
 			{
 				// set new position
@@ -285,8 +288,55 @@ void CAodixCore::gui_timer(HWND const hwnd)
 			}
 		}
 
-		// end clip
-		arg_gdi_end_clip_rgn(hdc);
+		// activity bars: a new note-on in a track shoots its bar up, then it falls back
+		bool bars_moving=false;
+		for(int t=0;t<MAX_TRACKS;t++)
+		{
+			unsigned int const cnt=master_midi_note_count[t];
+			if(cnt!=gui_ov_note_seen[t])
+			{
+				gui_ov_note_seen[t]=cnt;
+				gui_ov_level[t]=std::max(gui_ov_level[t],0.25f+0.75f*float(master_midi_note_velo[t])/127.0f);
+			}
+			if(gui_ov_level[t]>0.0f)
+			{
+				gui_ov_level[t]=std::max(0.0f,gui_ov_level[t]-float(frame_dt)*1.6f);
+				bars_moving=true;
+			}
+		}
+
+		// overlay area: line, plus the bars above it
+		bool const changed=!gui_ov_active || i_ty!=gui_ov_play_y || bars_moving || w!=gui_ov_width;
+		gui_ov_active=true;
+		gui_ov_play_y=i_ty;
+		gui_ov_seq_y=seq_area_y;
+		gui_ov_width=w;
+		gui_ov_first_x=TRACK_WIDTH+user_pr_width;
+		gui_ov_tracks=seq_visi_t;
+		if(changed)
+		{
+			RECT ov;
+			ov.left=0;
+			ov.right=w;
+			ov.top=std::max(seq_area_y,i_ty-(cfg.play_bars_off?0:ADX_BAR_HEIGHT));
+			ov.bottom=std::min(h,i_ty+2);
+			adxplat::overlay_changed(hwnd,ov.bottom>ov.top?&ov:NULL);
+		}
+	}
+	else
+	{
+		// transport stopped or another page: remove the overlay
+		if(gui_ov_active)
+		{
+			gui_ov_active=false;
+			adxplat::overlay_changed(hwnd,NULL);
+		}
+		gui_ov_last_frame=-1;
+		for(int t=0;t<MAX_TRACKS;t++)
+		{
+			gui_ov_note_seen[t]=master_midi_note_count[t];
+			gui_ov_level[t]=0.0f;
+		}
 	}
 
 	// waiting midi-input cc (flash rec-learn indicator)
@@ -711,4 +761,53 @@ void CAodixCore::gui_vst_build_lib(void)
 int CAodixCore::gui_get_event_height(ADX_EVENT* pe)
 {
 	return arg_tool_clipped_assign((1-pe->szd)*NR_EVENT_HEIGHT+pe->szd*(pe->par/project.pattern[user_pat].usr_ppp),2,MAX_SIGNED_INT);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: play position overlay (called by the platform whenever a part of the window is sent to the screen)
+void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
+{
+	if(!gui_ov_active)
+		return;
+
+	int const y=gui_ov_play_y;
+
+	// activity bars above the line, in the right part of each track column (green -> yellow -> red)
+	if(!cfg.play_bars_off)
+	{
+		for(int t=0;t<gui_ov_tracks;t++)
+		{
+			int const ti=user_trk_offset+t;
+			if(ti>=MAX_TRACKS || gui_ov_level[ti]<=0.0f)
+				continue;
+			int const bh=int(gui_ov_level[ti]*ADX_BAR_HEIGHT+0.5f);
+			int const bx=gui_ov_first_x+t*TRACK_WIDTH+TRACK_WIDTH-ADX_BAR_WIDTH-4;
+			for(int r=0;r<bh;r++)
+			{
+				int const yy=y-1-r;
+				if(yy<gui_ov_seq_y)
+					break;
+				adxplat::overlay_fill(cv,bx,yy,ADX_BAR_WIDTH,1,adx_theme_bar_color(float(r)/float(ADX_BAR_HEIGHT-1)),gl_adx_theme.bar_alpha);
+			}
+		}
+	}
+
+	// play position line (classic: inverted like the original)
+	if(y>=gui_ov_seq_y)
+	{
+		if(gl_adx_theme.play_line_invert)
+			adxplat::overlay_invert(cv,0,y,gui_ov_width,2);
+		else
+			adxplat::overlay_fill(cv,0,y,gui_ov_width,2,gl_adx_theme.play_line,255);
+	}
+}
+
+static void adx_overlay_proc(HWND,adxplat::OverlayCanvas* cv,void* user)
+{
+	((CAodixCore*)user)->gui_overlay_paint(cv);
+}
+
+void adx_install_overlay(HWND hwnd,CAodixCore* core)
+{
+	adxplat::set_overlay(hwnd,adx_overlay_proc,core);
 }

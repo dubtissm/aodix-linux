@@ -32,7 +32,34 @@ void adx_theme_defaults(ADX_THEME* t)
 	t->midi=0x606080;			t->midi_text=0xFFFFFF;
 	t->automation=0x404040;		t->automation_text=0xFFFFFF;
 	t->tempo=0x404040;			t->tempo_text=0xFFFFFF;
+	t->play_line_invert=true;
+	t->play_line=0xFFFFFF;
+	t->bar_low=0x00C000;		// green (0x00BBGGRR)
+	t->bar_mid=0x00E0E0;		// yellow
+	t->bar_high=0x0000E0;		// red
+	t->bar_alpha=216;
 	t->ui=adxplat::default_ui_colors();
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+static COLORREF color_lerp(COLORREF a,COLORREF b,float t)
+{
+	COLORREF r=0;
+	for(int s=0;s<24;s+=8)
+	{
+		float const ca=float((a>>s)&0xFF),cb=float((b>>s)&0xFF);
+		r|=COLORREF(int(ca+(cb-ca)*t+0.5f)&0xFF)<<s;
+	}
+	return r;
+}
+
+COLORREF adx_theme_bar_color(float pos)
+{
+	if(pos<0.0f) pos=0.0f;
+	if(pos>1.0f) pos=1.0f;
+	if(pos<0.5f)
+		return color_lerp(gl_adx_theme.bar_low,gl_adx_theme.bar_mid,pos*2.0f);
+	return color_lerp(gl_adx_theme.bar_mid,gl_adx_theme.bar_high,(pos-0.5f)*2.0f);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -106,6 +133,9 @@ static int theme_keys(ADX_THEME* t,ThemeKey* k)
 	k[n++]={"automation_text",&t->automation_text};
 	k[n++]={"tempo",&t->tempo};
 	k[n++]={"tempo_text",&t->tempo_text};
+	k[n++]={"bar_low",&t->bar_low};
+	k[n++]={"bar_mid",&t->bar_mid};
+	k[n++]={"bar_high",&t->bar_high};
 	k[n++]={"menu_face",&t->ui.face};
 	k[n++]={"menu_text",&t->ui.text};
 	k[n++]={"menu_text_disabled",&t->ui.graytext};
@@ -166,6 +196,21 @@ bool adx_theme_load(const char* cfg_path)
 				*ke=0;
 				char* v=eq+1;
 				while(isspace((unsigned char)*v)) v++;
+
+				// values that are not plain colors
+				if(strcasecmp(p,"play_line")==0 && strncasecmp(v,"invert",6)==0)
+				{
+					t.play_line_invert=true;
+					continue;
+				}
+				if(strcasecmp(p,"bar_opacity")==0)
+				{
+					int const pct=atoi(v);
+					t.bar_alpha=(pct<0?0:pct>100?100:pct)*255/100;
+					continue;
+				}
+				bool const is_play_line=strcasecmp(p,"play_line")==0;
+
 				if(*v=='#') v++;
 				char* end=nullptr;
 				unsigned long const rgb=strtoul(v,&end,16);
@@ -177,6 +222,12 @@ bool adx_theme_load(const char* cfg_path)
 
 				// file has rgb, colorref is bgr
 				COLORREF const c=COLORREF(((rgb>>16)&0xFF)|(rgb&0xFF00)|((rgb&0xFF)<<16));
+				if(is_play_line)
+				{
+					t.play_line=c;
+					t.play_line_invert=false;
+					continue;
+				}
 				int k=0;
 				for(;k<nkeys;k++)
 					if(strcasecmp(keys[k].name,p)==0)

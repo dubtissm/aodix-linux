@@ -238,7 +238,17 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 
 	// track midi vu reset
 	for(int tv=0;tv<MAX_TRACKS;tv++)
+	{
 		master_midi_vumeter[tv]=0;
+		master_midi_note_count[tv]=0;
+		master_midi_note_velo[tv]=0;
+		gui_ov_note_seen[tv]=0;
+		gui_ov_level[tv]=0.0f;
+	}
+	gui_ov_active=false;
+	gui_ov_play_y=gui_ov_seq_y=gui_ov_width=gui_ov_first_x=gui_ov_tracks=0;
+	gui_ov_last_frame=-1;
+	gui_ov_last_frame_ms=gui_ov_last_tick_ms=0.0;
 
 	// load cursors
 	hcursor_diag=LoadCursor(NULL,IDC_SIZENWSE);

@@ -333,6 +333,14 @@ void CAodixCore::instance_close_editor(ADX_INSTANCE* pi)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::instance_add_midi_event(ADX_INSTANCE* pi,int const track,unsigned char const md0,unsigned char const md1,unsigned char const md2,unsigned char const md3,int const deltaframe)
 {
+	// linux port: activity bars over the play position (every note-on of the track counts, also repeated ones and
+	// notes of called patterns; instances without a plugin too)
+	if((md0&0xF0)==0x90 && md2>0 && track>=0 && track<MAX_TRACKS)
+	{
+		master_midi_note_velo[track]=md2;
+		master_midi_note_count[track]++;
+	}
+
 	// check if effect is instanced
 	if(pi->peffect!=NULL)
 	{
@@ -342,6 +350,7 @@ void CAodixCore::instance_add_midi_event(ADX_INSTANCE* pi,int const track,unsign
 			// track midi vumeter update
 			if((md0&0xF0)==0x90)
 				master_midi_vumeter[track]=md2;
+
 
 			// get new event pointer
 			ADX_MIDI_EVENT* pe=&pi->midi_event[pi->midi_queue_size];

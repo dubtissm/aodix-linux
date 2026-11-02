@@ -153,6 +153,10 @@ struct Win32Window
 	void*						shminfo;
 	bool						has_dirty;
 	RECT						dirty;
+	adxplat::OverlayProc		overlay_proc;	// drawn over the image at every flush
+	void*						overlay_user;
+	bool						has_overlay_rect;
+	RECT						overlay_rect;	// surface coordinates
 	int							root_x;		// last known root position of the surface origin
 	int							root_y;
 	bool						root_valid;

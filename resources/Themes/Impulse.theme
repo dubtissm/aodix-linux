@@ -26,6 +26,12 @@ automation_text     = #FCFC54
 tempo               = #241C14
 tempo_text          = #FCFC54
 
+play_line           = #FCFC54
+bar_low             = #44A048
+bar_mid             = #FCFC54
+bar_high            = #B00054
+bar_opacity         = 90
+
 menu_face           = #C09C7A
 menu_text           = #000000
 menu_text_disabled  = #7C5844

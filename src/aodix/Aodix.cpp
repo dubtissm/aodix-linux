@@ -159,6 +159,9 @@ int main(int argc,char** argv)
 	if(gl_hwnd_main==NULL)
 		return FALSE;
 
+	// linux port: play position line and activity bars are drawn as an overlay
+	adx_install_overlay(gl_hwnd_main,gl_padx);
+
 	// show and update window
 	adxplat::track_window_placement(gl_hwnd_main);
 	ShowWindow(gl_hwnd_main,win_maximized?SW_MAXIMIZE:SW_SHOWNORMAL);

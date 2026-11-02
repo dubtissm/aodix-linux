@@ -771,6 +771,21 @@ namespace adxplat
 	UiColors	default_ui_colors(void);
 	void		set_ui_colors(const UiColors& colors);	// repaints all windows
 
+	// overlay of a top level window: drawn on top of the window's image every time a part of it is sent to the
+	// screen, without changing the image itself (moving play position, activity bars). coordinates are logical
+	// client coordinates. call overlay_changed with the area the overlay now covers whenever it changes.
+	struct OverlayCanvas
+	{
+		void*	window;
+		int		origin_x,origin_y;					// client origin in the surface (logical)
+		int		clip_x,clip_y,clip_x2,clip_y2;		// physical part being drawn
+	};
+	typedef void (*OverlayProc)(HWND hwnd,OverlayCanvas* canvas,void* user);
+	void		set_overlay(HWND hwnd,OverlayProc proc,void* user);
+	void		overlay_changed(HWND hwnd,const RECT* bounds);	// bounds: client rect covered now (NULL: none)
+	void		overlay_fill(OverlayCanvas* canvas,int x,int y,int w,int h,COLORREF color,int alpha);	// alpha 0..255
+	void		overlay_invert(OverlayCanvas* canvas,int x,int y,int w,int h);
+
 	// set the cursor for a window (persists until changed)
 	void		set_window_cursor(HWND hwnd,HCURSOR cursor);
 

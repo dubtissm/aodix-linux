@@ -232,6 +232,9 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// check fullscreen option
 		CheckDlgButton(hdlg,IDC_FULLSCREEN_CHECK,gl_padx->cfg.fullscreen);
 
+		// linux port: activity bars at the play position
+		CheckDlgButton(hdlg,IDC_PLAY_BARS_CHECK,gl_padx->cfg.play_bars_off?BST_UNCHECKED:BST_CHECKED);
+
 		return TRUE;
 	}
 
@@ -419,6 +422,9 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 			// set fullscreen option
 			gl_padx->cfg.fullscreen=IsDlgButtonChecked(hdlg,IDC_FULLSCREEN_CHECK);
+
+			// linux port: activity bars at the play position
+			gl_padx->cfg.play_bars_off=IsDlgButtonChecked(hdlg,IDC_PLAY_BARS_CHECK)?0:1;
 
 			// restart midi
 			gl_padx->midi_in_init();

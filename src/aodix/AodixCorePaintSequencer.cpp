@@ -464,18 +464,7 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 		bf.SourceConstantAlpha=96;
 		AlphaBlend(hdc,0,seq_cent_y,w,1,hdc_gfx,240,0,16,16,bf);
 
-		// invert player transport rect
-		if(master_time_info.flags & ADX_TRANSPORT_PLAYING)
-		{
-			// get transport gridline coordinate
-			int const i_ty=seq_cent_y+(i_master_play_pos-pp->usr_pos)/pp->usr_ppp;
-
-			// paint play-gridline
-			arg_gdi_paint_invert_rect(hdc,0,i_ty,w,2);
-
-			// update last gridline coordinate
-			master_transport_last_y=i_ty;
-		}
+		// linux port: the play position line is drawn as an overlay by gui_timer (see gui_overlay_paint)
 
 		// end clip
 		arg_gdi_end_clip_rgn(hdc);
