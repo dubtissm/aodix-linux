@@ -809,10 +809,12 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 								return;
 							}
 
-							// relocate event
+							// relocate event (linux port: with shift a copy is dragged; an event of the selection takes the
+							// whole selection along)
 							user_event_drag=e;
 							user_drag_offset=(e_y-ym)*pp->usr_ppp;
 							user_pressed=PRESS_EVENT_MOVE;
+							edit_group_drag_start(e,GetKeyState(VK_SHIFT)<0);
 							return;
 						}
 					}
@@ -945,6 +947,17 @@ void CAodixCore::gui_mouse_down(HWND const hwnd,bool const is_double_click)
 				// select instance box
 				if(arg_tool_check_plane_xy(xm,ym,i_x,i_y,i_w,48))
 				{
+					// linux port: shift+drag drags a copy of the instance (same plugin and settings, no wires)
+					if(!is_double_click && GetKeyState(VK_SHIFT)<0)
+					{
+						int const ci=instance_clone(hwnd,i);
+						if(ci>=0)
+						{
+							i=ci;
+							pi=&instance[ci];
+						}
+					}
+
 					// update selected instance
 					user_instance=i;
 

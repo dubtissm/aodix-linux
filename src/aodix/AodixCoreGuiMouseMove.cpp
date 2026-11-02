@@ -210,8 +210,8 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 		// get sequencer event beign relocated
 		ADX_EVENT* pe=&seq_event[user_event_drag];
 
-		// set new event position
-		if(!(GetKeyState(VK_SHIFT)<0))
+		// set new event position (shift keeps the position; linux port: not for copies, shift started those)
+		if(!(GetKeyState(VK_SHIFT)<0) || user_drag_copy)
 			pe->pos=arg_tool_clipped_assign(ym_seq_pos+user_drag_offset,0,MAX_SIGNED_INT);
 
 		// set event track or event
@@ -237,6 +237,10 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 			// set new event note
 			pe->da2=pr_nn;
 		}
+
+		// linux port: the other events of the selection follow
+		if(user_pressed==PRESS_EVENT_MOVE)
+			edit_group_drag_apply();
 
 		// scroll iterate
 		gui_scroll_iterate(hwnd,ym,seq_area_y,h);

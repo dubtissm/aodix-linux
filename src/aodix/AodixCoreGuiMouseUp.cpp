@@ -4,6 +4,7 @@
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "AodixCore.h"
+#include <algorithm>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::gui_mouse_up(HWND const hwnd)
@@ -119,9 +120,33 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 			pp->usr_pos=edit_quantize(pp->usr_pos);
 
 		// sequencer edit event relocated, quantize event position if control and shift are unpressed
-		if((user_pressed==PRESS_EVENT_MOVE || user_pressed==PRESS_PR_EVENT_MOVE) && GetKeyState(VK_SHIFT)>=0)
+		if((user_pressed==PRESS_EVENT_MOVE || user_pressed==PRESS_PR_EVENT_MOVE) && (GetKeyState(VK_SHIFT)>=0 || user_drag_copy))
 			seq_event[user_event_drag].pos=edit_quantize(seq_event[user_event_drag].pos);
 	}
+
+	// linux port: the selection follows the quantized position too; then the drag group ends
+	if(user_pressed==PRESS_EVENT_MOVE)
+	{
+		edit_group_drag_apply();
+
+		// copies dropped where they were made: no copy (a shift+click alone must not double events)
+		ADX_EVENT const* const pd=&seq_event[user_event_drag];
+		if(user_drag_copy && pd->pos==user_group_drag_pos && pd->trk==user_group_drag_trk)
+		{
+			if(pd->typ==EVT_NOT)
+				instance_add_midi_event(&instance[pd->da0],pd->trk,0x80+(pd->da1&0xF),pd->da2,0x40,0,0);
+			std::vector<int> idx=user_group_index;
+			std::sort(idx.begin(),idx.end());
+			audio_enter_cs();
+			for(int k=int(idx.size())-1;k>=0;k--)
+				seq_delete_event(idx[k]);
+			audio_leave_cs();
+			user_pressed=PRESS_NONE;
+			gui_is_dirty=1;
+		}
+	}
+	user_group_index.clear();
+	user_drag_copy=false;
 
 	// sequencer edit event finished, send note-off to instance if event was a note
 	if(user_pressed==PRESS_EVENT_MOVE || user_pressed==PRESS_EVENT_SIZE || user_pressed==PRESS_PR_EVENT_MOVE)

@@ -405,3 +405,64 @@ void CAodixCore::instance_set_param(ADX_INSTANCE* pi,int const param_index,float
 	if(pi->peffect!=NULL)
 		pi->peffect->setParameter(param_index,param_value);
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: copy of a plugin instance (same plugin, state, mute/bypass, label and midi cc assignments; no wires) in
+// the first free slot, at the same routing position. returns the new instance index or -1.
+int CAodixCore::instance_clone(HWND const hwnd,int const src)
+{
+	ADX_INSTANCE* const ps=&instance[src];
+	if(ps->peffect==NULL)
+		return -1;
+
+	int dst=-1;
+	for(int i=0;i<MAX_INSTANCES;i++)
+	{
+		if(instance[i].peffect==NULL)
+		{
+			dst=i;
+			break;
+		}
+	}
+	if(dst<0)
+	{
+		MessageBox(hwnd,"Error: No Free Instance Slot","Aodix - Copy Instance",MB_OK | MB_ICONERROR);
+		return -1;
+	}
+	ADX_INSTANCE* const pd=&instance[dst];
+
+	// state of the source (the chunk pointer stays valid only until the next call)
+	void* chunk=NULL;
+	int const chunk_size=ps->peffect->getChunk(&chunk,false);
+	std::vector<unsigned char> state;
+	if(chunk_size>0 && chunk!=NULL)
+		state.assign((unsigned char*)chunk,(unsigned char*)chunk+chunk_size);
+	int const program=ps->peffect->getProgram();
+
+	SetCursor(hcursor_wait);
+	audio_enter_cs();
+
+	instance_free(pd);
+	instance_eff_id_currently_loading=ps->peffect->uniqueID;
+	instance_dll(hwnd,pd,ps->dll_path,ps->x,ps->y);
+	instance_eff_id_currently_loading=0;
+
+	if(pd->peffect!=NULL)
+	{
+		if(!state.empty())
+			pd->peffect->setChunk(state.data(),int(state.size()),false);
+		else if(pd->peffect->numPrograms>0)
+			pd->peffect->setProgram(program);
+
+		pd->process_mute=ps->process_mute;
+		pd->process_thru=ps->process_thru;
+		memcpy(pd->alias,ps->alias,sizeof(pd->alias));
+		if(pd->pmidi_cc!=NULL && ps->pmidi_cc!=NULL && pd->peffect->numParams==ps->peffect->numParams)
+			memcpy(pd->pmidi_cc,ps->pmidi_cc,pd->peffect->numParams);
+	}
+
+	audio_leave_cs();
+	SetCursor(hcursor_arro);
+
+	return pd->peffect!=NULL?dst:-1;
+}

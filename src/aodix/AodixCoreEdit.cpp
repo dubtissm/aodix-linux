@@ -864,3 +864,108 @@ ADX_EVENT* CAodixCore::edit_find_prev_event(int pat,int pos,int trk,int len)
 	}
 	return found;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: drag an event together with the events of the selection, or drag copies (shift)
+void CAodixCore::edit_group_drag_start(int const dragged,bool const copy)
+{
+	user_group_index.clear();
+	user_group_pos.clear();
+	user_group_trk.clear();
+	user_drag_copy=copy;
+
+	ADX_EVENT const* const pd=&seq_event[dragged];
+
+	// dragged event inside the selection: all events of the selection move
+	bool const in_block=user_block_pos_end>user_block_pos_sta && user_block_trk_end>user_block_trk_sta
+		&& pd->pos>=user_block_pos_sta && pd->pos<user_block_pos_end && pd->trk>=user_block_trk_sta && pd->trk<user_block_trk_end;
+
+	std::vector<int> members;
+	if(in_block)
+	{
+		for(int e=0;e<seq_num_events;e++)
+		{
+			ADX_EVENT const* const pe=&seq_event[e];
+			if(pe->pat==user_pat && pe->pos>=user_block_pos_sta && pe->pos<user_block_pos_end && pe->trk>=user_block_trk_sta && pe->trk<user_block_trk_end)
+				members.push_back(e);
+		}
+	}
+	else
+		members.push_back(dragged);
+
+	// copies: the originals stay, new events are appended and dragged instead
+	if(copy)
+	{
+		audio_enter_cs();
+		std::vector<int> copies;
+		for(int e:members)
+		{
+			if(seq_num_events>=MAX_EVENTS)
+				break;
+			seq_event[seq_num_events]=seq_event[e];
+			if(e==dragged)
+				user_event_drag=seq_num_events;
+			copies.push_back(seq_num_events);
+			seq_num_events++;
+		}
+		audio_leave_cs();
+		members=copies;
+	}
+
+	ADX_EVENT const* const pdrag=&seq_event[user_event_drag];
+	user_group_drag_pos=pdrag->pos;
+	user_group_drag_trk=pdrag->trk;
+	user_group_block[0]=user_block_pos_sta;
+	user_group_block[1]=user_block_pos_end;
+	user_group_block[2]=user_block_trk_sta;
+	user_group_block[3]=user_block_trk_end;
+
+	// a single event without copy needs no group (original behaviour)
+	if(!in_block && !copy)
+		return;
+
+	for(int e:members)
+	{
+		user_group_index.push_back(e);
+		user_group_pos.push_back(seq_event[e].pos);
+		user_group_trk.push_back(seq_event[e].trk);
+	}
+	if(!in_block)
+		user_group_block[0]=user_group_block[1]=0;
+}
+
+void CAodixCore::edit_group_drag_apply(void)
+{
+	if(user_group_index.empty())
+		return;
+
+	// offset of the dragged event; limited so that every event stays in a valid position and track
+	ADX_EVENT const* const pd=&seq_event[user_event_drag];
+	int dpos=pd->pos-user_group_drag_pos;
+	int dtrk=pd->trk-user_group_drag_trk;
+	for(size_t g=0;g<user_group_index.size();g++)
+	{
+		if(user_group_pos[g]+dpos<0)
+			dpos=-user_group_pos[g];
+		if(user_group_trk[g]+dtrk<0)
+			dtrk=-user_group_trk[g];
+		if(user_group_trk[g]+dtrk>MAX_TRACKS-1)
+			dtrk=MAX_TRACKS-1-user_group_trk[g];
+	}
+
+	for(size_t g=0;g<user_group_index.size();g++)
+	{
+		ADX_EVENT* const pe=&seq_event[user_group_index[g]];
+		pe->pos=user_group_pos[g]+dpos;
+		pe->trk=(unsigned char)(user_group_trk[g]+dtrk);
+	}
+
+	// the selection moves along
+	if(user_group_block[1]>user_group_block[0])
+	{
+		user_block_pos_sta=user_group_block[0]+dpos;
+		user_block_pos_end=user_group_block[1]+dpos;
+		user_block_trk_sta=user_group_block[2]+dtrk;
+		user_block_trk_end=user_group_block[3]+dtrk;
+	}
+}

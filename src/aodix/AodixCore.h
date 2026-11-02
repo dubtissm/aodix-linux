@@ -442,6 +442,7 @@ public:
 public:
 	void instance_dll(HWND const hwnd,ADX_INSTANCE* pi,char* filename,int const param_x,int const param_y);
 	void instance_free(ADX_INSTANCE* pi);
+	int  instance_clone(HWND const hwnd,int const src);	// linux port: copy of a plugin instance in a free slot, or -1
 	void instance_open_editor(ADX_INSTANCE* pi,HWND const hwnd);
 	void instance_close_editor(ADX_INSTANCE* pi);
 	void instance_add_midi_event(ADX_INSTANCE* pi,int const track,unsigned char const md0,unsigned char const md1,unsigned char const md2,unsigned char const md3,int const deltaframe);
@@ -783,6 +784,17 @@ public:
 		PRESS_WIRE_DELETE,
 		PRESS_SEQ_PAN,			// linux port: sequencer dragged with the middle mouse button
 	} user_pressed;
+
+	// linux port: dragging several events at once (the events of the selection) and shift+drag copies
+	bool				user_drag_copy;			// the dragged events are copies made when the drag started
+	std::vector<int>	user_group_index;		// events moved together with the dragged one
+	std::vector<int>	user_group_pos;			// their positions and tracks when the drag started
+	std::vector<int>	user_group_trk;
+	int					user_group_drag_pos;	// dragged event at the start
+	int					user_group_drag_trk;
+	int					user_group_block[4];	// selection at the start (pos sta/end, trk sta/end)
+	void				edit_group_drag_start(int const dragged,bool const copy);
+	void				edit_group_drag_apply(void);
 
 	// linux port: middle mouse button drag (sequencer and routing view)
 	int user_pan_x_rest;		// horizontal pixels not yet turned into a whole track
