@@ -34,8 +34,8 @@ struct ADX_THEME
 };
 
 // size of the activity bars over the play position
-#define ADX_BAR_HEIGHT		48
-#define ADX_BAR_WIDTH		10
+#define ADX_BAR_HEIGHT		72
+#define ADX_BAR_WIDTH		15
 
 extern ADX_THEME gl_adx_theme;
 

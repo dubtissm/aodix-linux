@@ -300,7 +300,7 @@ void CAodixCore::gui_timer(HWND const hwnd)
 			}
 			if(gui_ov_level[t]>0.0f)
 			{
-				gui_ov_level[t]=std::max(0.0f,gui_ov_level[t]-float(frame_dt)*1.6f);
+				gui_ov_level[t]=std::max(0.0f,gui_ov_level[t]-float(frame_dt)*3.2f);
 				bars_moving=true;
 			}
 		}
@@ -772,7 +772,7 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 
 	int const y=gui_ov_play_y;
 
-	// activity bars above the line, in the right part of each track column (green -> yellow -> red)
+	// activity bars above the line, centered in each track column (green -> yellow -> red)
 	if(!cfg.play_bars_off)
 	{
 		for(int t=0;t<gui_ov_tracks;t++)
@@ -781,7 +781,7 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 			if(ti>=MAX_TRACKS || gui_ov_level[ti]<=0.0f)
 				continue;
 			int const bh=int(gui_ov_level[ti]*ADX_BAR_HEIGHT+0.5f);
-			int const bx=gui_ov_first_x+t*TRACK_WIDTH+TRACK_WIDTH-ADX_BAR_WIDTH-4;
+			int const bx=gui_ov_first_x+t*TRACK_WIDTH+(TRACK_WIDTH-ADX_BAR_WIDTH)/2;
 			for(int r=0;r<bh;r++)
 			{
 				int const yy=y-1-r;
