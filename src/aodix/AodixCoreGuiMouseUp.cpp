@@ -250,3 +250,53 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 	// release mouse capture
 	ReleaseCapture();
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: middle mouse button drags the sequencer (both directions) and the routing view, wherever it is pressed
+void CAodixCore::gui_middle_down(HWND const hwnd)
+{
+	// another drag is running (left button)
+	if(user_pressed!=PRESS_NONE)
+		return;
+
+	RECT r;
+	GetClientRect(hwnd,&r);
+	int const h=r.bottom-r.top;
+
+	POINT cp;
+	GetCursorPos(&cp);
+	ScreenToClient(hwnd,&cp);
+
+	int const seq_area_y=264;
+	int const rout_area_y=232;
+
+	if(user_page==0 && cp.y>=seq_area_y && cp.y<h)
+		user_pressed=PRESS_SEQ_PAN;
+	else if(user_page==1 && cp.y>=rout_area_y && cp.y<h)
+		user_pressed=PRESS_ROUTING_PAN;
+	else
+		return;
+
+	SetCapture(hwnd);
+	SetCursor(hcursor_hacl);
+	user_pan_x_rest=0;
+	user_lxm=cp.x;
+	user_lym=cp.y;
+}
+
+void CAodixCore::gui_middle_up(HWND const hwnd)
+{
+	if(user_pressed!=PRESS_SEQ_PAN && user_pressed!=PRESS_ROUTING_PAN)
+		return;
+
+	// like dragging the position column: snap to the quantize grid unless control is held
+	if(user_pressed==PRESS_SEQ_PAN && GetKeyState(VK_CONTROL)>=0)
+	{
+		ADX_PATTERN* pp=&project.pattern[user_pat];
+		pp->usr_pos=edit_quantize(pp->usr_pos);
+	}
+
+	user_pressed=PRESS_NONE;
+	gui_is_dirty=1;
+	ReleaseCapture();
+}

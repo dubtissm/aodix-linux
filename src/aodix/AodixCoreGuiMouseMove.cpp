@@ -417,6 +417,26 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 		gui_is_dirty=1;
 	}
 
+	// linux port: sequencer dragged with the middle mouse button. vertical: the view follows the mouse (one pixel
+	// is one zoom step, so it moves faster when zoomed out); horizontal: whole tracks, the edit cursor moves along
+	if(user_pressed==PRESS_SEQ_PAN)
+	{
+		pp->usr_pos=arg_tool_clipped_assign(pp->usr_pos-i_my_dif*pp->usr_ppp,0,MAX_SIGNED_INT);
+
+		user_pan_x_rest-=i_mx_dif;
+		int d=0;
+		while(user_pan_x_rest>=TRACK_WIDTH/2)	{ user_pan_x_rest-=TRACK_WIDTH; d++; }
+		while(user_pan_x_rest<=-TRACK_WIDTH/2)	{ user_pan_x_rest+=TRACK_WIDTH; d--; }
+		if(d!=0)
+		{
+			d=arg_tool_clipped_assign(d,-user_trk_offset,MAX_TRACKS-1-user_trk);
+			d=arg_tool_clipped_assign(d,-user_trk,MAX_TRACKS-1-user_trk);
+			user_trk_offset+=d;
+			user_trk+=d;
+		}
+		gui_is_dirty=1;
+	}
+
 	// routing view offset dragging
 	if(user_pressed==PRESS_ROUTING_PAN)
 	{

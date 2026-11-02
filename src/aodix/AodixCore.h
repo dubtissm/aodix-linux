@@ -376,6 +376,8 @@ public:
 	void gui_mouse_down(HWND const hwnd,bool const is_double_click);
 	void gui_mouse_up(HWND const hwnd);
 	void gui_mouse_move(HWND const hwnd);
+	void gui_middle_down(HWND const hwnd);
+	void gui_middle_up(HWND const hwnd);
 	void gui_mouse_scan_pin(HWND const hwnd,int const xm,int const ym,ADX_PIN* ppins,int const num_pins,int const pin_x,int const pin_y,int const is_double_click,int const is_midi_pin);
 	void gui_timer(HWND const hwnd);
 	void gui_command(HWND const hwnd,int const id);
@@ -779,7 +781,11 @@ public:
 		PRESS_RESERVED2,
 		PRESS_WIRE_GAIN,
 		PRESS_WIRE_DELETE,
+		PRESS_SEQ_PAN,			// linux port: sequencer dragged with the middle mouse button
 	} user_pressed;
+
+	// linux port: middle mouse button drag (sequencer and routing view)
+	int user_pan_x_rest;		// horizontal pixels not yet turned into a whole track
 
 public:
 	int user_event_drag;

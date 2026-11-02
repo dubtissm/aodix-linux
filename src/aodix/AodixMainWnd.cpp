@@ -84,6 +84,18 @@ LRESULT CALLBACK main_wnd_proc(HWND hwnd,UINT message,WPARAM wparam,LPARAM lpara
 		return 0;
 	}
 
+	// linux port: middle mouse button drags the sequencer and the routing view
+	if(message==WM_MBUTTONDOWN)
+	{
+		gl_padx->gui_middle_down(hwnd);
+		return 0;
+	}
+	if(message==WM_MBUTTONUP)
+	{
+		gl_padx->gui_middle_up(hwnd);
+		return 0;
+	}
+
 	// mouse move
 	if(message==WM_MOUSEMOVE)
 	{
