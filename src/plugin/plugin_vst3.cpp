@@ -735,8 +735,21 @@ void Vst3Plugin::setActive(bool on)
 // parameters
 void Vst3Plugin::push_processor_change(ParamID id,ParamValue v,int32 offset)
 {
+	// a newer value of the same parameter (at the same offset) replaces the queued one: while the plugin is not
+	// processed (bypassed instance) the queue keeps only the latest value of every parameter instead of overflowing
 	proc_lock.lock();
-	if(proc_pending.size()<4096)
+	bool replaced=false;
+	for(size_t k=proc_pending.size();k>0;k--)
+	{
+		ParamChange& c=proc_pending[k-1];
+		if(c.id==id && c.offset==offset)
+		{
+			c.value=v;
+			replaced=true;
+			break;
+		}
+	}
+	if(!replaced && proc_pending.size()<4096)
 		proc_pending.push_back({id,v,offset});
 	proc_lock.unlock();
 }

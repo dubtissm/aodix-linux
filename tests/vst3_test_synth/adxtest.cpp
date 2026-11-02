@@ -67,6 +67,7 @@ public:
 		tlog("setBusArrangements in=%d out=%d -> %d",ni?SpeakerArr::getChannelCount(in[0]):0,no?SpeakerArr::getChannelCount(out[0]):0,(int)r);
 		return r;
 	}
+	long process_calls=0;
 	tresult PLUGIN_API process(ProcessData& d) SMTG_OVERRIDE
 	{
 		if(d.inputParameterChanges)
@@ -74,8 +75,10 @@ public:
 			{
 				IParamValueQueue* q=d.inputParameterChanges->getParameterData(i);
 				ParamValue v; int32 off;
-				if(q && q->getParameterId()==0 && q->getPointCount()>0 && q->getPoint(q->getPointCount()-1,off,v)==kResultOk) gain=v;
+				if(q && q->getParameterId()==0 && q->getPointCount()>0 && q->getPoint(q->getPointCount()-1,off,v)==kResultOk) { gain=v; tlog("process: gain %.3f (%d points)",v,(int)q->getPointCount()); }
 			}
+		// process call counter in the log (every 500 calls), shows whether the host processes the plugin
+		if(++process_calls%500==0) tlog("process calls %ld",process_calls);
 		if(d.inputEvents)
 			for(int32 i=0;i<d.inputEvents->getEventCount();i++)
 			{

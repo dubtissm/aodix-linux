@@ -758,8 +758,23 @@ void ClapPlugin::setParameter(int index,float value)
 	if(index<0 || index>=numParams)
 		return;
 	param_cache[index].store(value<0.0f?0.0f:(value>1.0f?1.0f:value),std::memory_order_relaxed);
+	// a newer value of the same parameter replaces the queued one: while the plugin is not processed (bypassed
+	// instance) the queue keeps only the latest value of every parameter instead of growing
+	clap_id const id=params[index].id;
+	double const v=to_value(params[index],value);
 	proc_lock.lock();
-	proc_pending.push_back({params[index].id,to_value(params[index],value)});
+	bool replaced=false;
+	for(size_t k=proc_pending.size();k>0;k--)
+	{
+		if(proc_pending[k-1].id==id)
+		{
+			proc_pending[k-1].value=v;
+			replaced=true;
+			break;
+		}
+	}
+	if(!replaced && proc_pending.size()<4096)
+		proc_pending.push_back({id,v});
 	proc_lock.unlock();
 }
 

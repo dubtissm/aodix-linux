@@ -14,6 +14,8 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #include "AodixCore.h"
 #include <ctime>
+#include <algorithm>
+#include <cstring>
 
 thread_local ADX_MIDI_CAPTURE* g_dsp_midi_capture=NULL;
 
@@ -153,32 +155,63 @@ void CAodixCore::dsp_node_work(int const node)
 		}
 	}
 
-	int const num_block_events=pi->midi_queue_size;
+	int num_block_events=pi->midi_queue_size;
 	pi->midi_queue_size=0;
 
-	// plugin process, midi output is captured for the destinations
 	ADX_MIDI_CAPTURE* const pc=&dsp_midi_capture[i];
 	pc->num_events=0;
 	pc->num_segments=0;
-	g_dsp_midi_capture=pc;
-	pi->peffect->process(pi->pins,pi->pous,dsp_block_size,pi->midi_event,num_block_events);
-	g_dsp_midi_capture=NULL;
 
-
-	// instance process mute and thru (bypass)
-	for(int o=0;o<pi->peffect->numOutputs;o++)
+	// linux port: a bypassed instance (thru) is not processed at all, so it costs no cpu. parameter changes (automation
+	// events) still reach it: the plugin hosts keep the latest value of every parameter and hand them over when
+	// processing resumes. audio inputs go to the outputs, midi inputs to the midi output (instead of the plugin's)
+	if(pi->process_thru)
 	{
-		if(pi->process_mute)
-			arg_dsp_zero(pi->pous[o],dsp_block_size);
-
-		if(pi->process_thru)
+		for(int o=0;o<pi->peffect->numOutputs;o++)
 		{
-			if(o<pi->peffect->numInputs)
+			if(o<pi->peffect->numInputs && !pi->process_mute)
 				arg_dsp_copy(pi->pins[o],pi->pous[o],dsp_block_size);
 			else
 				arg_dsp_zero(pi->pous[o],dsp_block_size);
 		}
+		if(num_block_events>0 && !pi->process_mute)
+		{
+			for(int e=0;e<num_block_events && e<MAX_BLOCK_EVENTS;e++)
+				pc->event[pc->num_events++]=pi->midi_event[e];
+			pc->num_segments=1;
+			pc->segment_end[0]=pc->num_events;
+		}
+		dsp_instance_bypassed[i]=true;
+		float const t=(float)(dsp_now_us()-t_start);
+		dsp_instance_cost[i]+=(t-dsp_instance_cost[i])*0.05f;
+		return;
 	}
+
+	// back from bypass: notes that ended meanwhile never reached the plugin, so all notes off first
+	if(dsp_instance_bypassed[i])
+	{
+		dsp_instance_bypassed[i]=false;
+		int const n=std::min(num_block_events,MAX_BLOCK_EVENTS-16);
+		memmove(&pi->midi_event[16],&pi->midi_event[0],sizeof(ADX_MIDI_EVENT)*n);
+		for(int c=0;c<16;c++)
+		{
+			ADX_MIDI_EVENT* const pe=&pi->midi_event[c];
+			memset(pe,0,sizeof(*pe));
+			pe->midiData[0]=(unsigned char)(0xB0+c);
+			pe->midiData[1]=123;
+		}
+		num_block_events=n+16;
+	}
+
+	// plugin process, midi output is captured for the destinations
+	g_dsp_midi_capture=pc;
+	pi->peffect->process(pi->pins,pi->pous,dsp_block_size,pi->midi_event,num_block_events);
+	g_dsp_midi_capture=NULL;
+
+	// instance process mute
+	if(pi->process_mute)
+		for(int o=0;o<pi->peffect->numOutputs;o++)
+			arg_dsp_zero(pi->pous[o],dsp_block_size);
 
 	// smoothed processing time of this instance (decides about parallel processing)
 	float const t=(float)(dsp_now_us()-t_start);

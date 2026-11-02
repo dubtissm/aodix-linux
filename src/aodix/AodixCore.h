@@ -607,6 +607,7 @@ public:
 	AdxDspPool						dsp_pool;
 	int								dsp_num_nodes;
 	int								dsp_node_instance[MAX_INSTANCES];
+	bool							dsp_instance_bypassed[MAX_INSTANCES];	// linux port: skipped (thru) in the last block
 	int								dsp_instance_node[MAX_INSTANCES];
 	int								dsp_node_pending[MAX_INSTANCES];
 	int								dsp_node_succ_off[MAX_INSTANCES+1];

@@ -139,6 +139,7 @@ void CAodixCore::instance_free(ADX_INSTANCE* pi)
 {
 	// linux port: a new plugin in this slot gets a new dsp thread
 	dsp_instance_slot[pi-instance]=-1;
+	dsp_instance_bypassed[pi-instance]=false;
 
 	// delete vst instance
 	if(pi->peffect!=NULL)

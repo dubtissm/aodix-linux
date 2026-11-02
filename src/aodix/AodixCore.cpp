@@ -24,6 +24,7 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 	{
 		dsp_instance_cost[i]=0.0f;
 		dsp_instance_slot[i]=-1;
+		dsp_instance_bypassed[i]=false;
 	}
 	dsp_midi_capture=(ADX_MIDI_CAPTURE*)calloc(MAX_INSTANCES,sizeof(ADX_MIDI_CAPTURE));
 	dsp_node_mix.reserve(4096);
