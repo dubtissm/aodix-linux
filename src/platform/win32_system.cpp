@@ -351,7 +351,17 @@ bool adxplat::choose_file(HWND owner,const char* title,char* path,int path_size,
 		std::string cmd;
 		if(have_program("zenity"))
 		{
-			cmd="zenity --file-selection --title="+shell_quote(title?title:"");
+			// zenity takes the folder from --filename only on some versions (others only when it ends with '/'),
+			// otherwise its dialog opens in the current directory: so it is started in the folder itself
+			std::string folder=start;
+			if(!folder.empty() && folder.back()!='/')
+			{
+				size_t const sl=folder.find_last_of('/');
+				folder=(sl==std::string::npos)?std::string():folder.substr(0,sl+1);
+			}
+			if(!folder.empty())
+				cmd="cd "+shell_quote(folder)+" 2>/dev/null; ";
+			cmd+="zenity --file-selection --title="+shell_quote(title?title:"");
 			if(save)
 				cmd+=" --save --confirm-overwrite";
 			if(!start.empty())
