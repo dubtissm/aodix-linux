@@ -23,6 +23,9 @@ struct ADX_THEME
 	COLORREF automation,automation_text;	// value/2 is added to the red channel
 	COLORREF tempo,tempo_text;				// tempo/2 is added to the red channel
 
+	// sequencer track separator lines (left dark, right light); ADX_THEME_AUTO = derived from the skin background
+	COLORREF track_line_dark,track_line_light;
+
 	// routing view: audio wires, arrow at full gain (gain 0 = wire color), midi wires, wire being dragged
 	COLORREF wire,wire_arrow,midi_wire,wire_drag;
 
@@ -35,6 +38,9 @@ struct ADX_THEME
 	// menus, dialogs and controls
 	adxplat::UiColors ui;
 };
+
+// color value meaning "not set in the theme, use the skin"
+#define ADX_THEME_AUTO		0xFFFFFFFF
 
 // size of the activity bars over the play position
 #define ADX_BAR_HEIGHT		28

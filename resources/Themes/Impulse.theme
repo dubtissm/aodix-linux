@@ -26,6 +26,9 @@ automation_text     = #FCFC54
 tempo               = #241C14
 tempo_text          = #FCFC54
 
+track_line_dark     = #000000
+track_line_light    = #3C2C1E
+
 wire                = #B89470
 wire_arrow          = #FCFC54
 midi_wire           = #78DC78

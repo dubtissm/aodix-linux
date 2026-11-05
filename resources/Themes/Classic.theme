@@ -37,6 +37,12 @@ automation_text     = #FFFFFF
 tempo               = #404040
 tempo_text          = #FFFFFF
 
+# --- sequencer -----------------------------------------------------------------------
+# vertical separator lines between the tracks (left: dark, right: light). without these lines in the
+# theme they are derived from the skin background, like in the original:
+# track_line_dark   = #000000
+# track_line_light  = #808080
+
 # --- routing view (vst routing) -------------------------------------------------------
 # audio wires; their arrow goes from the wire color (gain 0%) to wire_arrow (gain 100%)
 wire                = #000000

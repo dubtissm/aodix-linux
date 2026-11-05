@@ -32,6 +32,8 @@ void adx_theme_defaults(ADX_THEME* t)
 	t->midi=0x606080;			t->midi_text=0xFFFFFF;
 	t->automation=0x404040;		t->automation_text=0xFFFFFF;
 	t->tempo=0x404040;			t->tempo_text=0xFFFFFF;
+	t->track_line_dark=ADX_THEME_AUTO;
+	t->track_line_light=ADX_THEME_AUTO;
 	t->wire=0x000000;
 	t->wire_arrow=0xFFFFFF;
 	t->midi_wire=0x80FFFF;
@@ -139,6 +141,8 @@ static int theme_keys(ADX_THEME* t,ThemeKey* k)
 	k[n++]={"automation_text",&t->automation_text};
 	k[n++]={"tempo",&t->tempo};
 	k[n++]={"tempo_text",&t->tempo_text};
+	k[n++]={"track_line_dark",&t->track_line_dark};
+	k[n++]={"track_line_light",&t->track_line_light};
 	k[n++]={"wire",&t->wire};
 	k[n++]={"wire_arrow",&t->wire_arrow};
 	k[n++]={"midi_wire",&t->midi_wire};

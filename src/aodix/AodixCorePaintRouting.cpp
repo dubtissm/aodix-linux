@@ -37,16 +37,16 @@ void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int con
 
 		// paint rout horizontal grid
 		for(int xg=0;xg<w;xg+=64)
-			arg_gdi_paint_solid_rect(hdc,xg-(user_rout_offset_x%64),rout_area_y,1,rout_area_h,bck_color+0x00080808);
+			arg_gdi_paint_solid_rect(hdc,xg-(user_rout_offset_x%64),rout_area_y,1,rout_area_h,adx_color_add(bck_color,0x00080808));
 
 		// paint rout vertical grid
 		for(int yg=0;yg<rout_area_h;yg+=64)
-			arg_gdi_paint_solid_rect(hdc,0,rout_area_y+yg-(user_rout_offset_y%64),w,1,bck_color+0x00080808);
+			arg_gdi_paint_solid_rect(hdc,0,rout_area_y+yg-(user_rout_offset_y%64),w,1,adx_color_add(bck_color,0x00080808));
 
 		// paint rout routing center offset-axis
-		arg_gdi_paint_solid_rect(hdc,-user_rout_offset_x,rout_area_y,1,rout_area_h,bck_color+0x00202020);
-		arg_gdi_paint_solid_rect(hdc,0,rout_area_y-user_rout_offset_y,w,1,bck_color+0x00202020);
-		arg_gdi_paint_solid_rect(hdc,-user_rout_offset_x,rout_area_y-user_rout_offset_y,1,1,bck_color+0x00808080);
+		arg_gdi_paint_solid_rect(hdc,-user_rout_offset_x,rout_area_y,1,rout_area_h,adx_color_add(bck_color,0x00202020));
+		arg_gdi_paint_solid_rect(hdc,0,rout_area_y-user_rout_offset_y,w,1,adx_color_add(bck_color,0x00202020));
+		arg_gdi_paint_solid_rect(hdc,-user_rout_offset_x,rout_area_y-user_rout_offset_y,1,1,adx_color_add(bck_color,0x00808080));
 
 		// get master input module screen coordinates
 		int const m_i_x=master_i_x-user_rout_offset_x;

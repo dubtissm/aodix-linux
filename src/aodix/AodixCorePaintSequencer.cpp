@@ -166,20 +166,20 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 
 				// tick gridline
 				if(i_gridline_visible_tick)
-					arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH,bgy,w-TRACK_WIDTH,1,bck_color+0x00080808);
+					arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH,bgy,w-TRACK_WIDTH,1,adx_color_add(bck_color,0x00080808));
 
 				// beat gridline
 				if(i_gridline_visible_beat && (bgi%4)==0)
 				{
 					if(i_gridline_visible_tick)
 					{
-						SetTextColor(hdc,bck_color+0x00202020);
+						SetTextColor(hdc,adx_color_add(bck_color,0x00202020));
 						TextOut(hdc,6,bgy+2,buf_a,13);
-						arg_gdi_paint_solid_rect(hdc,0,bgy,w,1,bck_color+0x00202020);
+						arg_gdi_paint_solid_rect(hdc,0,bgy,w,1,adx_color_add(bck_color,0x00202020));
 					}
 					else
 					{
-						arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH,bgy,w-TRACK_WIDTH,1,bck_color+0x00080808);
+						arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH,bgy,w-TRACK_WIDTH,1,adx_color_add(bck_color,0x00080808));
 					}
 				}
 
@@ -188,13 +188,13 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 				{
 					if(i_gridline_visible_beat)
 					{
-						SetTextColor(hdc,bck_color+0x00404040);
+						SetTextColor(hdc,adx_color_add(bck_color,0x00404040));
 						TextOut(hdc,6,bgy+2,buf_a,13);
-						arg_gdi_paint_solid_rect(hdc,0,bgy,w,1,bck_color+0x00404040);
+						arg_gdi_paint_solid_rect(hdc,0,bgy,w,1,adx_color_add(bck_color,0x00404040));
 					}
 					else
 					{
-						arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH,bgy,w-TRACK_WIDTH,1,bck_color+0x00202020);
+						arg_gdi_paint_solid_rect(hdc,TRACK_WIDTH,bgy,w-TRACK_WIDTH,1,adx_color_add(bck_color,0x00202020));
 					}
 				}
 
@@ -203,9 +203,9 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 				{
 					SetTextColor(hdc,0);
 					TextOut(hdc,7,bgy+3,buf_a,13);
-					SetTextColor(hdc,bck_color+0x00808080);
+					SetTextColor(hdc,adx_color_add(bck_color,0x00808080));
 					TextOut(hdc,6,bgy+2,buf_a,13);
-					arg_gdi_paint_solid_rect(hdc,0,bgy,w,1,bck_color+0x00808080);
+					arg_gdi_paint_solid_rect(hdc,0,bgy,w,1,adx_color_add(bck_color,0x00808080));
 				}
 			}
 		}
@@ -220,16 +220,16 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 			int const pr_ni=pr_no+prn;
 			int const pr_nx=TRACK_WIDTH+4+prn*user_pr_note_width;
 
-			COLORREF pr_cl=bck_color+0x00060606;
+			COLORREF pr_cl=adx_color_add(bck_color,0x00060606);
 
 			if((pr_ni%12)==0 || pr_ni==128)
-				pr_cl=bck_color+0x00101010;
+				pr_cl=adx_color_add(bck_color,0x00101010);
 
 			if(pr_ni==(user_kbd_note_offset+12))
-				pr_cl=bck_color+0x00202020;
+				pr_cl=adx_color_add(bck_color,0x00202020);
 
 			if(pr_ni==user_kbd_note_offset || pr_ni==(user_kbd_note_offset+24))
-				pr_cl=bck_color+0x00404040;
+				pr_cl=adx_color_add(bck_color,0x00404040);
 
 			if(pr_ni>=0 && pr_ni<=128)
 				arg_gdi_paint_solid_rect(hdc,pr_nx,seq_area_y,1,seq_area_h,pr_cl);
@@ -248,17 +248,22 @@ void CAodixCore::paint_sequencer(HWND const hwnd,HDC const hdc,int const w,int c
 			}
 		}
 
+		// linux port: track separator lines from the theme, otherwise derived from the skin background like the
+		// original (saturated: on a dark skin the darker line used to wrap around to almost white)
+		COLORREF const track_line_dark=(gl_adx_theme.track_line_dark!=ADX_THEME_AUTO)?gl_adx_theme.track_line_dark:adx_color_sub(bck_color,0x00202020);
+		COLORREF const track_line_light=(gl_adx_theme.track_line_light!=ADX_THEME_AUTO)?gl_adx_theme.track_line_light:adx_color_add(bck_color,0x00202020);
+
 		// draw back track frames
 		for(int t=1;t<seq_visi_t;t++)
 		{
 			int const tfx=TRACK_WIDTH+user_pr_width+t*TRACK_WIDTH;
-			arg_gdi_paint_solid_rect(hdc,tfx-1,seq_area_y,1,seq_area_h,bck_color-0x00202020);
-			arg_gdi_paint_solid_rect(hdc,tfx,seq_area_y,1,seq_area_h,bck_color+0x00202020);
+			arg_gdi_paint_solid_rect(hdc,tfx-1,seq_area_y,1,seq_area_h,track_line_dark);
+			arg_gdi_paint_solid_rect(hdc,tfx,seq_area_y,1,seq_area_h,track_line_light);
 		}
 
 		// paint sequencer position separator(s)
-		arg_gdi_paint_solid_rect(hdc,45,seq_area_y,1,seq_area_h,bck_color-0x00202020);
-		arg_gdi_paint_solid_rect(hdc,46,seq_area_y,1,seq_area_h,bck_color+0x00202020);
+		arg_gdi_paint_solid_rect(hdc,45,seq_area_y,1,seq_area_h,track_line_dark);
+		arg_gdi_paint_solid_rect(hdc,46,seq_area_y,1,seq_area_h,track_line_light);
 
 		// paint piano roll separator corners
 		BitBlt(hdc,TRACK_WIDTH,seq_area_y,4,16,hdc_gfx,192,572,SRCCOPY);
