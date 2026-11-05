@@ -14,7 +14,13 @@ void CAodixCore::export_adx_file_dlg(HWND const hwnd)
 
 	// open file dialog
 	// linux port: projects are saved compressed (".adxl") unless the name ends with ".adx"
-	if(arg_file_dialog_save(hinstance_app,hwnd,"Save Aodix Project File",filename,"Aodix Project File (*.adxl)\0*.adxl\0Aodix Project File, uncompressed (*.adx)\0*.adx\0\0","adxl",""))
+	// linux port: starts in the folder of the current project file, or in the configured project folder
+	char initial_dir[_MAX_PATH];
+	if(user_last_file[0]!=0)
+		adx_dir_of(user_last_file,initial_dir,_MAX_PATH);
+	else
+		adx_expand_path(cfg.project_path,initial_dir,_MAX_PATH);
+	if(arg_file_dialog_save(hinstance_app,hwnd,"Save Aodix Project File",filename,"Aodix Project File (*.adxl)\0*.adxl\0Aodix Project File, uncompressed (*.adx)\0*.adx\0\0","adxl",initial_dir))
 		export_adx_file(hwnd,filename);
 }
 

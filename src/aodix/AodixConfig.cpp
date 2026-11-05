@@ -154,6 +154,9 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// linux port: color theme file (empty = built-in classic colors)
 		SetDlgItemText(hdlg,IDC_THEME_PATH_EDIT,gl_padx->cfg.theme_path);
 
+		// linux port: folder for opening and saving projects
+		SetDlgItemText(hdlg,IDC_PROJECT_PATH_EDIT,gl_padx->cfg.project_path);
+
 		// get kbd layout combo pointer
 		HWND const hwnd_kbd_comb=GetDlgItem(hdlg,IDC_KBD_LAYOUT_COMBO);
 
@@ -312,6 +315,15 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			return TRUE;
 		}
 
+		// linux port: project folder chooser
+		if(lw_par==IDC_PROJECT_PATH_BUTTON)
+		{
+			GetDlgItemText(hdlg,IDC_PROJECT_PATH_EDIT,buf,_MAX_PATH);
+			conf_browse_folder(hdlg,buf);
+			SetDlgItemText(hdlg,IDC_PROJECT_PATH_EDIT,buf);
+			return TRUE;
+		}
+
 		// linux port: color theme file chooser
 		if(lw_par==IDC_THEME_PATH_BUTTON)
 		{
@@ -371,6 +383,11 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 
 			// set new skin path
 			GetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,gl_padx->cfg.skin_path,_MAX_PATH);
+
+			// linux port: project folder (empty: the documents folder)
+			GetDlgItemText(hdlg,IDC_PROJECT_PATH_EDIT,gl_padx->cfg.project_path,_MAX_PATH);
+			if(gl_padx->cfg.project_path[0]==0)
+				adx_default_project_path(gl_padx->cfg.project_path,_MAX_PATH);
 
 			// linux port: set and apply the color theme
 			GetDlgItemText(hdlg,IDC_THEME_PATH_EDIT,gl_padx->cfg.theme_path,_MAX_PATH);

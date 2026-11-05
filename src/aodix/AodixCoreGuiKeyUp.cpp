@@ -61,7 +61,7 @@ void CAodixCore::gui_key_up(HWND const hwnd,int const keycode)
 							if((master_time_info.flags & ADX_TRANSPORT_PLAYING) && cfg.rec_live)
 								pe->par=arg_tool_clipped_assign(seq_sample_to_pos(master_transport_sampleframe)-pe->pos,1,MAX_SIGNED_INT);
 							else
-								pe->par=arg_tool_clipped_assign((pp->usr_pos-pe->pos)-pp->usr_pre,1,MAX_SIGNED_INT);
+								pe->par=arg_tool_clipped_assign((pp->usr_pos-pe->pos)-edit_pre_release_ticks(),1,MAX_SIGNED_INT);
 						}
 					}
 				}

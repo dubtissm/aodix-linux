@@ -12,6 +12,56 @@
 #include <zlib.h>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void adx_default_project_path(char* out,int out_size)
+{
+	const char* const home=getenv("HOME");
+	std::string dir;
+
+	// XDG_DOCUMENTS_DIR from ~/.config/user-dirs.dirs (localized, e.g. "$HOME/Dokumente")
+	std::string cfg_home=getenv("XDG_CONFIG_HOME")?getenv("XDG_CONFIG_HOME"):(home?std::string(home)+"/.config":"");
+	FILE* f=cfg_home.empty()?NULL:fopen((cfg_home+"/user-dirs.dirs").c_str(),"r");
+	if(f)
+	{
+		char line[1024];
+		while(fgets(line,sizeof(line),f))
+		{
+			const char* p=line;
+			while(*p==' ' || *p=='\t') p++;
+			if(strncmp(p,"XDG_DOCUMENTS_DIR=",18)!=0)
+				continue;
+			p+=18;
+			std::string v;
+			for(;*p && *p!='\n';p++)
+				if(*p!='"')
+					v+=*p;
+			if(v.compare(0,5,"$HOME")==0)
+				v=std::string(home?home:"")+v.substr(5);
+			dir=v;
+		}
+		fclose(f);
+	}
+
+	struct stat st;
+	if(dir.empty() || stat(dir.c_str(),&st)!=0 || !S_ISDIR(st.st_mode))
+	{
+		dir=std::string(home?home:"")+"/Documents";
+		if(stat(dir.c_str(),&st)!=0 || !S_ISDIR(st.st_mode))
+			dir=home?home:"/";
+	}
+	adx_compact_path(dir.c_str(),out,out_size);
+}
+
+void adx_dir_of(const char* path,char* out,int out_size)
+{
+	snprintf(out,out_size,"%s",path);
+	char* const slash=strrchr(out,'/');
+	if(slash)
+		*(slash==out?slash+1:slash)=0;
+	else
+		out[0]=0;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 double adx_now_ms(void)
 {
 	struct timespec ts;

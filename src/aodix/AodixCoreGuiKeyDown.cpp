@@ -36,6 +36,20 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 	// shift pressed, no control pressed
 	if(shift && !control)
 	{
+		// linux port: pattern navigation (D/A: next/previous, W/S: 16 patterns forward/back) and zoom (Q: out, E: in)
+		if(keycode=='D' || keycode=='A' || keycode=='W' || keycode=='S')
+		{
+			int const step=(keycode=='D')?1:(keycode=='A')?-1:(keycode=='W')?16:-16;
+			user_pat=arg_tool_clipped_assign(user_pat+step,0,MAX_PATTERNS-1);
+			gui_is_dirty=1;
+		}
+		if(keycode=='Q' || keycode=='E')
+		{
+			int const zstep=std::max(1,pp->usr_ppp/4);
+			pp->usr_ppp=arg_tool_clipped_assign(pp->usr_ppp+(keycode=='Q'?zstep:-zstep),1,project.master_ppqn/4);
+			gui_is_dirty=1;
+		}
+
 		// sequencer go previous track
 		if(keycode==VK_TAB)
 		{
@@ -331,6 +345,39 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 		if(keycode=='M')
 		{
 			edit_toggle_mute(user_pat, user_trk);
+			gui_is_dirty=1;
+		}
+
+		// linux port: track solo toggle (also ctrl+shift+m)
+		if(keycode==VK_OEM_PERIOD)
+		{
+			ADX_TRACK *pt = &pp->track[user_trk];
+			pt->solo=!pt->solo;
+			gui_is_dirty=1;
+		}
+
+		// linux port: start and end marker on the selection, cycle on, cursor to the start marker
+		if(keycode=='L' && user_block_pos_end>user_block_pos_sta && user_block_trk_end>user_block_trk_sta)
+		{
+			pp->cue_sta=user_block_pos_sta;
+			pp->cue_end=user_block_pos_end;
+			master_time_info.flags|=ADX_TRANSPORT_CYCLE_ACTIVE;
+			pp->usr_pos=pp->cue_sta;
+			gui_is_dirty=1;
+		}
+
+		// linux port: note pre-release -/+ 10%
+		if(keycode=='7' || keycode=='8')
+		{
+			edit_set_pre_release_pct(edit_pre_release_pct()+(keycode=='7'?-10:10));
+			gui_is_dirty=1;
+		}
+
+		// linux port: previous / next instance (also numpad / and *)
+		if(keycode=='9' || keycode=='0')
+		{
+			user_instance=arg_tool_clipped_assign(user_instance+(keycode=='9'?-1:1),0,MAX_INSTANCES-1);
+			gui_scroll_to_instance();
 			gui_is_dirty=1;
 		}
 	}

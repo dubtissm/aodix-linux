@@ -321,11 +321,30 @@ void CAodixCore::edit_copy(int const cut)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CAodixCore::edit_select_all(void)
 {
-	// select all
-	user_block_pos_sta=0;
-	user_block_pos_end=MAX_SIGNED_INT>>1;
-	user_block_trk_sta=0;
-	user_block_trk_end=MAX_TRACKS;
+	// linux port: the selection covers exactly the events of the current pattern (the original selected the whole
+	// pattern area); without events nothing is selected
+	int pos_sta=MAX_SIGNED_INT,pos_end=0,trk_sta=MAX_TRACKS,trk_end=0;
+	for(int e=0;e<seq_num_events;e++)
+	{
+		ADX_EVENT const* const pe=&seq_event[e];
+		if(pe->pat!=user_pat)
+			continue;
+		int const len=pe->szd?std::max(pe->par,1):1;
+		pos_sta=std::min(pos_sta,pe->pos);
+		pos_end=std::max(pos_end,pe->pos+len);
+		trk_sta=std::min(trk_sta,int(pe->trk));
+		trk_end=std::max(trk_end,int(pe->trk)+1);
+	}
+	if(pos_sta>=pos_end)
+	{
+		user_block_pos_sta=user_block_pos_end=0;
+		user_block_trk_sta=user_block_trk_end=0;
+		return;
+	}
+	user_block_pos_sta=pos_sta;
+	user_block_pos_end=pos_end;
+	user_block_trk_sta=trk_sta;
+	user_block_trk_end=trk_end;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -968,4 +987,22 @@ void CAodixCore::edit_group_drag_apply(void)
 		user_block_trk_sta=user_group_block[2]+dtrk;
 		user_block_trk_end=user_group_block[3]+dtrk;
 	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: note pre-release as a percentage of the quantization. 0% = an entered note is exactly one quantization step
+// long, 99% = 1% of it. (the original stored a fixed number of ticks per pattern; that value stays in the project file)
+int CAodixCore::edit_pre_release_pct(void)
+{
+	return cfg.pre_release?arg_tool_clipped_assign(int(cfg.pre_release)-1,0,99):25;
+}
+
+void CAodixCore::edit_set_pre_release_pct(int pct)
+{
+	cfg.pre_release=(unsigned char)(arg_tool_clipped_assign(pct,0,99)+1);
+}
+
+int CAodixCore::edit_pre_release_ticks(void)
+{
+	return edit_get_quantization()*edit_pre_release_pct()/100;
 }

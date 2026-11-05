@@ -107,8 +107,11 @@ struct ADX_CONFIG
 	// linux port: activity bars over the play position (0 = shown, so older configurations show them)
 	unsigned char play_bars_off;
 
+	// linux port: note pre-release in percent of the quantization, stored +1 (0 = default 25%)
+	unsigned char pre_release;
+
 	// reserved fields
-	char reserved2[40];
+	char reserved2[39];
 
 	// registration info
 	char user_name[32];
@@ -135,6 +138,9 @@ struct ADX_CONFIG
 
 	// linux port: color theme file (empty: built-in classic colors), appended in 4.2.1.6
 	char theme_path[_MAX_PATH];
+
+	// linux port: folder for opening and saving projects (empty: the documents folder), appended in 4.2.1.7
+	char project_path[_MAX_PATH];
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -499,6 +505,11 @@ public:
 
 public:
 	int	edit_get_quantization(void);
+
+	// linux port: note pre-release in percent of the quantization (0..99) and in ticks for the current quantization
+	int		edit_pre_release_pct(void);
+	void	edit_set_pre_release_pct(int pct);
+	int		edit_pre_release_ticks(void);
 	int edit_quantize(int const position);
 
 public:

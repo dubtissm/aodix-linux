@@ -109,7 +109,7 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 	// edit change note pre-release
 	if(user_pressed==PRESS_PRE_RELEASE)
 	{
-		pp->usr_pre=arg_tool_clipped_assign(pp->usr_pre-i_my_dif,0,MAX_SIGNED_INT);
+		edit_set_pre_release_pct(edit_pre_release_pct()-i_my_dif);
 		gui_is_dirty=1;
 	}
 
@@ -210,8 +210,8 @@ void CAodixCore::gui_mouse_move(HWND const hwnd)
 		// get sequencer event beign relocated
 		ADX_EVENT* pe=&seq_event[user_event_drag];
 
-		// set new event position (shift keeps the position; linux port: not for copies, shift started those)
-		if(!(GetKeyState(VK_SHIFT)<0) || user_drag_copy)
+		// set new event position (shift keeps the position)
+		if(!(GetKeyState(VK_SHIFT)<0))
 			pe->pos=arg_tool_clipped_assign(ym_seq_pos+user_drag_offset,0,MAX_SIGNED_INT);
 
 		// set event track or event

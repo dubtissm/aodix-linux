@@ -9,6 +9,12 @@
 // then in <prefix>/share/aodix. 'out' must hold _MAX_PATH characters.
 void adx_resolve_resource_path(const char* rel,char* out);
 
+// the user's documents folder (xdg user dirs, else ~/Documents, else ~), shown as ~/...
+void adx_default_project_path(char* out,int out_size);
+
+// directory part of a path ("" if there is none)
+void adx_dir_of(const char* path,char* out,int out_size);
+
 // monotonic clock in milliseconds
 double adx_now_ms(void);
 

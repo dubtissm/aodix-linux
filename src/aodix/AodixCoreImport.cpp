@@ -22,8 +22,12 @@ void CAodixCore::import_adx_file_dlg(HWND const hwnd)
 	char filename[_MAX_PATH];
 	sprintf(filename,"*.adxl");
 
+	// linux port: starts in the configured project folder
+	char initial_dir[_MAX_PATH];
+	adx_expand_path(cfg.project_path,initial_dir,_MAX_PATH);
+
 	// open file dialog (linux port: compressed ".adxl" and original ".adx" projects)
-	if(arg_file_dialog_open(hinstance_app,hwnd,"Open Aodix Project File",filename,"Aodix Project File (*.adxl;*.adx)\0*.adxl;*.adx\0All Files (*.*)\0*\0\0","adxl","",1,0))
+	if(arg_file_dialog_open(hinstance_app,hwnd,"Open Aodix Project File",filename,"Aodix Project File (*.adxl;*.adx)\0*.adxl;*.adx\0All Files (*.*)\0*\0\0","adxl",initial_dir,1,0))
 	{
 		// set wait cursor
 		SetCursor(hcursor_wait);

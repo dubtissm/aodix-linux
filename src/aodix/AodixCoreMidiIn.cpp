@@ -71,7 +71,7 @@ void CAodixCore::midi_in_process(BYTE const data0,BYTE const data1,BYTE const da
 				int const is_note_off_c=is_note_off_a || is_note_off_b;
 
 				// check if note off, override with prerelease
-				seq_add_evmid(pp->usr_pos-(pp->usr_pre*is_note_off_c),user_pat,user_trk,user_instance,data0,data1,data2,user_edit_overwrite);
+				seq_add_evmid(pp->usr_pos-(edit_pre_release_ticks()*is_note_off_c),user_pat,user_trk,user_instance,data0,data1,data2,user_edit_overwrite);
 
 				// step if note on event
 				if(user_edit_step && ((data0&0xF0)==0x90 && data2>0))

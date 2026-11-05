@@ -518,6 +518,7 @@ void CAodixCore::config_read(void)
 	strcpy(cfg.clap_path[1],"/usr/lib/clap");
 	strcpy(cfg.clap_path[2],"/usr/local/lib/clap");
 	strcpy(cfg.theme_path,"Themes/Classic.theme");
+	adx_default_project_path(cfg.project_path,_MAX_PATH);
 
 	// init recent file paths
 	for(int rf=0;rf<NUM_RECENT_FILES;rf++)
@@ -597,8 +598,12 @@ void CAodixCore::config_read(void)
 		}
 
 		// file without theme path (before 4.2.1.6)
-		if(got<sizeof(ADX_CONFIG))
+		if(got<offsetof(ADX_CONFIG,project_path))
 			strcpy(cfg.theme_path,"Themes/Classic.theme");
+
+		// file without project path (before 4.2.1.7)
+		if(got<sizeof(ADX_CONFIG) || cfg.project_path[0]==0)
+			adx_default_project_path(cfg.project_path,_MAX_PATH);
 		fclose(pfile);
 
 		// linux port: windows style skin path from an older config

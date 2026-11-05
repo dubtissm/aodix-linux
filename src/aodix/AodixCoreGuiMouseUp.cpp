@@ -120,7 +120,7 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 			pp->usr_pos=edit_quantize(pp->usr_pos);
 
 		// sequencer edit event relocated, quantize event position if control and shift are unpressed
-		if((user_pressed==PRESS_EVENT_MOVE || user_pressed==PRESS_PR_EVENT_MOVE) && (GetKeyState(VK_SHIFT)>=0 || user_drag_copy))
+		if((user_pressed==PRESS_EVENT_MOVE || user_pressed==PRESS_PR_EVENT_MOVE) && GetKeyState(VK_SHIFT)>=0)
 			seq_event[user_event_drag].pos=edit_quantize(seq_event[user_event_drag].pos);
 	}
 
@@ -129,7 +129,7 @@ void CAodixCore::gui_mouse_up(HWND const hwnd)
 	{
 		edit_group_drag_apply();
 
-		// copies dropped where they were made: no copy (a shift+click alone must not double events)
+		// copies dropped where they were made: no copy (a control+click alone must not double events)
 		ADX_EVENT const* const pd=&seq_event[user_event_drag];
 		if(user_drag_copy && pd->pos==user_group_drag_pos && pd->trk==user_group_drag_trk)
 		{
