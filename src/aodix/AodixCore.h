@@ -404,7 +404,7 @@ public:
 	void paint_seq_pos_big(HDC const hdc,int const x,int const y,int const pos);
 	void paint_event(HDC const hdc,int const x,int const y,int const w,int const h,COLORREF const text_color,COLORREF const back_color,char* text);
 	void paint_marker(HDC const hdc,COLORREF const color,int const type,char* label,int const y,int const w,int const label_offset,int const selected);
-	void paint_wire(HDC const hdc,int const x1,int const y1,int const x2,int const y2,COLORREF const clr);
+	void paint_wire(HDC const hdc,int const x1,int const y1,int const x2,int const y2,COLORREF const clr,COLORREF const arrow_fill);
 	void paint_pin_array(HDC const hdc,int const x,int const y,int const num_pins,ADX_PIN* ppin,int const master_o_x,int const master_o_y,int const rout_area_y);
 	void paint_track_midi_vumeters(HDC const hdc,int const x,int const y,int const visible_tracks);
 	void paint(HWND const hwnd,HDC const hdc,int const w,int const h);

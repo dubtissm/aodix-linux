@@ -52,6 +52,29 @@ def recolor(p):
     r, g, b = p
     return (min(255, int(r * 1.04)), g, int(b * 0.9))
 
+# smooth ramp without the black fields, for gradients (master modules, transport buttons): the steep part of RAMP
+# around the black field threshold would turn their darker rows into black stripes
+SMOOTH = [(0, (20, 12, 6)), (90, DKBROWN), (140, SHADOW), (190, FACE), (230, LIGHT), (256, HILIGHT)]
+
+def smooth_ramp(l):
+    for (l0, c0), (l1, c1) in zip(SMOOTH, SMOOTH[1:]):
+        if l < l1:
+            return lerp(c0, c1, (l - l0) / (l1 - l0))
+    return SMOOTH[-1][1]
+
+def recolor_smooth(p):
+    """unsaturated pixels get the tan tint of their brightness, colored ones keep their color; with a soft
+    transition between the two, so gradients stay gradients"""
+    if p == KEY:
+        return p
+    w = min(1.0, max(0.0, (sat(p) - 20) / 30.0))
+    r, g, b = p
+    warm = (min(255, int(r * 1.04)), g, int(b * 0.9))
+    return lerp(smooth_ramp(luma(p)), warm, w)
+
+SMOOTH_BOXES = [(64, 16, 320, 80),     # master input / output modules (normal and selected)
+                (64, 96, 320, 208)]    # play / stop / rec / auto (normal, hover, active)
+
 def recolor_image(im, box=None):
     px = im.load()
     x0, y0, x1, y1 = box or (0, 0, im.width, im.height)
@@ -146,6 +169,12 @@ def main(src_dir, dst_dir):
     src = Image.open(os.path.join(src_dir, 'gfx.bmp')).convert('RGB')
     gfx = src.copy()
     recolor_image(gfx)
+    spx = src.load()
+    gpx = gfx.load()
+    for (x0, y0, x1, y1) in SMOOTH_BOXES:
+        for y in range(y0, y1):
+            for x in range(x0, x1):
+                gpx[x, y] = recolor_smooth(spx[x, y])
     redo_font(src, gfx)
     d = ImageDraw.Draw(gfx)
 

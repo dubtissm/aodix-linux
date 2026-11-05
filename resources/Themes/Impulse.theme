@@ -26,6 +26,11 @@ automation_text     = #FCFC54
 tempo               = #241C14
 tempo_text          = #FCFC54
 
+wire                = #B89470
+wire_arrow          = #FCFC54
+midi_wire           = #78DC78
+wire_drag           = #FCFC54
+
 play_line           = #FCFC54
 bar_low             = #44A048
 bar_mid             = #FCFC54

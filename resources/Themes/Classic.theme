@@ -37,6 +37,14 @@ automation_text     = #FFFFFF
 tempo               = #404040
 tempo_text          = #FFFFFF
 
+# --- routing view (vst routing) -------------------------------------------------------
+# audio wires; their arrow goes from the wire color (gain 0%) to wire_arrow (gain 100%)
+wire                = #000000
+wire_arrow          = #FFFFFF
+# midi wires and a wire while it is being dragged (their arrows: wire_arrow)
+midi_wire           = #FFFF80
+wire_drag           = #FFFFFF
+
 # --- play position ----------------------------------------------------------------
 # the line: "invert" (inverts what is below it, like the original) or a color
 play_line           = invert

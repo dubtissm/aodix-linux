@@ -23,6 +23,9 @@ struct ADX_THEME
 	COLORREF automation,automation_text;	// value/2 is added to the red channel
 	COLORREF tempo,tempo_text;				// tempo/2 is added to the red channel
 
+	// routing view: audio wires, arrow at full gain (gain 0 = wire color), midi wires, wire being dragged
+	COLORREF wire,wire_arrow,midi_wire,wire_drag;
+
 	// play position line and the activity bars above it
 	bool	 play_line_invert;		// classic: the line inverts what is below it
 	COLORREF play_line;
@@ -45,6 +48,9 @@ void		adx_theme_defaults(ADX_THEME* theme);
 // load a theme file (path as stored in the config: empty = built-in classic, relative = next to the program /
 // share/aodix). keys missing in the file keep the classic value. applies the menu colors right away.
 bool		adx_theme_load(const char* path);
+
+// mix of two colors (t 0..1)
+COLORREF	adx_color_lerp(COLORREF a,COLORREF b,float t);
 
 // activity bar color at a height position (0 = bottom, 1 = top)
 COLORREF	adx_theme_bar_color(float pos);

@@ -32,6 +32,10 @@ void adx_theme_defaults(ADX_THEME* t)
 	t->midi=0x606080;			t->midi_text=0xFFFFFF;
 	t->automation=0x404040;		t->automation_text=0xFFFFFF;
 	t->tempo=0x404040;			t->tempo_text=0xFFFFFF;
+	t->wire=0x000000;
+	t->wire_arrow=0xFFFFFF;
+	t->midi_wire=0x80FFFF;
+	t->wire_drag=0xFFFFFF;
 	t->play_line_invert=true;
 	t->play_line=0xFFFFFF;
 	t->bar_low=0x00C000;		// green (0x00BBGGRR)
@@ -42,8 +46,10 @@ void adx_theme_defaults(ADX_THEME* t)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-static COLORREF color_lerp(COLORREF a,COLORREF b,float t)
+COLORREF adx_color_lerp(COLORREF a,COLORREF b,float t)
 {
+	if(t<0.0f) t=0.0f;
+	if(t>1.0f) t=1.0f;
 	COLORREF r=0;
 	for(int s=0;s<24;s+=8)
 	{
@@ -58,8 +64,8 @@ COLORREF adx_theme_bar_color(float pos)
 	if(pos<0.0f) pos=0.0f;
 	if(pos>1.0f) pos=1.0f;
 	if(pos<0.5f)
-		return color_lerp(gl_adx_theme.bar_low,gl_adx_theme.bar_mid,pos*2.0f);
-	return color_lerp(gl_adx_theme.bar_mid,gl_adx_theme.bar_high,(pos-0.5f)*2.0f);
+		return adx_color_lerp(gl_adx_theme.bar_low,gl_adx_theme.bar_mid,pos*2.0f);
+	return adx_color_lerp(gl_adx_theme.bar_mid,gl_adx_theme.bar_high,(pos-0.5f)*2.0f);
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,6 +139,10 @@ static int theme_keys(ADX_THEME* t,ThemeKey* k)
 	k[n++]={"automation_text",&t->automation_text};
 	k[n++]={"tempo",&t->tempo};
 	k[n++]={"tempo_text",&t->tempo_text};
+	k[n++]={"wire",&t->wire};
+	k[n++]={"wire_arrow",&t->wire_arrow};
+	k[n++]={"midi_wire",&t->midi_wire};
+	k[n++]={"wire_drag",&t->wire_drag};
 	k[n++]={"bar_low",&t->bar_low};
 	k[n++]={"bar_mid",&t->bar_mid};
 	k[n++]={"bar_high",&t->bar_high};

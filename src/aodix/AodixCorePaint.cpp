@@ -189,7 +189,7 @@ void CAodixCore::paint_marker(HDC const hdc,COLORREF const color,int const type,
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CAodixCore::paint_wire(HDC const hdc,int const x1,int const y1,int const x2,int const y2,COLORREF const clr)
+void CAodixCore::paint_wire(HDC const hdc,int const x1,int const y1,int const x2,int const y2,COLORREF const clr,COLORREF const arrow_fill)
 {
 	// get vector
 	double const d_vw=double(x2-x1);
@@ -223,8 +223,17 @@ void CAodixCore::paint_wire(HDC const hdc,int const x1,int const y1,int const x2
 		pnt[2].x=(int32_t)(d_cx-d_yr);
 		pnt[2].y=(int32_t)(d_cy+d_xr);
 
-		// point polygon
+		// point polygon (linux port: fill and border from the color theme; classic: border black like the default
+		// pen, fill as before)
+		HBRUSH const hbrush=CreateSolidBrush(arrow_fill);
+		HPEN const hpen=CreatePen(PS_SOLID,1,gl_adx_theme.wire);
+		HBRUSH const hbrush_old=(HBRUSH)SelectObject(hdc,hbrush);
+		HPEN const hpen_old=(HPEN)SelectObject(hdc,hpen);
 		Polygon(hdc,pnt,3);
+		SelectObject(hdc,hpen_old);
+		SelectObject(hdc,hbrush_old);
+		DeleteObject(hpen);
+		DeleteObject(hbrush);
 	}
 }
 
@@ -243,21 +252,13 @@ void CAodixCore::paint_pin_array(HDC const hdc,int const x,int const y,int const
 			// get wire pointer
 			ADX_WIRE* pw=&pp->pwire[w];
 
-			// get wire colour
-			int const clr_scl=int(pw->value*255.0f);
-
-			// wire colour code
-			COLORREF const clr_code=clr_scl*0x00010101;
-
-			// create and select the brush that will be used to fill the polygon
-			HBRUSH const hbrush=CreateSolidBrush(clr_code);
-
-			// select brush
-			HBRUSH const hbrush_old=(HBRUSH)SelectObject(hdc,hbrush);
+			// linux port: arrow fill between the wire color (gain 0) and the arrow color (gain 1), from the theme;
+			// classic: black wire, arrow gray by gain like the original
+			COLORREF const clr_code=adx_color_lerp(gl_adx_theme.wire,gl_adx_theme.wire_arrow,pw->value);
 
 			// wire connected to master output, paint wire
 			if(pw->instance_index==MAX_INSTANCES)
-				paint_wire(hdc,x+p*8+4,y,master_o_x+pw->pin_index*8+4,master_o_y+4,0);
+				paint_wire(hdc,x+p*8+4,y,master_o_x+pw->pin_index*8+4,master_o_y+4,gl_adx_theme.wire,clr_code);
 
 			// wire connected to machine
 			if(pw->instance_index<MAX_INSTANCES)
@@ -273,15 +274,10 @@ void CAodixCore::paint_pin_array(HDC const hdc,int const x,int const y,int const
 					int const i_y=rout_area_y+pi->y-user_rout_offset_y;
 
 					// paint wire
-					paint_wire(hdc,x+p*8+4,y,i_x+4+pw->pin_index*8,i_y+4,0);
+					paint_wire(hdc,x+p*8+4,y,i_x+4+pw->pin_index*8,i_y+4,gl_adx_theme.wire,clr_code);
 				}
 			}
 
-			// select old hbrush object
-			SelectObject(hdc,hbrush_old);
-
-			// delete brush
-			DeleteObject(hbrush);
 		}
 	}
 }

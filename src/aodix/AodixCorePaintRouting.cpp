@@ -165,7 +165,7 @@ void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int con
 						int const mol_y2=rout_area_y+pi_mol->y-user_rout_offset_y+4;
 
 						// paint midi-out link wire
-						paint_wire(hdc,mol_x1+4,mol_y1+4,mol_x2,mol_y2,0x0080FFFF);
+						paint_wire(hdc,mol_x1+4,mol_y1+4,mol_x2,mol_y2,gl_adx_theme.midi_wire,gl_adx_theme.wire_arrow);
 					}
 				}
 			}
@@ -182,7 +182,7 @@ void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int con
 			int const i_y=rout_area_y+pi->y-user_rout_offset_y;
 
 			// paint wire
-			paint_wire(hdc,i_x+4+pi->peffect->numOutputs*8,i_y+44,user_lxm,user_lym,0x00FFFFFF);
+			paint_wire(hdc,i_x+4+pi->peffect->numOutputs*8,i_y+44,user_lxm,user_lym,gl_adx_theme.wire_drag,gl_adx_theme.wire_arrow);
 		}
 
 		// paint dragging instance audio wire
@@ -199,12 +199,12 @@ void CAodixCore::paint_routing(HWND const hwnd,HDC const hdc,int const w,int con
 				int const i_y=rout_area_y+pi->y-user_rout_offset_y;
 
 				// paint wire
-				paint_wire(hdc,i_x+4+user_dragging_rout_pin_index*8,i_y+44,user_lxm,user_lym,0x00FFFFFF);
+				paint_wire(hdc,i_x+4+user_dragging_rout_pin_index*8,i_y+44,user_lxm,user_lym,gl_adx_theme.wire_drag,gl_adx_theme.wire_arrow);
 			}
 
 			// paint dragging master-input wire
 			if(user_dragging_rout_instance_index==INPUT_INSTANCE)
-				paint_wire(hdc,m_i_x+4+user_dragging_rout_pin_index*8,m_i_y+28,user_lxm,user_lym,0x00FFFFFF);
+				paint_wire(hdc,m_i_x+4+user_dragging_rout_pin_index*8,m_i_y+28,user_lxm,user_lym,gl_adx_theme.wire_drag,gl_adx_theme.wire_arrow);
 		}
 
 		// paint wire gain bar
