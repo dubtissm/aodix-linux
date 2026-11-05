@@ -436,7 +436,7 @@ void CAodixCore::paint(HWND const hwnd,HDC const hdc,int const w,int const h)
 	BitBlt(hdc,243,197,16,16,hdc_gfx,16+(user_pressed==PRESS_VELOCITY)*16,32,SRCCOPY);
 
 	// edit note pre-release
-	sprintf(buf_a,"%3d%%",edit_pre_release_pct());
+	sprintf(buf_a,"%d%%",edit_pre_release_pct());
 	paint_txt(hdc,199,217,buf_a,4,0);
 	BitBlt(hdc,243,213,16,16,hdc_gfx,16+(user_pressed==PRESS_PRE_RELEASE)*16,32,SRCCOPY);
 

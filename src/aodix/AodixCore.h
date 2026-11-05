@@ -107,11 +107,8 @@ struct ADX_CONFIG
 	// linux port: activity bars over the play position (0 = shown, so older configurations show them)
 	unsigned char play_bars_off;
 
-	// linux port: note pre-release in percent of the quantization, stored +1 (0 = default 25%)
-	unsigned char pre_release;
-
 	// reserved fields
-	char reserved2[39];
+	char reserved2[40];
 
 	// registration info
 	char user_name[32];
@@ -267,7 +264,7 @@ struct ADX_PATTERN
 	int usr_pre;
 	int usr_mod;
 
-	// reserved
+	// reserved (linux port: reserved[0] = note pre-release in percent + 1, 0 = not set: derived from usr_pre)
 	int reserved[8];
 
 	// pattern markers array
@@ -506,9 +503,10 @@ public:
 public:
 	int	edit_get_quantization(void);
 
-	// linux port: note pre-release in percent of the quantization (0..99) and in ticks for the current quantization
+	// linux port: note pre-release of the current pattern in percent of the quantization (0..95) and in ticks
 	int		edit_pre_release_pct(void);
 	void	edit_set_pre_release_pct(int pct);
+	void	edit_step_pre_release(int dir);
 	int		edit_pre_release_ticks(void);
 	int edit_quantize(int const position);
 

@@ -989,17 +989,35 @@ void CAodixCore::edit_group_drag_apply(void)
 	}
 }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// linux port: note pre-release as a percentage of the quantization. 0% = an entered note is exactly one quantization step
-// long, 99% = 1% of it. (the original stored a fixed number of ticks per pattern; that value stays in the project file)
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: note pre-release as a percentage of the quantization, per pattern. 0% = an entered note is exactly one
+// quantization step long, 95% = 5% of it. stored in the reserved field of the pattern; usr_pre (the original value in
+// ticks) is kept in step for aodix on windows (as ticks of a 1/16 step). patterns of older files take it from usr_pre.
 int CAodixCore::edit_pre_release_pct(void)
 {
-	return cfg.pre_release?arg_tool_clipped_assign(int(cfg.pre_release)-1,0,99):25;
+	ADX_PATTERN const* const pp=&project.pattern[user_pat];
+	if(pp->reserved[0]>=1 && pp->reserved[0]<=96)
+		return pp->reserved[0]-1;
+	int const q=std::max(1,project.master_ppqn/4);
+	return arg_tool_clipped_assign((pp->usr_pre*100+q/2)/q,0,95);
 }
 
 void CAodixCore::edit_set_pre_release_pct(int pct)
 {
-	cfg.pre_release=(unsigned char)(arg_tool_clipped_assign(pct,0,99)+1);
+	ADX_PATTERN* const pp=&project.pattern[user_pat];
+	pct=arg_tool_clipped_assign(pct,0,95);
+	pp->reserved[0]=pct+1;
+	pp->usr_pre=pct*std::max(1,project.master_ppqn/4)/100;
+}
+
+// keyboard steps on a 5% grid (22% -> 20% / 25%)
+void CAodixCore::edit_step_pre_release(int dir)
+{
+	int const pct=edit_pre_release_pct();
+	if(dir<0)
+		edit_set_pre_release_pct((pct%5)?(pct/5)*5:pct-5);
+	else
+		edit_set_pre_release_pct((pct/5+1)*5);
 }
 
 int CAodixCore::edit_pre_release_ticks(void)

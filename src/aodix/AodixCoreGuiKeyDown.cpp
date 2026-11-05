@@ -366,10 +366,10 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 			gui_is_dirty=1;
 		}
 
-		// linux port: note pre-release -/+ 10%
+		// linux port: note pre-release -/+ 5% (on a 5% grid)
 		if(keycode=='7' || keycode=='8')
 		{
-			edit_set_pre_release_pct(edit_pre_release_pct()+(keycode=='7'?-10:10));
+			edit_step_pre_release(keycode=='7'?-1:1);
 			gui_is_dirty=1;
 		}
 
