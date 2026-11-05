@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Aodix – Keyboard and Mouse Shortcuts</title>
+<style>
+  body { font-family: Verdana, "DejaVu Sans", sans-serif; font-size: 12px; color: #202020; background: #ffffff;
+         margin: 16px 24px; max-width: 980px; }
+  h1 { font-size: 18px; margin: 0 0 4px 0; }
+  p.sub { margin: 0 0 16px 0; color: #505050; }
+  h2 { font-size: 13px; color: #ffffff; background: #008080; padding: 4px 8px; margin: 22px 0 0 0; }
+  table { border-collapse: collapse; width: 100%; }
+  td { border-bottom: 1px solid #d8d8d8; padding: 4px 8px; vertical-align: top; }
+  td.k { width: 42%; }
+  td.k kbd { white-space: nowrap; }
+  kbd { font-family: "DejaVu Sans Mono", monospace; font-size: 11px; background: #f2f2f2; border: 1px solid #b8b8b8;
+        border-bottom-width: 2px; border-radius: 3px; padding: 0 4px; }
+  span.new { font-size: 9px; color: #ffffff; background: #c06000; border-radius: 3px; padding: 0 4px; margin-left: 6px; }
+  .cols { columns: 2 440px; column-gap: 28px; }
+  .cols section { break-inside: avoid; }
+  a { color: #008080; }
+  @media print { body { margin: 0; } h2 { background: #ffffff; color: #000000; border-bottom: 2px solid #000000; } }
+</style>
+</head>
+<body>
+
+<h1>Aodix – Keyboard and Mouse Shortcuts</h1>
+<p class="sub">All shortcuts of Aodix for Linux 4.2.1.x. <span class="new">new</span> marks additions and changes of the
+Linux version. Ctrl = Control key. The <a href="quickshortcuts.htm">original quick reference</a> also explains the event
+syntaxes.</p>
+
+<div class="cols">
+
+<section>
+<h2>Transport and modes</h2>
+<table>
+<tr><td class="k"><kbd>Space</kbd></td><td>Play / Stop</td></tr>
+<tr><td class="k"><kbd>F1</kbd></td><td>Record events on/off</td></tr>
+<tr><td class="k"><kbd>F2</kbd></td><td>Write automation on/off</td></tr>
+<tr><td class="k"><kbd>F3</kbd></td><td>Cycle (loop) on/off</td></tr>
+<tr><td class="k"><kbd>F4</kbd></td><td>Live recording on/off</td></tr>
+<tr><td class="k"><kbd>F5</kbd></td><td>Stop-wrap on/off</td></tr>
+<tr><td class="k"><kbd>F6</kbd></td><td>Step (cursor advances after entering) on/off</td></tr>
+<tr><td class="k"><kbd>F7</kbd></td><td>Overwrite on/off</td></tr>
+<tr><td class="k"><kbd>F8</kbd></td><td>Switch sequencer / routing view</td></tr>
+<tr><td class="k"><kbd>F9</kbd></td><td>Event / pattern entry mode</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Edit settings</h2>
+<table>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>1</kbd> / <kbd>2</kbd></td><td>Quantization smaller / larger</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>3</kbd> / <kbd>4</kbd></td><td>MIDI channel down / up</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>5</kbd> / <kbd>6</kbd></td><td>Keyboard octave down / up</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>7</kbd> / <kbd>8</kbd></td><td>Note pre-release −5% / +5% (on a 5% grid, 0–95%, per pattern)<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Shift</kbd>+<kbd>Q</kbd> / <kbd>E</kbd></td><td>Zoom out / in<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+mouse wheel</td><td>Zoom</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>,</kbd></td><td>Configuration dialog</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Moving around in the sequencer</h2>
+<table>
+<tr><td class="k"><kbd>↑</kbd> <kbd>↓</kbd></td><td>Cursor one quantization step up / down</td></tr>
+<tr><td class="k"><kbd>←</kbd> <kbd>→</kbd></td><td>Previous / next data column (into the next track)</td></tr>
+<tr><td class="k">Mouse wheel</td><td>Cursor up / down by the quantization</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>↑</kbd> / <kbd>↓</kbd></td><td>To the previous / next event in the track</td></tr>
+<tr><td class="k"><kbd>Page Up</kbd> / <kbd>Page Down</kbd></td><td>One bar up / down</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Page Up</kbd> / <kbd>Page Down</kbd></td><td>To position 000:0 / to the last event of the pattern</td></tr>
+<tr><td class="k"><kbd>Home</kbd> / <kbd>End</kbd></td><td>To the start / end marker</td></tr>
+<tr><td class="k"><kbd>Tab</kbd> / <kbd>Shift</kbd>+<kbd>Tab</kbd></td><td>Next / previous track</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>←</kbd> / <kbd>→</kbd></td><td>8 tracks left / right</td></tr>
+<tr><td class="k">Double-click (left half of a track)</td><td>Cursor to this position</td></tr>
+<tr><td class="k">Middle mouse button + drag</td><td>Drag the sequencer: vertically (faster when zoomed out) and by whole tracks<span class="new">new</span></td></tr>
+<tr><td class="k">Drag the position column</td><td>Scroll; snaps to the grid unless Ctrl is held</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Patterns</h2>
+<table>
+<tr><td class="k">Numpad <kbd>+</kbd> / <kbd>−</kbd></td><td>Next / previous pattern</td></tr>
+<tr><td class="k"><kbd>Shift</kbd>+<kbd>D</kbd> / <kbd>A</kbd></td><td>Next / previous pattern<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Shift</kbd>+<kbd>W</kbd> / <kbd>S</kbd></td><td>16 patterns forward / back (up to FF / down to 00)<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Enter</kbd> on a pattern call</td><td>Go to the called pattern</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Enter</kbd></td><td>Back to the previous pattern</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Entering events</h2>
+<table>
+<tr><td class="k">Piano keys</td><td>Notes: lower octave on the bottom letter row (<kbd>Z</kbd>…<kbd>M</kbd>, QWERTZ <kbd>Y</kbd>…<kbd>M</kbd>), upper octave on <kbd>Q</kbd>…<kbd>P</kbd>, sharps on the row above; layout in the configuration</td></tr>
+<tr><td class="k"><kbd>1</kbd></td><td>Write a jump event</td></tr>
+<tr><td class="k"><kbd>Enter</kbd></td><td>Write a MIDI program change (current program of the instance)</td></tr>
+<tr><td class="k"><kbd>0</kbd>…<kbd>9</kbd>, <kbd>A</kbd>…<kbd>F</kbd></td><td>Hex values in the data columns of an event</td></tr>
+<tr><td class="k"><kbd>Del</kbd></td><td>Delete events at the cursor (routing view: unload the instance)</td></tr>
+<tr><td class="k"><kbd>Insert</kbd> / <kbd>Backspace</kbd></td><td>Insert / remove space in the track (following events move)</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Insert</kbd> / <kbd>Backspace</kbd></td><td>The same across all tracks</td></tr>
+<tr><td class="k"><kbd>+</kbd> / <kbd>Ctrl</kbd>+<kbd>+</kbd></td><td>Resize the previous event(s) to the cursor (track / all tracks)</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Selection (block)</h2>
+<table>
+<tr><td class="k">Drag in the left half of a track</td><td>Select a block</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>E</kbd></td><td>Block start / end at the cursor</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>A</kbd></td><td>Select exactly the events of the pattern<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Start and end marker on the selection, cycle on, cursor to the start marker<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd></td><td>Copy / cut / paste</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>F1</kbd> / <kbd>F2</kbd></td><td>Value at the cursor −1 / +1 for the whole block (transpose, velocity …)</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Q</kbd></td><td>Quantize the notes of the block</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>R</kbd></td><td>Randomize the value at the cursor in the block</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>I</kbd></td><td>Interpolate the value at the cursor across the block</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Events with the mouse (right half of an event)</h2>
+<table>
+<tr><td class="k">Drag</td><td>Move the event; an event of the selection moves the whole selection<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+drag</td><td>Drag a copy (of the event or of the whole selection)<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd> held when dropping</td><td>Drop off the grid; release Ctrl before dropping to snap to the grid</td></tr>
+<tr><td class="k"><kbd>Shift</kbd> while dragging</td><td>Keep the position (change only the track)</td></tr>
+<tr><td class="k">Drag the bottom edge</td><td>Change the length</td></tr>
+<tr><td class="k">Double-click</td><td>Delete the event</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Tracks and markers</h2>
+<table>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Mute the track</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>.</kbd> or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>M</kbd></td><td>Solo the track<span class="new">new</span></td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Home</kbd> / <kbd>End</kbd></td><td>Set the start / end marker at the cursor</td></tr>
+<tr><td class="k">Double-click in the timeline column</td><td>Create / delete a marker</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+double-click in the timeline column</td><td>Create / delete the stop marker</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Plugin instances</h2>
+<table>
+<tr><td class="k">Numpad <kbd>/</kbd> / <kbd>*</kbd></td><td>Previous / next instance</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>9</kbd> / <kbd>0</kbd></td><td>Previous / next instance<span class="new">new</span></td></tr>
+<tr><td class="k">Double-click an empty slot</td><td>Plugin library (load a plugin)</td></tr>
+<tr><td class="k">Double-click an instance</td><td>Open its editor</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+click on a used slot</td><td>Center the routing view on the instance</td></tr>
+<tr><td class="k"><kbd>m</kbd> / <kbd>b</kbd> buttons</td><td>Mute / bypass; a bypassed plugin is not processed (no cpu load)<span class="new">new</span></td></tr>
+</table>
+</section>
+
+<section>
+<h2>Routing view</h2>
+<table>
+<tr><td class="k">Double-click on an empty spot</td><td>Load a plugin there</td></tr>
+<tr><td class="k">Drag on an empty spot / middle mouse button + drag</td><td>Move the view (middle button: anywhere)<span class="new">new</span></td></tr>
+<tr><td class="k">Drag an instance</td><td>Move it</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+drag an instance</td><td>Drag a copy (same plugin and settings, no wires)<span class="new">new</span></td></tr>
+<tr><td class="k">Drag from an output pin to an input pin</td><td>Draw a wire</td></tr>
+<tr><td class="k">Drag the arrow of a wire</td><td>Gain of the wire</td></tr>
+<tr><td class="k">Double-click the arrow of a wire</td><td>Delete the wire</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+click / double-click on an output pin or arrow</td><td>Draw / delete all wires of the instance</td></tr>
+<tr><td class="k">Click on a master input / output pin</td><td>Assign the audio port</td></tr>
+<tr><td class="k"><kbd>Del</kbd></td><td>Unload the selected instance</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Values in boxes and knobs</h2>
+<table>
+<tr><td class="k">Click + move the mouse</td><td>Change the value</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+click + move</td><td>Fine adjustment</td></tr>
+<tr><td class="k">Double-click (pre-release, zoom …)</td><td>Default value</td></tr>
+</table>
+</section>
+
+<section>
+<h2>Files</h2>
+<table>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>New project</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>O</kbd></td><td>Open project (starts in the project folder of the configuration)</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>S</kbd></td><td>Save</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td><td>Save as</td></tr>
+<tr><td class="k"><kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>Bounce (render to a WAV file)</td></tr>
+</table>
+</section>
+
+</div>
+</body>
+</html>

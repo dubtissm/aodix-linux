@@ -218,6 +218,7 @@ HMENU load_menu_resource(int id)
 
 	HMENU help=CreatePopupMenu();
 	AppendMenu(help,MF_STRING,ID_HELP_CONTENT,"Content...");
+	AppendMenu(help,MF_STRING,ID_HELP_SHORTCUTS,"Keyboard Shortcuts...");
 	AppendMenu(help,MF_STRING,ID_HELP_ABOUT,"About...");
 	AppendMenu(help,MF_SEPARATOR,0,nullptr);
 	AppendMenu(help,MF_STRING,ID_HELP_WEBSITE,"Development...");

@@ -401,6 +401,14 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 	if(id==ID_HELP_CONTENT)
 		adxplat::open_url(hlp_fil);
 
+	// linux port: overview of all keyboard and mouse shortcuts
+	if(id==ID_HELP_SHORTCUTS)
+	{
+		char shortcuts_fil[_MAX_PATH];
+		adx_resolve_resource_path("HTMLHelp/shortcuts.html",shortcuts_fil);
+		adxplat::open_url(shortcuts_fil);
+	}
+
 	// about dialog
 	if(id==ID_HELP_ABOUT)
 		DialogBox(hinstance_app,(LPCTSTR)IDD_ABOUTBOX,hwnd,(DLGPROC)abou_dlg_proc);
