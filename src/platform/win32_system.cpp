@@ -326,6 +326,20 @@ static std::string zenity_patterns(const std::string& pat)
 
 static bool g_external_choosers_disabled=false;
 
+// major version of the installed zenity (0 if unknown), asked once
+static int zenity_major_version(void)
+{
+	static int major=-1;
+	if(major<0)
+	{
+		std::string out;
+		major=0;
+		if(run_capture("zenity --version 2>/dev/null",out)==0)
+			major=atoi(out.c_str());
+	}
+	return major;
+}
+
 bool adxplat::choose_file(HWND owner,const char* title,char* path,int path_size,const char* filter,bool save,const char* default_ext,const char* initial_dir)
 {
 	auto filters=parse_filter(filter);
@@ -335,6 +349,14 @@ bool adxplat::choose_file(HWND owner,const char* title,char* path,int path_size,
 	std::string name=path?path:"";
 	if(name.find('*')!=std::string::npos)
 		name.clear();
+
+	// suggested name of a file to be saved gets the default extension ("Untitled" -> "Untitled.adxl")
+	if(save && !name.empty() && default_ext && default_ext[0])
+	{
+		size_t const sl=name.find_last_of('/');
+		if(name.find('.',sl==std::string::npos?0:sl+1)==std::string::npos)
+			name+=std::string(".")+default_ext;
+	}
 	if(initial_dir && initial_dir[0])
 		start=std::string(initial_dir)+"/"+name;
 	else if(!name.empty() && name[0]=='/')
@@ -351,17 +373,16 @@ bool adxplat::choose_file(HWND owner,const char* title,char* path,int path_size,
 		std::string cmd;
 		if(have_program("zenity"))
 		{
-			// zenity takes the folder from --filename only on some versions (others only when it ends with '/'),
-			// otherwise its dialog opens in the current directory: so it is started in the folder itself
-			std::string folder=start;
-			if(!folder.empty() && folder.back()!='/')
+			// zenity 4 (gtk4, file chooser portal) takes the start folder only from a folder name ending in '/':
+			// a file name (also of a new file to be saved) is ignored there and the dialog opens somewhere else.
+			// zenity 3 also preselects the file (or suggests the name when saving), so it gets the full path
+			if(zenity_major_version()>=4 && !start.empty() && start.back()!='/')
 			{
-				size_t const sl=folder.find_last_of('/');
-				folder=(sl==std::string::npos)?std::string():folder.substr(0,sl+1);
+				size_t const sl=start.find_last_of('/');
+				if(sl!=std::string::npos)
+					start=start.substr(0,sl+1);
 			}
-			if(!folder.empty())
-				cmd="cd "+shell_quote(folder)+" 2>/dev/null; ";
-			cmd+="zenity --file-selection --title="+shell_quote(title?title:"");
+			cmd="zenity --file-selection --title="+shell_quote(title?title:"");
 			if(save)
 				cmd+=" --save --confirm-overwrite";
 			if(!start.empty())
