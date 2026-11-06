@@ -882,11 +882,8 @@ int CAodixCore::gui_flash_height(ADX_FLASH const& f)
 // flash color of an event: the theme color if the theme sets one, otherwise the block color made much lighter
 COLORREF CAodixCore::gui_event_flash_color(ADX_FLASH_TRIGGER const& t)
 {
-	// pattern calls have their own flash color
-	if(t.typ==EVT_PAT)
-		return gl_adx_theme.flash_block;
-
-	COLORREF const theme=t.kind?gl_adx_theme.flash_automation:gl_adx_theme.flash_note;
+	// pattern calls have their own flash color (not the one of the notes they play)
+	COLORREF const theme=(t.typ==EVT_PAT)?gl_adx_theme.flash_block:(t.kind?gl_adx_theme.flash_automation:gl_adx_theme.flash_note);
 	if(theme!=ADX_THEME_AUTO)
 		return theme;
 

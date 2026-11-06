@@ -59,8 +59,9 @@ play_line           = invert
 # with them notes flash in flash_note, automation / midi / tempo events in flash_automation:
 # flash_note        = #FFC040
 # flash_automation  = #40B0FF
-# pattern calls flash in their own color (for every event of the called pattern)
-flash_block         = #E8E8E8
+# pattern calls flash for every event of the called pattern; without flash_block in their own color,
+# 12% lighter, with it in flash_block (never in flash_note):
+# flash_block       = #E8E8E8
 
 # --- menus, dialogs and controls ---------------------------------------------------
 menu_face           = #D4D0C8   # menu bar, menus, dialog background

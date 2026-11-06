@@ -33,7 +33,7 @@ struct ADX_THEME
 	bool	 play_line_invert;		// classic: the line inverts what is below it
 	COLORREF play_line;
 	COLORREF flash_note,flash_automation;	// ADX_THEME_AUTO = the event color, a little lighter
-	COLORREF flash_block;					// pattern calls (always this color)
+	COLORREF flash_block;					// pattern calls (never flash_note); ADX_THEME_AUTO = their color, a little lighter
 
 	// menus, dialogs and controls
 	adxplat::UiColors ui;

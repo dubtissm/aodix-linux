@@ -42,7 +42,7 @@ void adx_theme_defaults(ADX_THEME* t)
 	t->play_line=0xFFFFFF;
 	t->flash_note=ADX_THEME_AUTO;		// event color, much lighter
 	t->flash_automation=ADX_THEME_AUTO;
-	t->flash_block=0xE8E8E8;
+	t->flash_block=ADX_THEME_AUTO;
 	t->ui=adxplat::default_ui_colors();
 }
 
