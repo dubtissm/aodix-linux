@@ -1,5 +1,41 @@
 # Changelog
 
+## 4.2.1.7 (2026-11-06)
+
+Editing
+- Copies by dragging: Ctrl+drag on an event drags a copy; on an event of the selection, a copy of the whole
+  selection. Dragging an event of the selection without Ctrl moves the whole selection. Holding Ctrl when
+  dropping places it off the grid, releasing Ctrl before dropping snaps it to the grid. Ctrl+drag on a plugin
+  in the routing view drags a copy of it (same plugin and settings, no wires).
+- The middle mouse button drags the sequencer (vertically, faster when zoomed out, and by whole tracks) and the
+  routing view (anywhere in the view).
+- Note pre-release is a percentage of the quantization (0–95%, default 25%, per pattern): 0% = an entered note
+  is one quantization step long. Projects stay compatible with Aodix on Windows.
+- New shortcuts: Ctrl+L (start/end marker on the selection, cycle on), Shift+D/A (next/previous pattern),
+  Shift+W/S (16 patterns forward/back), Shift+Q/E (zoom out/in), Ctrl+7/8 (pre-release −/+5%), Ctrl+9/0
+  (previous/next instance), Ctrl+. (solo track). Ctrl+A now selects exactly the events of the pattern.
+- Help → Keyboard Shortcuts... opens an overview of all keyboard and mouse shortcuts.
+
+Playback
+- Events flash when they start playing: their block lights up in a lighter version of its color and fades back
+  (pattern calls for every event of the called pattern). Flash time in *File → Configuration → Flash Events*
+  (default 400 ms, or no flash).
+- The play position line moves evenly and no longer flickers (it is drawn as an overlay over the window image,
+  its position is interpolated between audio blocks).
+- A bypassed plugin is no longer processed, so it costs no cpu. Automation and other parameter changes still
+  reach it and take effect when the bypass is switched off.
+- Live mode pages to the next view when the play position reaches 95% of the visible height.
+
+Configuration and look
+- Project folder setting (*File → Configuration → Project Path*, default: the documents folder); Open and Save
+  As start there.
+- File dialogs with zenity 4 open in the right folder.
+- Color themes: new keys for the routing view (wire, wire_arrow, midi_wire, wire_drag), the track separator
+  lines (track_line_dark, track_line_light), the play line (play_line) and the flash colors (flash_note,
+  flash_automation, flash_block). On dark skins the track separator lines were almost white; fixed.
+- Impulse skin: black stripes in the master input/output modules and the transport buttons removed; the
+  Impulse theme has wire colors that are readable on its dark background.
+
 ## 4.2.1.6 (2026-10-29)
 
 - Color themes: the colors of the event blocks (notes with their instrument colors, pattern, jump, MIDI,

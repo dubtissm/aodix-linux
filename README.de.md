@@ -26,6 +26,9 @@ JACK/PipeWire und den heutigen Linux-Plugin-Formaten.
 - **Farbthemen** für Event-Blöcke, Menüs und Dialoge: Classic, Dark, Vivid, Impulse oder ein
   eigenes (einfache Textdatei)
 - **Skin „Impulse“** mit den Farben und dem Gefühl von Impulse Tracker 2
+- **Bearbeitungshilfen:** Strg+Ziehen kopiert Events, Selektionen und Plugins, die mittlere Maustaste zieht die
+  Ansichten, spielende Events blitzen auf, gebypasste Plugins kosten keine CPU; alle Shortcuts unter *Help →
+  Keyboard Shortcuts*
 - Zwischenablage in allen Textfeldern, Debian-Paket mit Menüeintrag, Icon und Dateitypen
 
 ## Installation
@@ -58,7 +61,10 @@ JACK-Server (jack2) benötigt. LV2-Plugins brauchen `liblilv-0-0`.
 - **Routing:** Die Schaltfläche *vst routing* zeigt die modulare Ansicht: Audio- und MIDI-Kabel zwischen den
   Instanzen und dem Master-Ein- und -Ausgang, wie im Original.
 - **MIDI-Eingang:** Port `Aodix:midi_in`; mit *Open MIDI In Devices* verbindet Aodix Hardware-MIDI-Quellen.
-- **Hilfe:** *Help → Content* öffnet das Original-Handbuch.
+- **Hilfe:** *Help → Content* öffnet das Original-Handbuch, *Help → Keyboard Shortcuts* eine Übersicht aller
+  Tastatur- und Maus-Shortcuts, auch der in der Linux-Version hinzugekommenen.
+- **Projekte:** *Open* und *Save As* starten im Projektordner (*File → Configuration → Project Path*,
+  voreingestellt: dein Dokumentenordner).
 
 ![Konfigurationsdialog](docs/screenshots/extended_configuration_dialog.png)
 
@@ -70,7 +76,9 @@ Die Farben der Event-Blöcke (Noten, Patterns, Jumps, MIDI, Automation, Tempo) s
 aus einer Theme-Datei, die man unter *File → Configuration → Color Theme* auswählt; sie gilt sofort. Mitgeliefert
 werden *Classic* (die Originalfarben), *Dark*, *Vivid* und *Impulse* im Ordner `Themes` (beim Paket `/usr/share/aodix/Themes`).
 Für ein eigenes Theme eine davon kopieren, z. B. nach `~/.config/aodix/Mein.theme`, und die Farben ändern – eine
-Zeile `name = #RRGGBB` pro Farbe, alle Farben sind in `Classic.theme` beschrieben. Hintergrund, Raster und Regler
+Zeile `name = #RRGGBB` pro Farbe, alle Farben sind in `Classic.theme` beschrieben (Event-Blöcke, Menüs,
+Routing-Kabel, Track-Trennlinien, Abspiel-Linie und die Farben, in denen spielende Events aufblitzen).
+Hintergrund, Raster und Regler
 des Sequencers kommen aus dem Skin (*Skin Bitmaps Path*). Für den Look von Impulse Tracker 2 den Skin
 `Skins/Impulse` (nach einem Neustart) zusammen mit dem Theme `Themes/Impulse.theme` wählen.
 

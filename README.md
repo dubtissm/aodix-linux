@@ -25,6 +25,8 @@ the same project format as the original, with JACK/PipeWire audio and today's Li
 - **Color themes** for event blocks, menus and dialogs: Classic, Dark, Vivid, Impulse, or your own
   (a simple text file)
 - **Impulse skin** with the colors and feel of Impulse Tracker 2
+- **Editing extras:** Ctrl+drag copies events, selections and plugins, the middle mouse button drags the views,
+  playing events flash, bypassed plugins cost no cpu; all shortcuts in *Help → Keyboard Shortcuts*
 - Clipboard in all text fields, Debian package with menu entry, icon and file types
 
 ## Installation
@@ -56,7 +58,10 @@ systems) or a JACK server (jack2). LV2 plugins need `liblilv-0-0`.
 - **Routing:** the *vst routing* button shows the modular view: wire audio and MIDI between instances and the
   master input/output, just like in the original.
 - **MIDI input:** port `Aodix:midi_in`; with *Open MIDI In Devices* Aodix connects hardware MIDI sources.
-- **Help:** *Help → Content* opens the original manual.
+- **Help:** *Help → Content* opens the original manual, *Help → Keyboard Shortcuts* an overview of all keyboard
+  and mouse shortcuts, including those added in the Linux version.
+- **Projects:** *Open* and *Save As* start in the project folder (*File → Configuration → Project Path*, default:
+  your documents folder).
 
 ![Configuration dialog](docs/screenshots/extended_configuration_dialog.png)
 
@@ -68,7 +73,8 @@ The colors of the event blocks (notes, patterns, jumps, MIDI, automation, tempo)
 from a theme file, chosen in *File → Configuration → Color Theme* and applied right away. Aodix ships *Classic*
 (the original colors), *Dark*, *Vivid* and *Impulse* in its `Themes` folder (`/usr/share/aodix/Themes` for the package).
 For your own theme, copy one of them, e.g. to `~/.config/aodix/My.theme`, and change the colors – one
-`name = #RRGGBB` per line, every color is described in `Classic.theme`. The sequencer background, grid and knobs
+`name = #RRGGBB` per line, every color is described in `Classic.theme` (event blocks, menus, routing wires, track separator lines, play
+line and the colors in which playing events flash). The sequencer background, grid and knobs
 come from the skin (*Skin Bitmaps Path*). For the Impulse Tracker 2 look, choose the skin `Skins/Impulse`
 (after a restart) together with the theme `Themes/Impulse.theme`.
 

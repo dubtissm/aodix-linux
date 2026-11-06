@@ -357,3 +357,19 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
 3. ~~**Oberfläche**~~ erledigt: Skalierung 1,5× und 2×, Tastatur-Layouts (QWERTY/QWERTZ/AZERTY), Zwischenablage.
 4. ~~**VST3**~~ erledigt (Laden, Parameter, Programme, MIDI, Zustand im Projekt, Editoren mit `IRunLoop`).
 5. ~~**Paketierung**~~ erledigt: Debian-Paket über CPack (`cmake/Packaging.cmake`), GitHub-Workflows für Build und Release.
+
+## 4.2.1.7 (November 2026)
+
+- Overlay-Ebene in der Plattformschicht (`adxplat::set_overlay`, `overlay_changed`, `overlay_fill`,
+  `overlay_fill_keep`, `overlay_invert`): wird bei jedem Flush über das Fensterbild gelegt, ohne das Bild zu
+  verändern. Top-Level-Fenster zeichnen dafür immer in einen eigenen Puffer, der beim Flush ins XImage kopiert
+  bzw. skaliert wird. Darauf liegen die Abspiel-Linie (Position zwischen Audioblöcken nach der Uhr interpoliert)
+  und das Aufblitzen der Events.
+- Aufblitzen: der Audio-Thread meldet gestartete Events über einen lock-freien Ringpuffer
+  (`dsp_flash_event`), die GUI überblendet den Block (Textpixel bleiben stehen).
+- Bypass: gebypasste Instanzen werden nicht mehr berechnet; die VST3-/CLAP-Hosts halten je Parameter nur den
+  neuesten Wert in der Warteschlange.
+- Pre-Release pro Pattern in Prozent im reservierten Pattern-Feld (`reserved[0]`), `usr_pre` wird für Windows
+  mitgeführt. Neue Konfigurationsfelder: `project_path` (angehängt), `flash_time` (aus reserved2).
+- zenity 4 übernimmt den Startordner nur aus einem Ordnerpfad mit „/“ am Ende; Aodix übergibt dort nur den Ordner.
+- Aus der Skin-Hintergrundfarbe abgeleitete Farben werden pro Kanal gesättigt (vorher Überlauf bei dunklen Skins).
