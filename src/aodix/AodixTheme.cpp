@@ -40,8 +40,8 @@ void adx_theme_defaults(ADX_THEME* t)
 	t->wire_drag=0xFFFFFF;
 	t->play_line_invert=true;
 	t->play_line=0xFFFFFF;
-	t->flash_note=0x40C0FF;			// warm yellow (0x00BBGGRR)
-	t->flash_automation=0xFFB040;	// light blue
+	t->flash_note=ADX_THEME_AUTO;		// event color, much lighter
+	t->flash_automation=ADX_THEME_AUTO;
 	t->ui=adxplat::default_ui_colors();
 }
 

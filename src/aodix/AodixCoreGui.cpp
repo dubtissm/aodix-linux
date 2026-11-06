@@ -783,7 +783,7 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 				fy=gui_ov_seq_y;
 			}
 			if(fh>0)
-				adxplat::overlay_fill(cv,fx,fy,TRACK_WIDTH,fh,f.kind?gl_adx_theme.flash_automation:gl_adx_theme.flash_note,int(f.level*255.0f+0.5f));
+				adxplat::overlay_fill(cv,fx,fy,TRACK_WIDTH,fh,f.color,int(f.level*255.0f+0.5f));
 		}
 	}
 
@@ -842,6 +842,7 @@ bool CAodixCore::gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTE
 			if(f.pos==t.pos && f.trk==t.trk && f.kind==t.kind)
 			{
 				f.level=1.0f;
+				f.color=gui_event_flash_color(t);
 				found=true;
 				break;
 			}
@@ -854,6 +855,7 @@ bool CAodixCore::gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTE
 			f.trk=t.trk;
 			f.kind=t.kind;
 			f.szd=t.len>0;
+			f.color=gui_event_flash_color(t);
 			f.level=1.0f;
 			gui_flashes.push_back(f);
 		}
@@ -868,4 +870,33 @@ int CAodixCore::gui_flash_height(ADX_FLASH const& f)
 	if(!f.szd)
 		return NR_EVENT_HEIGHT;
 	return std::max(2,f.len/std::max(1,gui_ov_usr_ppp));
+}
+
+// flash color of an event: the theme color if the theme sets one, otherwise the block color made much lighter
+COLORREF CAodixCore::gui_event_flash_color(ADX_FLASH_TRIGGER const& t)
+{
+	COLORREF const theme=t.kind?gl_adx_theme.flash_automation:gl_adx_theme.flash_note;
+	if(theme!=ADX_THEME_AUTO)
+		return theme;
+
+	// block colors as painted by the sequencer
+	COLORREF back=gl_adx_theme.note_plain;
+	switch(t.typ)
+	{
+	case EVT_NOT:
+		if(cfg.note_colors)
+		{
+			int const inst_div_24=(t.da0*0xAAB)>>16;
+			int const inst_mod_24=t.da0-inst_div_24*24;
+			int const hue=(inst_mod_24<<4)|((inst_div_24&1)<<3)|((inst_div_24&2)<<1)|((inst_div_24&4)>>1)|((inst_div_24&8)>>3);
+			back=adx_color_add(adx_theme_note_color(hue),gl_adx_theme.note_back_add);
+		}
+		break;
+	case EVT_PAT: back=gl_adx_theme.pattern; break;
+	case EVT_JMP: back=gl_adx_theme.jump; break;
+	case EVT_MID: back=gl_adx_theme.midi; break;
+	case EVT_AUT: back=adx_color_add(gl_adx_theme.automation,t.da3/2); break;
+	case EVT_TMP: back=adx_color_add(gl_adx_theme.tempo,t.da0/2); break;
+	}
+	return adx_color_lerp(back,0x00FFFFFF,ADX_FLASH_LIGHTEN);
 }

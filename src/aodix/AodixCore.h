@@ -656,6 +656,7 @@ public:
 		int				len;		// ticks (0 for unsized events)
 		unsigned char	trk;
 		unsigned char	kind;		// 0 = note, 1 = automation / midi / tempo
+		unsigned char	typ,da0,da3;	// for the color of the event
 	};
 	ADX_FLASH_TRIGGER		dsp_flash_trigger[1024];
 	std::atomic<unsigned>	dsp_flash_write;
@@ -666,11 +667,13 @@ public:
 	struct ADX_FLASH
 	{
 		int		pos,len,trk,kind,szd;
+		COLORREF color;				// flash color (theme, or the event color made much lighter)
 		float	level;
 	};
 	std::vector<ADX_FLASH>	gui_flashes;
 	bool					gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTERN const* pp,int const h);
 	int						gui_flash_height(ADX_FLASH const& f);
+	COLORREF				gui_event_flash_color(ADX_FLASH_TRIGGER const& t);
 
 	// linux port: play position overlay (line + activity bars), drawn by the platform over the window image
 	bool	gui_ov_active;

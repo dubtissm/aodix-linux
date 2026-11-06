@@ -543,7 +543,10 @@ void CAodixCore::dsp_flash_event(int const index,int const kind)
 	ADX_FLASH_TRIGGER* const t=&dsp_flash_trigger[w&1023];
 	t->index=index;
 	t->pos=pe->pos;
-	t->len=(pe->szd && pe->typ!=EVT_PAT)?pe->par:0;	// a pattern call can be long: only its header line flashes
+	t->len=pe->szd?pe->par:0;
+	t->typ=pe->typ;
+	t->da0=pe->da0;
+	t->da3=pe->da3;
 	t->trk=pe->trk;
 	t->kind=(unsigned char)kind;
 	dsp_flash_write.store(w+1,std::memory_order_release);
