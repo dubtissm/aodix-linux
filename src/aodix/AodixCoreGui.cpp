@@ -911,13 +911,13 @@ COLORREF CAodixCore::gui_event_flash_color(ADX_FLASH_TRIGGER const& t)
 	return adx_color_lerp(back,0x00FFFFFF,ADX_FLASH_LIGHTEN);
 }
 
-// flash time from the configuration (combo: no flash, 100, 200, 300, 400, 600, 800, 1000 ms; default 200 ms)
+// flash time from the configuration (combo: no flash, 100, 200, 300, 400, 600, 800, 1000 ms; default 400 ms)
 static int const g_flash_times[]={0,100,200,300,400,600,800,1000};
 
 int CAodixCore::gui_flash_ms(void)
 {
-	int const idx=cfg.flash_time?int(cfg.flash_time)-1:2;
-	return (idx>=0 && idx<8)?g_flash_times[idx]:200;
+	int const idx=cfg.flash_time?int(cfg.flash_time)-1:4;
+	return (idx>=0 && idx<8)?g_flash_times[idx]:400;
 }
 
 // text color of an event block as painted by the sequencer

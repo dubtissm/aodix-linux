@@ -106,7 +106,7 @@ struct ADX_CONFIG
 	unsigned char win_geom[8];
 
 	// linux port: flash time of events that start playing: combo index + 1 (1 = no flash, 2.. = 100 ms ..),
-	// 0 = default 200 ms (older configurations; their 1 = "off" stays off)
+	// 0 = default 400 ms (older configurations; their 1 = "off" stays off)
 	unsigned char flash_time;
 
 	// reserved fields

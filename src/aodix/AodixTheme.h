@@ -43,7 +43,7 @@ struct ADX_THEME
 #define ADX_THEME_AUTO		0xFFFFFFFF
 
 // without flash colors in the theme an event flashes in its own color, this much closer to white
-#define ADX_FLASH_LIGHTEN	0.12f
+#define ADX_FLASH_LIGHTEN	0.2f
 
 extern ADX_THEME gl_adx_theme;
 

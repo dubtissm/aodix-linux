@@ -240,7 +240,7 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		const char* const flash_items[]={"No Flash","100 ms","200 ms","300 ms","400 ms","600 ms","800 ms","1 sec"};
 		for(const char* it:flash_items)
 			SendMessage(hwnd_flash_comb,(UINT)CB_ADDSTRING,0,(LPARAM)it);
-		SendMessage(hwnd_flash_comb,(UINT)CB_SETCURSEL,(gl_padx->cfg.flash_time>=1 && gl_padx->cfg.flash_time<=8)?gl_padx->cfg.flash_time-1:2,0);
+		SendMessage(hwnd_flash_comb,(UINT)CB_SETCURSEL,(gl_padx->cfg.flash_time>=1 && gl_padx->cfg.flash_time<=8)?gl_padx->cfg.flash_time-1:4,0);
 
 		return TRUE;
 	}
