@@ -45,7 +45,7 @@ struct ADX_THEME
 #define ADX_FLASH_FADE		3.2f
 
 // without flash colors in the theme an event flashes in its own color, this much closer to white
-#define ADX_FLASH_LIGHTEN	0.6f
+#define ADX_FLASH_LIGHTEN	0.3f
 
 extern ADX_THEME gl_adx_theme;
 

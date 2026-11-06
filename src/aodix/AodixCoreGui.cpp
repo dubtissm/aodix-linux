@@ -278,7 +278,8 @@ void CAodixCore::gui_timer(HWND const hwnd)
 		if(i_ty!=master_transport_last_y)
 		{
 			master_transport_last_y=i_ty;
-			if(cfg.rec_live && i_ty>h)
+			// (linux port: at 95% of the visible height already, the original waited until the line had left the window)
+			if(cfg.rec_live && i_ty>seq_area_y+seq_area_h*95/100)
 			{
 				// set new position
 				pp->usr_pos=edit_quantize(arg_tool_clipped_assign(play_pos+(seq_area_h/2)*pp->usr_ppp,0,MAX_SIGNED_INT));
