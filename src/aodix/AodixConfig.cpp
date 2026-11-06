@@ -235,8 +235,12 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 		// check fullscreen option
 		CheckDlgButton(hdlg,IDC_FULLSCREEN_CHECK,gl_padx->cfg.fullscreen);
 
-		// linux port: activity bars at the play position
-		CheckDlgButton(hdlg,IDC_PLAY_BARS_CHECK,gl_padx->cfg.play_bars_off?BST_UNCHECKED:BST_CHECKED);
+		// linux port: flash time of playing events
+		HWND const hwnd_flash_comb=GetDlgItem(hdlg,IDC_FLASH_TIME_COMBO);
+		const char* const flash_items[]={"No Flash","100 ms","200 ms","300 ms","400 ms","600 ms","800 ms","1 sec"};
+		for(const char* it:flash_items)
+			SendMessage(hwnd_flash_comb,(UINT)CB_ADDSTRING,0,(LPARAM)it);
+		SendMessage(hwnd_flash_comb,(UINT)CB_SETCURSEL,(gl_padx->cfg.flash_time>=1 && gl_padx->cfg.flash_time<=8)?gl_padx->cfg.flash_time-1:2,0);
 
 		return TRUE;
 	}
@@ -440,8 +444,10 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			// set fullscreen option
 			gl_padx->cfg.fullscreen=IsDlgButtonChecked(hdlg,IDC_FULLSCREEN_CHECK);
 
-			// linux port: activity bars at the play position
-			gl_padx->cfg.play_bars_off=IsDlgButtonChecked(hdlg,IDC_PLAY_BARS_CHECK)?0:1;
+			// linux port: flash time of playing events
+			int const flash_sel=(int)SendMessage(GetDlgItem(hdlg,IDC_FLASH_TIME_COMBO),(UINT)CB_GETCURSEL,0,0);
+			if(flash_sel>=0 && flash_sel<8)
+				gl_padx->cfg.flash_time=(unsigned char)(flash_sel+1);
 
 			// restart midi
 			gl_padx->midi_in_init();

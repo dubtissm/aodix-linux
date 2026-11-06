@@ -768,7 +768,7 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 
 
 	// flashing events: their block in the theme color, fading into the block
-	if(!cfg.play_bars_off)
+	if(gui_flash_ms()>0)
 	{
 		for(ADX_FLASH const& f:gui_flashes)
 		{
@@ -823,15 +823,21 @@ bool CAodixCore::gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTE
 	// fade
 	for(size_t i=0;i<gui_flashes.size();)
 	{
-		gui_flashes[i].level-=float(dt)*ADX_FLASH_FADE;
+		gui_flashes[i].level-=float(dt)*1000.0f/float(std::max(1,gui_flash_ms()));
 		if(gui_flashes[i].level<=0.0f)
 			gui_flashes.erase(gui_flashes.begin()+i);
 		else
 			i++;
 	}
 
-	// new triggers (when the gui fell far behind, only the newest ones)
+	// new triggers (when the gui fell far behind, only the newest ones; none when flashing is off)
 	unsigned const w=dsp_flash_write.load(std::memory_order_acquire);
+	if(gui_flash_ms()==0)
+	{
+		gui_flash_read=w;
+		gui_flashes.clear();
+		return had;
+	}
 	if(w-gui_flash_read>1024)
 		gui_flash_read=w-1024;
 	for(;gui_flash_read!=w;gui_flash_read++)
@@ -900,4 +906,13 @@ COLORREF CAodixCore::gui_event_flash_color(ADX_FLASH_TRIGGER const& t)
 	case EVT_TMP: back=adx_color_add(gl_adx_theme.tempo,t.da0/2); break;
 	}
 	return adx_color_lerp(back,0x00FFFFFF,ADX_FLASH_LIGHTEN);
+}
+
+// flash time from the configuration (combo: no flash, 100, 200, 300, 400, 600, 800, 1000 ms; default 200 ms)
+static int const g_flash_times[]={0,100,200,300,400,600,800,1000};
+
+int CAodixCore::gui_flash_ms(void)
+{
+	int const idx=cfg.flash_time?int(cfg.flash_time)-1:2;
+	return (idx>=0 && idx<8)?g_flash_times[idx]:200;
 }

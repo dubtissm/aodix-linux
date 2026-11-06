@@ -105,8 +105,9 @@ struct ADX_CONFIG
 	unsigned char win_state;
 	unsigned char win_geom[8];
 
-	// linux port: events flash when they start playing (0 = on, so older configurations show it)
-	unsigned char play_bars_off;
+	// linux port: flash time of events that start playing: combo index + 1 (1 = no flash, 2.. = 100 ms ..),
+	// 0 = default 200 ms (older configurations; their 1 = "off" stays off)
+	unsigned char flash_time;
 
 	// reserved fields
 	char reserved2[40];
@@ -673,6 +674,7 @@ public:
 	std::vector<ADX_FLASH>	gui_flashes;
 	bool					gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTERN const* pp,int const h);
 	int						gui_flash_height(ADX_FLASH const& f);
+	int						gui_flash_ms(void);		// 0 = no flash
 	COLORREF				gui_event_flash_color(ADX_FLASH_TRIGGER const& t);
 
 	// linux port: play position overlay (line + activity bars), drawn by the platform over the window image

@@ -41,9 +41,6 @@ struct ADX_THEME
 // color value meaning "not set in the theme, use the skin"
 #define ADX_THEME_AUTO		0xFFFFFFFF
 
-// fade speed of flashing events (per second: from the flash color to the block in about 0.3 s)
-#define ADX_FLASH_FADE		3.2f
-
 // without flash colors in the theme an event flashes in its own color, this much closer to white
 #define ADX_FLASH_LIGHTEN	0.3f
 
