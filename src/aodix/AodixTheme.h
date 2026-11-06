@@ -29,7 +29,7 @@ struct ADX_THEME
 	// routing view: audio wires, arrow at full gain (gain 0 = wire color), midi wires, wire being dragged
 	COLORREF wire,wire_arrow,midi_wire,wire_drag;
 
-	// play position line, and its flash over a track when a note starts / an automation event plays there
+	// play position line; events flash in these colors when they start playing (a pattern call for its events)
 	bool	 play_line_invert;		// classic: the line inverts what is below it
 	COLORREF play_line;
 	COLORREF flash_note,flash_automation;
@@ -41,7 +41,7 @@ struct ADX_THEME
 // color value meaning "not set in the theme, use the skin"
 #define ADX_THEME_AUTO		0xFFFFFFFF
 
-// fade speed of the flashes on the play line (per second: full color to the line in about 0.3 s)
+// fade speed of flashing events (per second: from the flash color to the block in about 0.3 s)
 #define ADX_FLASH_FADE		3.2f
 
 extern ADX_THEME gl_adx_theme;

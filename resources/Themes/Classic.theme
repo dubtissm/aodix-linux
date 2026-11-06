@@ -54,8 +54,8 @@ wire_drag           = #FFFFFF
 # --- play position ----------------------------------------------------------------
 # the line: "invert" (inverts what is below it, like the original) or a color
 play_line           = invert
-# when a note starts in a track, the line flashes over this track in flash_note and fades back into the
-# line (about 0.3 s); automation and midi events flash in flash_automation
+# events flash when they start playing: a note in flash_note, automation / midi / tempo events in
+# flash_automation, fading back into their block in about 0.3 s (a pattern call flashes for its events)
 flash_note          = #FFC040
 flash_automation    = #40B0FF
 

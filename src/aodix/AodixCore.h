@@ -48,6 +48,7 @@
 #include "AodixDspPool.h"
 #include "AodixTheme.h"
 #include <vector>
+#include <atomic>
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // window procedures
@@ -104,7 +105,7 @@ struct ADX_CONFIG
 	unsigned char win_state;
 	unsigned char win_geom[8];
 
-	// linux port: events flash on the play position line (0 = on, so older configurations show it)
+	// linux port: events flash when they start playing (0 = on, so older configurations show it)
 	unsigned char play_bars_off;
 
 	// reserved fields
@@ -646,7 +647,30 @@ public:
 	// linux port: note-on counter and last velocity per track (written by the audio thread, read by the gui)
 	unsigned int	master_midi_note_count[MAX_TRACKS];
 	unsigned char	master_midi_note_velo[MAX_TRACKS];
-	unsigned int	master_auto_count[MAX_TRACKS];	// automation events (vst automation, midi events) per track
+
+	// linux port: events that just started playing (written by the audio thread, read by the gui: they flash)
+	struct ADX_FLASH_TRIGGER
+	{
+		int				index;		// sequencer event (for a called pattern: the pattern event)
+		int				pos;
+		int				len;		// ticks (0 for unsized events)
+		unsigned char	trk;
+		unsigned char	kind;		// 0 = note, 1 = automation / midi / tempo
+	};
+	ADX_FLASH_TRIGGER		dsp_flash_trigger[1024];
+	std::atomic<unsigned>	dsp_flash_write;
+	unsigned				gui_flash_read;
+	void					dsp_flash_event(int const index,int const kind);
+
+	// linux port: flashing events in the gui (fade from the theme color to the block)
+	struct ADX_FLASH
+	{
+		int		pos,len,trk,kind,szd;
+		float	level;
+	};
+	std::vector<ADX_FLASH>	gui_flashes;
+	bool					gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTERN const* pp,int const h);
+	int						gui_flash_height(ADX_FLASH const& f);
 
 	// linux port: play position overlay (line + activity bars), drawn by the platform over the window image
 	bool	gui_ov_active;
@@ -655,10 +679,10 @@ public:
 	int		gui_ov_width;
 	int		gui_ov_first_x;			// x of the first visible track column
 	int		gui_ov_tracks;			// visible tracks
-	unsigned int gui_ov_note_seen[MAX_TRACKS];
-	unsigned int gui_ov_auto_seen[MAX_TRACKS];
-	float	gui_ov_level[MAX_TRACKS];		// flash of a note start on the play line, 1 = full color, fades to 0
-	float	gui_ov_auto_level[MAX_TRACKS];	// flash of an automation event
+	int		gui_ov_cent_y;			// sequencer geometry of the last frame (flashing events)
+	int		gui_ov_usr_pos;
+	int		gui_ov_usr_ppp;
+	int		gui_ov_bottom;
 	int		gui_ov_last_frame;		// interpolation of the play position between audio blocks
 	double	gui_ov_last_frame_ms;
 	double	gui_ov_last_tick_ms;

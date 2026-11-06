@@ -288,52 +288,38 @@ void CAodixCore::gui_timer(HWND const hwnd)
 			}
 		}
 
-		// flashes on the play line: a note start (or automation event) in a track lights up the line over this
-		// track in the theme color, which then fades out
-		bool flashing=false;
-		for(int t=0;t<MAX_TRACKS;t++)
-		{
-			unsigned int const cnt=master_midi_note_count[t];
-			if(cnt!=gui_ov_note_seen[t])
-			{
-				gui_ov_note_seen[t]=cnt;
-				gui_ov_level[t]=1.0f;
-			}
-			unsigned int const acnt=master_auto_count[t];
-			if(acnt!=gui_ov_auto_seen[t])
-			{
-				gui_ov_auto_seen[t]=acnt;
-				gui_ov_auto_level[t]=1.0f;
-			}
-			if(gui_ov_level[t]>0.0f || gui_ov_auto_level[t]>0.0f)
-			{
-				gui_ov_level[t]=std::max(0.0f,gui_ov_level[t]-float(frame_dt)*ADX_FLASH_FADE);
-				gui_ov_auto_level[t]=std::max(0.0f,gui_ov_auto_level[t]-float(frame_dt)*ADX_FLASH_FADE);
-				flashing=true;
-			}
-		}
-
 		// overlay area: the line
-		bool const changed=!gui_ov_active || i_ty!=gui_ov_play_y || flashing || w!=gui_ov_width;
+		bool const changed=!gui_ov_active || i_ty!=gui_ov_play_y || w!=gui_ov_width;
 		gui_ov_active=true;
 		gui_ov_play_y=i_ty;
 		gui_ov_seq_y=seq_area_y;
 		gui_ov_width=w;
 		gui_ov_first_x=TRACK_WIDTH+user_pr_width;
 		gui_ov_tracks=seq_visi_t;
-		if(changed)
+		bool const flashing=gui_flash_update(frame_dt,seq_cent_y,pp,h);
+		if(changed || flashing)
 		{
+			// the line, plus the blocks of the flashing events
 			RECT ov;
 			ov.left=0;
 			ov.right=w;
 			ov.top=std::max(seq_area_y,i_ty);
 			ov.bottom=std::min(h,i_ty+2);
+			for(ADX_FLASH const& f:gui_flashes)
+			{
+				int const fy=seq_cent_y+(f.pos-pp->usr_pos)/pp->usr_ppp;
+				int const fh=gui_flash_height(f);
+				ov.top=std::max(seq_area_y,std::min<int>(ov.top,fy));
+				ov.bottom=std::min(h,std::max<int>(ov.bottom,fy+fh));
+			}
 			adxplat::overlay_changed(hwnd,ov.bottom>ov.top?&ov:NULL);
 		}
 	}
 	else
 	{
 		// transport stopped or another page: remove the overlay
+		gui_flashes.clear();
+		gui_flash_read=dsp_flash_write.load(std::memory_order_acquire);
 		if(gui_ov_active)
 		{
 			gui_ov_active=false;
@@ -342,10 +328,7 @@ void CAodixCore::gui_timer(HWND const hwnd)
 		gui_ov_last_frame=-1;
 		for(int t=0;t<MAX_TRACKS;t++)
 		{
-			gui_ov_note_seen[t]=master_midi_note_count[t];
-			gui_ov_auto_seen[t]=master_auto_count[t];
-			gui_ov_level[t]=0.0f;
-			gui_ov_auto_level[t]=0.0f;
+
 		}
 	}
 
@@ -782,29 +765,35 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 
 	int const y=gui_ov_play_y;
 
-	// play position line (classic: inverted like the original)
+
+	// flashing events: their block in the theme color, fading into the block
+	if(!cfg.play_bars_off)
+	{
+		for(ADX_FLASH const& f:gui_flashes)
+		{
+			int const t=f.trk-user_trk_offset;
+			if(t<0 || t>=gui_ov_tracks)
+				continue;
+			int const fx=gui_ov_first_x+t*TRACK_WIDTH;
+			int fy=gui_ov_cent_y+(f.pos-gui_ov_usr_pos)/gui_ov_usr_ppp;
+			int fh=gui_flash_height(f);
+			if(fy<gui_ov_seq_y)
+			{
+				fh-=gui_ov_seq_y-fy;
+				fy=gui_ov_seq_y;
+			}
+			if(fh>0)
+				adxplat::overlay_fill(cv,fx,fy,TRACK_WIDTH,fh,f.kind?gl_adx_theme.flash_automation:gl_adx_theme.flash_note,int(f.level*255.0f+0.5f));
+		}
+	}
+
+	// play position line on top (classic: inverted like the original)
 	if(y>=gui_ov_seq_y)
 	{
 		if(gl_adx_theme.play_line_invert)
 			adxplat::overlay_invert(cv,0,y,gui_ov_width,2);
 		else
 			adxplat::overlay_fill(cv,0,y,gui_ov_width,2,gl_adx_theme.play_line,255);
-	}
-
-	// flashes on the line over the tracks: the theme color, fading into the line
-	if(!cfg.play_bars_off && y>=gui_ov_seq_y)
-	{
-		for(int t=0;t<gui_ov_tracks;t++)
-		{
-			int const ti=user_trk_offset+t;
-			if(ti>=MAX_TRACKS)
-				break;
-			int const fx=gui_ov_first_x+t*TRACK_WIDTH;
-			if(gui_ov_auto_level[ti]>0.0f)
-				adxplat::overlay_fill(cv,fx,y,TRACK_WIDTH,2,gl_adx_theme.flash_automation,int(gui_ov_auto_level[ti]*255.0f+0.5f));
-			if(gui_ov_level[ti]>0.0f)
-				adxplat::overlay_fill(cv,fx,y,TRACK_WIDTH,2,gl_adx_theme.flash_note,int(gui_ov_level[ti]*255.0f+0.5f));
-		}
 	}
 }
 
@@ -816,4 +805,67 @@ static void adx_overlay_proc(HWND,adxplat::OverlayCanvas* cv,void* user)
 void adx_install_overlay(HWND hwnd,CAodixCore* core)
 {
 	adxplat::set_overlay(hwnd,adx_overlay_proc,core);
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: events that started playing flash (taken from the audio thread), then fade. returns true while any flashes
+bool CAodixCore::gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTERN const* pp,int const h)
+{
+	// geometry for the overlay
+	gui_ov_cent_y=seq_cent_y;
+	gui_ov_usr_pos=pp->usr_pos;
+	gui_ov_usr_ppp=std::max(1,pp->usr_ppp);
+	gui_ov_bottom=h;
+
+	bool const had=!gui_flashes.empty();
+
+	// fade
+	for(size_t i=0;i<gui_flashes.size();)
+	{
+		gui_flashes[i].level-=float(dt)*ADX_FLASH_FADE;
+		if(gui_flashes[i].level<=0.0f)
+			gui_flashes.erase(gui_flashes.begin()+i);
+		else
+			i++;
+	}
+
+	// new triggers (when the gui fell far behind, only the newest ones)
+	unsigned const w=dsp_flash_write.load(std::memory_order_acquire);
+	if(w-gui_flash_read>1024)
+		gui_flash_read=w-1024;
+	for(;gui_flash_read!=w;gui_flash_read++)
+	{
+		ADX_FLASH_TRIGGER const t=dsp_flash_trigger[gui_flash_read&1023];
+		bool found=false;
+		for(ADX_FLASH& f:gui_flashes)
+		{
+			if(f.pos==t.pos && f.trk==t.trk && f.kind==t.kind)
+			{
+				f.level=1.0f;
+				found=true;
+				break;
+			}
+		}
+		if(!found && gui_flashes.size()<256)
+		{
+			ADX_FLASH f;
+			f.pos=t.pos;
+			f.len=t.len;
+			f.trk=t.trk;
+			f.kind=t.kind;
+			f.szd=t.len>0;
+			f.level=1.0f;
+			gui_flashes.push_back(f);
+		}
+	}
+
+	return had || !gui_flashes.empty();
+}
+
+// height of a flashing event block, like gui_get_event_height
+int CAodixCore::gui_flash_height(ADX_FLASH const& f)
+{
+	if(!f.szd)
+		return NR_EVENT_HEIGHT;
+	return std::max(2,f.len/std::max(1,gui_ov_usr_ppp));
 }

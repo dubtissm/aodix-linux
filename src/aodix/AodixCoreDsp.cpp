@@ -334,9 +334,12 @@ int CAodixCore::dsp_play_events(int const i_samples_per_point,int const block_sa
 			// note event
 			if(pe->typ==EVT_NOT)
 			{
-				// note on
+				// note on (linux port: the note flashes)
 				if(event_sample_sta>=block_sample_sta)
+				{
 					instance_add_midi_event(&instance[pe->da0],pe->trk,0x90+(pe->da1&0xF),pe->da2,pe->da3,0,event_sample_sta+deltaframe);
+					dsp_flash_event(e,0);
+				}
 
 				// note off
 				if(event_sample_end<block_sample_end)
@@ -388,6 +391,9 @@ int CAodixCore::dsp_play_events(int const i_samples_per_point,int const block_sa
 
 								// send midi sub note-on event
 								instance_add_midi_event(&instance[pse->da0],pe->trk,0x90+(pse->da1&0xF),transposed_note,transposed_velo,0,sub_event_sample_sta+deltaframe);
+
+								// linux port: the pattern event flashes for every note of the called pattern
+								dsp_flash_event(e,0);
 							}
 
 							// check sub note-off
@@ -401,9 +407,9 @@ int CAodixCore::dsp_play_events(int const i_samples_per_point,int const block_sa
 							}
 						}
 
-						// linux port: automation flash on the play line (track of the pattern call)
-						if(pse->typ==EVT_MID || pse->typ==EVT_AUT)
-							master_auto_count[pe->trk]++;
+						// linux port: the pattern event flashes for the automation of the called pattern
+						if(pse->typ==EVT_MID || pse->typ==EVT_AUT || pse->typ==EVT_TMP)
+							dsp_flash_event(e,1);
 
 						// sub midi automation event
 						if(pse->typ==EVT_MID)
@@ -424,9 +430,9 @@ int CAodixCore::dsp_play_events(int const i_samples_per_point,int const block_sa
 			if(pe->typ==EVT_JMP && block_sample_sta!=event_sample_end)
 				jump=event_sample_end;
 
-			// linux port: automation flash on the play line
-			if(pe->typ==EVT_MID || pe->typ==EVT_AUT)
-				master_auto_count[pe->trk]++;
+			// linux port: automation, midi and tempo events flash when they play
+			if(pe->typ==EVT_MID || pe->typ==EVT_AUT || pe->typ==EVT_TMP)
+				dsp_flash_event(e,1);
 
 			// midi automation event
 			if(pe->typ==EVT_MID)
@@ -526,4 +532,19 @@ void CAodixCore::dsp_vumeter_drive(float* psrc,float& vum,int const num_samples)
 		if(f_peak>vum)
 			vum=f_peak;
 	}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: an event started playing, the gui lets it flash (lock free: one writer, the audio thread)
+void CAodixCore::dsp_flash_event(int const index,int const kind)
+{
+	ADX_EVENT const* const pe=&seq_event[index];
+	unsigned const w=dsp_flash_write.load(std::memory_order_relaxed);
+	ADX_FLASH_TRIGGER* const t=&dsp_flash_trigger[w&1023];
+	t->index=index;
+	t->pos=pe->pos;
+	t->len=(pe->szd && pe->typ!=EVT_PAT)?pe->par:0;	// a pattern call can be long: only its header line flashes
+	t->trk=pe->trk;
+	t->kind=(unsigned char)kind;
+	dsp_flash_write.store(w+1,std::memory_order_release);
 }
