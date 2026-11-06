@@ -785,6 +785,8 @@ namespace adxplat
 	void		overlay_changed(HWND hwnd,const RECT* bounds);	// bounds: client rect covered now (NULL: none)
 	void		overlay_fill(OverlayCanvas* canvas,int x,int y,int w,int h,COLORREF color,int alpha);	// alpha 0..255
 	void		overlay_invert(OverlayCanvas* canvas,int x,int y,int w,int h);
+	// like overlay_fill, but pixels close to keep_color (text) stay as they are, edges in between partly
+	void		overlay_fill_keep(OverlayCanvas* canvas,int x,int y,int w,int h,COLORREF color,int alpha,COLORREF keep_color);
 
 	// set the cursor for a window (persists until changed)
 	void		set_window_cursor(HWND hwnd,HCURSOR cursor);

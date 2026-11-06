@@ -808,6 +808,36 @@ void adxplat::overlay_fill(OverlayCanvas* cv,int x,int y,int w,int h,COLORREF co
 	}
 }
 
+void adxplat::overlay_fill_keep(OverlayCanvas* cv,int x,int y,int w,int h,COLORREF color,int alpha,COLORREF keep_color)
+{
+	int px,py,px2,py2;
+	if(!overlay_rect(cv,x,y,w,h,&px,&py,&px2,&py2))
+		return;
+	XImage* const img=(XImage*)((Win32Window*)cv->window)->ximage;
+	int const stride=img->bytes_per_line/4;
+	uint32_t const c=colorref_to_pixel(color);
+	uint32_t const k=colorref_to_pixel(keep_color);
+	int const kr=(k>>16)&0xFF,kg=(k>>8)&0xFF,kb=k&0xFF;
+	alpha=std::max(0,std::min(255,alpha));
+	for(int yy=py;yy<py2;yy++)
+	{
+		uint32_t* d=(uint32_t*)img->data+(size_t)yy*stride;
+		for(int xx=px;xx<px2;xx++)
+		{
+			uint32_t const s=d[xx];
+
+			// distance to the text color: text pixels keep their color, scaled / mixed edge pixels get part of the flash
+			int const dist=std::abs(int((s>>16)&0xFF)-kr)+std::abs(int((s>>8)&0xFF)-kg)+std::abs(int(s&0xFF)-kb);
+			int const a=(dist>=96)?alpha:alpha*dist/96;
+			if(a<=0)
+				continue;
+			uint32_t const rb=((((c&0xFF00FF)*a)+((s&0xFF00FF)*(255-a)))>>8)&0xFF00FF;
+			uint32_t const g=((((c&0x00FF00)*a)+((s&0x00FF00)*(255-a)))>>8)&0x00FF00;
+			d[xx]=rb|g;
+		}
+	}
+}
+
 void adxplat::overlay_invert(OverlayCanvas* cv,int x,int y,int w,int h)
 {
 	int px,py,px2,py2;

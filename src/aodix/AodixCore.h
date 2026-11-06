@@ -668,7 +668,8 @@ public:
 	struct ADX_FLASH
 	{
 		int		pos,len,trk,kind,szd;
-		COLORREF color;				// flash color (theme, or the event color made much lighter)
+		COLORREF color;				// flash color (theme, or the event color made lighter)
+		COLORREF text;				// text color of the block (the text stays readable over the flash)
 		float	level;
 	};
 	std::vector<ADX_FLASH>	gui_flashes;
@@ -676,6 +677,7 @@ public:
 	int						gui_flash_height(ADX_FLASH const& f);
 	int						gui_flash_ms(void);		// 0 = no flash
 	COLORREF				gui_event_flash_color(ADX_FLASH_TRIGGER const& t);
+	COLORREF				gui_event_text_color(ADX_FLASH_TRIGGER const& t);
 
 	// linux port: play position overlay (line + activity bars), drawn by the platform over the window image
 	bool	gui_ov_active;

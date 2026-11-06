@@ -784,7 +784,7 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 				fy=gui_ov_seq_y;
 			}
 			if(fh>0)
-				adxplat::overlay_fill(cv,fx,fy,TRACK_WIDTH,fh,f.color,int(f.level*255.0f+0.5f));
+				adxplat::overlay_fill_keep(cv,fx,fy,TRACK_WIDTH,fh,f.color,int(f.level*255.0f+0.5f),f.text);
 		}
 	}
 
@@ -850,6 +850,7 @@ bool CAodixCore::gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTE
 			{
 				f.level=1.0f;
 				f.color=gui_event_flash_color(t);
+				f.text=gui_event_text_color(t);
 				found=true;
 				break;
 			}
@@ -863,6 +864,7 @@ bool CAodixCore::gui_flash_update(double const dt,int const seq_cent_y,ADX_PATTE
 			f.kind=t.kind;
 			f.szd=t.len>0;
 			f.color=gui_event_flash_color(t);
+			f.text=gui_event_text_color(t);
 			f.level=1.0f;
 			gui_flashes.push_back(f);
 		}
@@ -916,4 +918,19 @@ int CAodixCore::gui_flash_ms(void)
 {
 	int const idx=cfg.flash_time?int(cfg.flash_time)-1:2;
 	return (idx>=0 && idx<8)?g_flash_times[idx]:200;
+}
+
+// text color of an event block as painted by the sequencer
+COLORREF CAodixCore::gui_event_text_color(ADX_FLASH_TRIGGER const& t)
+{
+	switch(t.typ)
+	{
+	case EVT_NOT: return adx_color_add(gl_adx_theme.note_text,arg_tool_clipped_assign(int(t.da3),0,127)*0x00010101);
+	case EVT_PAT: return gl_adx_theme.pattern_text;
+	case EVT_JMP: return gl_adx_theme.jump_text;
+	case EVT_MID: return gl_adx_theme.midi_text;
+	case EVT_AUT: return gl_adx_theme.automation_text;
+	case EVT_TMP: return gl_adx_theme.tempo_text;
+	}
+	return 0x00FFFFFF;
 }
