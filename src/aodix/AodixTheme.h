@@ -32,7 +32,8 @@ struct ADX_THEME
 	// play position line; events flash in these colors when they start playing (a pattern call for its events)
 	bool	 play_line_invert;		// classic: the line inverts what is below it
 	COLORREF play_line;
-	COLORREF flash_note,flash_automation;	// ADX_THEME_AUTO = the event color, much lighter
+	COLORREF flash_note,flash_automation;	// ADX_THEME_AUTO = the event color, a little lighter
+	COLORREF flash_block;					// pattern calls (always this color)
 
 	// menus, dialogs and controls
 	adxplat::UiColors ui;
@@ -42,7 +43,7 @@ struct ADX_THEME
 #define ADX_THEME_AUTO		0xFFFFFFFF
 
 // without flash colors in the theme an event flashes in its own color, this much closer to white
-#define ADX_FLASH_LIGHTEN	0.3f
+#define ADX_FLASH_LIGHTEN	0.12f
 
 extern ADX_THEME gl_adx_theme;
 

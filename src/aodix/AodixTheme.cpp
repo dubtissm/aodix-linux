@@ -42,6 +42,7 @@ void adx_theme_defaults(ADX_THEME* t)
 	t->play_line=0xFFFFFF;
 	t->flash_note=ADX_THEME_AUTO;		// event color, much lighter
 	t->flash_automation=ADX_THEME_AUTO;
+	t->flash_block=0xE8E8E8;
 	t->ui=adxplat::default_ui_colors();
 }
 
@@ -139,6 +140,7 @@ static int theme_keys(ADX_THEME* t,ThemeKey* k)
 	k[n++]={"wire_drag",&t->wire_drag};
 	k[n++]={"flash_note",&t->flash_note};
 	k[n++]={"flash_automation",&t->flash_automation};
+	k[n++]={"flash_block",&t->flash_block};
 	k[n++]={"menu_face",&t->ui.face};
 	k[n++]={"menu_text",&t->ui.text};
 	k[n++]={"menu_text_disabled",&t->ui.graytext};

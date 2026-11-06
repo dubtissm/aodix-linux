@@ -54,11 +54,13 @@ wire_drag           = #FFFFFF
 # --- play position ----------------------------------------------------------------
 # the line: "invert" (inverts what is below it, like the original) or a color
 play_line           = invert
-# events flash when they start playing and fade back into their block (time: File > Configuration > Flash Events) (a pattern call
-# flashes for its events). without these lines an event flashes in its own color, 30% lighter; with
-# them notes flash in flash_note, automation / midi / tempo events in flash_automation:
+# events flash when they start playing and fade back into their block (time: File > Configuration >
+# Flash Events). without flash_note / flash_automation an event flashes in its own color, 12% lighter;
+# with them notes flash in flash_note, automation / midi / tempo events in flash_automation:
 # flash_note        = #FFC040
 # flash_automation  = #40B0FF
+# pattern calls flash in their own color (for every event of the called pattern)
+flash_block         = #E8E8E8
 
 # --- menus, dialogs and controls ---------------------------------------------------
 menu_face           = #D4D0C8   # menu bar, menus, dialog background

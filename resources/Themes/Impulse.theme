@@ -35,6 +35,7 @@ midi_wire           = #78DC78
 wire_drag           = #FCFC54
 
 play_line           = #FCFC54
+flash_block         = #FCFC54
 
 menu_face           = #C09C7A
 menu_text           = #000000
