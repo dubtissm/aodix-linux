@@ -40,10 +40,8 @@ void adx_theme_defaults(ADX_THEME* t)
 	t->wire_drag=0xFFFFFF;
 	t->play_line_invert=true;
 	t->play_line=0xFFFFFF;
-	t->bar_low=0x00C000;		// green (0x00BBGGRR)
-	t->bar_mid=0x00E0E0;		// yellow
-	t->bar_high=0x0000E0;		// red
-	t->bar_alpha=216;
+	t->flash_note=0x40C0FF;			// warm yellow (0x00BBGGRR)
+	t->flash_automation=0xFFB040;	// light blue
 	t->ui=adxplat::default_ui_colors();
 }
 
@@ -61,14 +59,6 @@ COLORREF adx_color_lerp(COLORREF a,COLORREF b,float t)
 	return r;
 }
 
-COLORREF adx_theme_bar_color(float pos)
-{
-	if(pos<0.0f) pos=0.0f;
-	if(pos>1.0f) pos=1.0f;
-	if(pos<0.5f)
-		return adx_color_lerp(gl_adx_theme.bar_low,gl_adx_theme.bar_mid,pos*2.0f);
-	return adx_color_lerp(gl_adx_theme.bar_mid,gl_adx_theme.bar_high,(pos-0.5f)*2.0f);
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 COLORREF adx_color_add(COLORREF c,COLORREF a)
@@ -147,9 +137,8 @@ static int theme_keys(ADX_THEME* t,ThemeKey* k)
 	k[n++]={"wire_arrow",&t->wire_arrow};
 	k[n++]={"midi_wire",&t->midi_wire};
 	k[n++]={"wire_drag",&t->wire_drag};
-	k[n++]={"bar_low",&t->bar_low};
-	k[n++]={"bar_mid",&t->bar_mid};
-	k[n++]={"bar_high",&t->bar_high};
+	k[n++]={"flash_note",&t->flash_note};
+	k[n++]={"flash_automation",&t->flash_automation};
 	k[n++]={"menu_face",&t->ui.face};
 	k[n++]={"menu_text",&t->ui.text};
 	k[n++]={"menu_text_disabled",&t->ui.graytext};
@@ -217,12 +206,9 @@ bool adx_theme_load(const char* cfg_path)
 					t.play_line_invert=true;
 					continue;
 				}
-				if(strcasecmp(p,"bar_opacity")==0)
-				{
-					int const pct=atoi(v);
-					t.bar_alpha=(pct<0?0:pct>100?100:pct)*255/100;
+				// keys of the former activity bars (themes made for 4.2.1.7 test builds): ignored
+				if(strncasecmp(p,"bar_",4)==0)
 					continue;
-				}
 				bool const is_play_line=strcasecmp(p,"play_line")==0;
 
 				if(*v=='#') v++;

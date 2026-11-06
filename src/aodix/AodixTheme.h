@@ -29,11 +29,10 @@ struct ADX_THEME
 	// routing view: audio wires, arrow at full gain (gain 0 = wire color), midi wires, wire being dragged
 	COLORREF wire,wire_arrow,midi_wire,wire_drag;
 
-	// play position line and the activity bars above it
+	// play position line, and its flash over a track when a note starts / an automation event plays there
 	bool	 play_line_invert;		// classic: the line inverts what is below it
 	COLORREF play_line;
-	COLORREF bar_low,bar_mid,bar_high;	// bar gradient bottom -> middle -> top
-	int		 bar_alpha;				// 0..255
+	COLORREF flash_note,flash_automation;
 
 	// menus, dialogs and controls
 	adxplat::UiColors ui;
@@ -42,9 +41,8 @@ struct ADX_THEME
 // color value meaning "not set in the theme, use the skin"
 #define ADX_THEME_AUTO		0xFFFFFFFF
 
-// size of the activity bars over the play position
-#define ADX_BAR_HEIGHT		28
-#define ADX_BAR_WIDTH		24
+// fade speed of the flashes on the play line (per second: full color to the line in about 0.3 s)
+#define ADX_FLASH_FADE		3.2f
 
 extern ADX_THEME gl_adx_theme;
 
@@ -57,9 +55,6 @@ bool		adx_theme_load(const char* path);
 
 // mix of two colors (t 0..1)
 COLORREF	adx_color_lerp(COLORREF a,COLORREF b,float t);
-
-// activity bar color at a height position (0 = bottom, 1 = top)
-COLORREF	adx_theme_bar_color(float pos);
 
 // note block color for a hue position (0..383)
 COLORREF	adx_theme_note_color(int hue);

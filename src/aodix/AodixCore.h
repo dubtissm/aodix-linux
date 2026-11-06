@@ -104,7 +104,7 @@ struct ADX_CONFIG
 	unsigned char win_state;
 	unsigned char win_geom[8];
 
-	// linux port: activity bars over the play position (0 = shown, so older configurations show them)
+	// linux port: events flash on the play position line (0 = on, so older configurations show it)
 	unsigned char play_bars_off;
 
 	// reserved fields
@@ -646,6 +646,7 @@ public:
 	// linux port: note-on counter and last velocity per track (written by the audio thread, read by the gui)
 	unsigned int	master_midi_note_count[MAX_TRACKS];
 	unsigned char	master_midi_note_velo[MAX_TRACKS];
+	unsigned int	master_auto_count[MAX_TRACKS];	// automation events (vst automation, midi events) per track
 
 	// linux port: play position overlay (line + activity bars), drawn by the platform over the window image
 	bool	gui_ov_active;
@@ -655,7 +656,9 @@ public:
 	int		gui_ov_first_x;			// x of the first visible track column
 	int		gui_ov_tracks;			// visible tracks
 	unsigned int gui_ov_note_seen[MAX_TRACKS];
-	float	gui_ov_level[MAX_TRACKS];	// bar height 0..1
+	unsigned int gui_ov_auto_seen[MAX_TRACKS];
+	float	gui_ov_level[MAX_TRACKS];		// flash of a note start on the play line, 1 = full color, fades to 0
+	float	gui_ov_auto_level[MAX_TRACKS];	// flash of an automation event
 	int		gui_ov_last_frame;		// interpolation of the play position between audio blocks
 	double	gui_ov_last_frame_ms;
 	double	gui_ov_last_tick_ms;

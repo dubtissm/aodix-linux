@@ -401,6 +401,10 @@ int CAodixCore::dsp_play_events(int const i_samples_per_point,int const block_sa
 							}
 						}
 
+						// linux port: automation flash on the play line (track of the pattern call)
+						if(pse->typ==EVT_MID || pse->typ==EVT_AUT)
+							master_auto_count[pe->trk]++;
+
 						// sub midi automation event
 						if(pse->typ==EVT_MID)
 							instance_add_midi_event(&instance[pse->da0],pe->trk,pse->da1,pse->da2,pse->da3,0,sub_event_sample_end+deltaframe);
@@ -419,6 +423,10 @@ int CAodixCore::dsp_play_events(int const i_samples_per_point,int const block_sa
 			// jump event
 			if(pe->typ==EVT_JMP && block_sample_sta!=event_sample_end)
 				jump=event_sample_end;
+
+			// linux port: automation flash on the play line
+			if(pe->typ==EVT_MID || pe->typ==EVT_AUT)
+				master_auto_count[pe->trk]++;
 
 			// midi automation event
 			if(pe->typ==EVT_MID)

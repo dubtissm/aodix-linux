@@ -46,6 +46,10 @@ if '--patcall' in sys.argv:
     for beat in range(4):
         events.append((beat * ppqn, ppqn // 2, 1, 0, 0, 1, 4, 0, 60 + beat * 2, 90 + beat * 10))
     events.append((0, ppqn * 8, 0, 4, 1, 1, 1, 0, 128, 128))
+# --aut: vst automation events in track 5 on every beat (instance 0, parameter 0)
+if '--aut' in sys.argv:
+    for beat in range(8):
+        events.append((beat * ppqn, 0, 0, 5, 4, 0, 0, 0, 0, beat * 32))
 # a tempo event
 events.append((ppqn * 4, 0, 0, 0, 5, 0, 130, 0, 0, 0))
 

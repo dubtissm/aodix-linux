@@ -244,7 +244,10 @@ CAodixCore::CAodixCore(HINSTANCE const hinstance)
 		master_midi_note_count[tv]=0;
 		master_midi_note_velo[tv]=0;
 		gui_ov_note_seen[tv]=0;
+		gui_ov_auto_seen[tv]=0;
 		gui_ov_level[tv]=0.0f;
+		gui_ov_auto_level[tv]=0.0f;
+		master_auto_count[tv]=0;
 	}
 	gui_ov_active=false;
 	gui_ov_play_y=gui_ov_seq_y=gui_ov_width=gui_ov_first_x=gui_ov_tracks=0;

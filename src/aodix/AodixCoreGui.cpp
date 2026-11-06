@@ -288,25 +288,33 @@ void CAodixCore::gui_timer(HWND const hwnd)
 			}
 		}
 
-		// activity bars: a new note-on in a track shoots its bar up, then it falls back
-		bool bars_moving=false;
+		// flashes on the play line: a note start (or automation event) in a track lights up the line over this
+		// track in the theme color, which then fades out
+		bool flashing=false;
 		for(int t=0;t<MAX_TRACKS;t++)
 		{
 			unsigned int const cnt=master_midi_note_count[t];
 			if(cnt!=gui_ov_note_seen[t])
 			{
 				gui_ov_note_seen[t]=cnt;
-				gui_ov_level[t]=std::max(gui_ov_level[t],0.25f+0.75f*float(master_midi_note_velo[t])/127.0f);
+				gui_ov_level[t]=1.0f;
 			}
-			if(gui_ov_level[t]>0.0f)
+			unsigned int const acnt=master_auto_count[t];
+			if(acnt!=gui_ov_auto_seen[t])
 			{
-				gui_ov_level[t]=std::max(0.0f,gui_ov_level[t]-float(frame_dt)*3.2f);
-				bars_moving=true;
+				gui_ov_auto_seen[t]=acnt;
+				gui_ov_auto_level[t]=1.0f;
+			}
+			if(gui_ov_level[t]>0.0f || gui_ov_auto_level[t]>0.0f)
+			{
+				gui_ov_level[t]=std::max(0.0f,gui_ov_level[t]-float(frame_dt)*ADX_FLASH_FADE);
+				gui_ov_auto_level[t]=std::max(0.0f,gui_ov_auto_level[t]-float(frame_dt)*ADX_FLASH_FADE);
+				flashing=true;
 			}
 		}
 
-		// overlay area: line, plus the bars above it
-		bool const changed=!gui_ov_active || i_ty!=gui_ov_play_y || bars_moving || w!=gui_ov_width;
+		// overlay area: the line
+		bool const changed=!gui_ov_active || i_ty!=gui_ov_play_y || flashing || w!=gui_ov_width;
 		gui_ov_active=true;
 		gui_ov_play_y=i_ty;
 		gui_ov_seq_y=seq_area_y;
@@ -318,7 +326,7 @@ void CAodixCore::gui_timer(HWND const hwnd)
 			RECT ov;
 			ov.left=0;
 			ov.right=w;
-			ov.top=std::max(seq_area_y,i_ty-(cfg.play_bars_off?0:ADX_BAR_HEIGHT));
+			ov.top=std::max(seq_area_y,i_ty);
 			ov.bottom=std::min(h,i_ty+2);
 			adxplat::overlay_changed(hwnd,ov.bottom>ov.top?&ov:NULL);
 		}
@@ -335,7 +343,9 @@ void CAodixCore::gui_timer(HWND const hwnd)
 		for(int t=0;t<MAX_TRACKS;t++)
 		{
 			gui_ov_note_seen[t]=master_midi_note_count[t];
+			gui_ov_auto_seen[t]=master_auto_count[t];
 			gui_ov_level[t]=0.0f;
+			gui_ov_auto_level[t]=0.0f;
 		}
 	}
 
@@ -772,26 +782,6 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 
 	int const y=gui_ov_play_y;
 
-	// activity bars above the line, centered in each track column (green -> yellow -> red)
-	if(!cfg.play_bars_off)
-	{
-		for(int t=0;t<gui_ov_tracks;t++)
-		{
-			int const ti=user_trk_offset+t;
-			if(ti>=MAX_TRACKS || gui_ov_level[ti]<=0.0f)
-				continue;
-			int const bh=int(gui_ov_level[ti]*ADX_BAR_HEIGHT+0.5f);
-			int const bx=gui_ov_first_x+t*TRACK_WIDTH+(TRACK_WIDTH-ADX_BAR_WIDTH)/2;
-			for(int r=0;r<bh;r++)
-			{
-				int const yy=y-1-r;
-				if(yy<gui_ov_seq_y)
-					break;
-				adxplat::overlay_fill(cv,bx,yy,ADX_BAR_WIDTH,1,adx_theme_bar_color(float(r)/float(ADX_BAR_HEIGHT-1)),gl_adx_theme.bar_alpha);
-			}
-		}
-	}
-
 	// play position line (classic: inverted like the original)
 	if(y>=gui_ov_seq_y)
 	{
@@ -799,6 +789,22 @@ void CAodixCore::gui_overlay_paint(adxplat::OverlayCanvas* cv)
 			adxplat::overlay_invert(cv,0,y,gui_ov_width,2);
 		else
 			adxplat::overlay_fill(cv,0,y,gui_ov_width,2,gl_adx_theme.play_line,255);
+	}
+
+	// flashes on the line over the tracks: the theme color, fading into the line
+	if(!cfg.play_bars_off && y>=gui_ov_seq_y)
+	{
+		for(int t=0;t<gui_ov_tracks;t++)
+		{
+			int const ti=user_trk_offset+t;
+			if(ti>=MAX_TRACKS)
+				break;
+			int const fx=gui_ov_first_x+t*TRACK_WIDTH;
+			if(gui_ov_auto_level[ti]>0.0f)
+				adxplat::overlay_fill(cv,fx,y,TRACK_WIDTH,2,gl_adx_theme.flash_automation,int(gui_ov_auto_level[ti]*255.0f+0.5f));
+			if(gui_ov_level[ti]>0.0f)
+				adxplat::overlay_fill(cv,fx,y,TRACK_WIDTH,2,gl_adx_theme.flash_note,int(gui_ov_level[ti]*255.0f+0.5f));
+		}
 	}
 }
 
