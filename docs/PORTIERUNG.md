@@ -373,3 +373,17 @@ u-he Bazille (Vollversion) mit eingebettetem Editor, MIDI-Steuerung aus Patterns
   mitgeführt. Neue Konfigurationsfelder: `project_path` (angehängt), `flash_time` (aus reserved2).
 - zenity 4 übernimmt den Startordner nur aus einem Ordnerpfad mit „/“ am Ende; Aodix übergibt dort nur den Ordner.
 - Aus der Skin-Hintergrundfarbe abgeleitete Farben werden pro Kanal gesättigt (vorher Überlauf bei dunklen Skins).
+
+## 4.2.1.8 (November 2026)
+
+- Konfiguration als Text (`AodixConfigFile.cpp`): `config_read`/`config_write` übersetzen zwischen der
+  Speicherstruktur `ADX_CONFIG` und Einträgen `name = wert`. Kombinations-Indizes werden als Klartextwerte
+  geschrieben (Puffergröße/Samplerate in Samples/Hz, Blitzzeit in ms, Fenstergeometrie als Pixel). Eine Datei mit
+  Nullbytes am Anfang gilt als alte Binärdatei: sie wird wie bisher gelesen, nach `Aodix.cfg.old` umbenannt und als
+  Text neu geschrieben. Geschrieben wird über eine `.tmp`-Datei und `rename`.
+- Plugin-Bibliothek (`AodixPluginLib.cpp`): Scan von VST3-, CLAP-, LV2- und LADSPA-Plugins in eine Liste
+  (`plugins.cfg`, Tab-getrennt: Format, Menüpfad, Name, ID, Pfad), aus der beim Start das Menü aufgebaut wird.
+  `IDM_VST_RESCAN` (9300) scannt neu; der Konfigurationsdialog scannt nur bei geänderten Plugin-Ordnern.
+- Skin-Laden als Funktion `adx_skin_load` (Aodix.cpp): lädt gfx/knb/gui.bmp, tauscht die Bitmaps in den
+  Gerätekontexten und löscht die alten; Start, Konfigurationsdialog und Strg+F12 nutzen sie. Aus dem Skin
+  abgeleitete Farben werden beim Zeichnen gelesen und brauchen kein Neuladen.

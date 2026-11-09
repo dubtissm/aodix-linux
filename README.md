@@ -26,7 +26,10 @@ the same project format as the original, with JACK/PipeWire audio and today's Li
   (a simple text file)
 - **Impulse skin** with the colors and feel of Impulse Tracker 2
 - **Editing extras:** Ctrl+drag copies events, selections and plugins, the middle mouse button drags the views,
-  playing events flash, bypassed plugins cost no cpu; all shortcuts in *Help → Keyboard Shortcuts*
+  playing events flash, bypassed plugins cost no cpu, F10 opens the plugin editor; all shortcuts in *Help →
+  Keyboard Shortcuts*
+- **Fast start:** the plugin scan is kept in a list (rescan from the plugin menu); the configuration is an
+  editable text file
 - Clipboard in all text fields, Debian package with menu entry, icon and file types
 
 ## Installation
@@ -82,7 +85,8 @@ For your own theme, copy one of them, e.g. to `~/.config/aodix/My.theme`, and ch
 `name = #RRGGBB` per line, every color is described in `Classic.theme` (event blocks, menus, routing wires, track separator lines, play
 line and the colors in which playing events flash). The sequencer background, grid and knobs
 come from the skin (*Skin Bitmaps Path*). For the Impulse Tracker 2 look, choose the skin `Skins/Impulse`
-(after a restart) together with the theme `Themes/Impulse.theme`.
+together with the theme `Themes/Impulse.theme`. While working on a skin or theme, Ctrl+F12 reloads both from
+disk.
 
 ### Project files (.adx / .adxl)
 
@@ -142,7 +146,7 @@ LoudMax (LADSPA), the swh LADSPA collection, LV2 effects, and the example plugin
 
 - Windows plugins (`.dll`), VST 2 and 32-bit plugins are not supported.
 - LV2: only X11 plugin editors (GTK/Qt-only plugins are controlled through the parameter list); bundle presets
-  are not listed; newly installed LV2 plugins appear after restarting Aodix.
+  are not listed.
 - CLAP: no preset browser, MPE or note expressions.
 - Old Windows projects: patterns, events, tracks and markers load; instances of Windows plugins stay empty –
   load a Linux version of the plugin instead (its settings have to be made again). Files older than 4.2.0.3

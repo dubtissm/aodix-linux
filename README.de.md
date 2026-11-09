@@ -27,8 +27,10 @@ JACK/PipeWire und den heutigen Linux-Plugin-Formaten.
   eigenes (einfache Textdatei)
 - **Skin „Impulse“** mit den Farben und dem Gefühl von Impulse Tracker 2
 - **Bearbeitungshilfen:** Strg+Ziehen kopiert Events, Selektionen und Plugins, die mittlere Maustaste zieht die
-  Ansichten, spielende Events blitzen auf, gebypasste Plugins kosten keine CPU; alle Shortcuts unter *Help →
-  Keyboard Shortcuts*
+  Ansichten, spielende Events blitzen auf, gebypasste Plugins kosten keine CPU, F10 öffnet den Plugin-Editor; alle
+  Shortcuts unter *Help → Keyboard Shortcuts*
+- **Schneller Start:** das Ergebnis des Plugin-Scans wird in einer Liste gespeichert (neu scannen über das
+  Plugin-Menü); die Konfiguration ist eine bearbeitbare Textdatei
 - Zwischenablage in allen Textfeldern, Debian-Paket mit Menüeintrag, Icon und Dateitypen
 
 ## Installation
@@ -87,7 +89,8 @@ Zeile `name = #RRGGBB` pro Farbe, alle Farben sind in `Classic.theme` beschriebe
 Routing-Kabel, Track-Trennlinien, Abspiel-Linie und die Farben, in denen spielende Events aufblitzen).
 Hintergrund, Raster und Regler
 des Sequencers kommen aus dem Skin (*Skin Bitmaps Path*). Für den Look von Impulse Tracker 2 den Skin
-`Skins/Impulse` (nach einem Neustart) zusammen mit dem Theme `Themes/Impulse.theme` wählen.
+`Skins/Impulse` zusammen mit dem Theme `Themes/Impulse.theme` wählen. Beim Arbeiten an einem Skin oder Theme lädt
+Strg+F12 beide neu von der Platte.
 
 ### Projektdateien (.adx / .adxl)
 
@@ -149,7 +152,7 @@ LoudMax (LADSPA), der swh-LADSPA-Sammlung, LV2-Effekten und den Beispiel-Plugins
 
 - Windows-Plugins (`.dll`), VST 2 und 32-bit-Plugins werden nicht unterstützt.
 - LV2: nur X11-Oberflächen (Plugins mit reiner GTK-/Qt-Oberfläche bedient man über die Parameterliste);
-  Presets aus dem Bundle werden nicht angezeigt; neu installierte LV2-Plugins erscheinen nach einem Neustart.
+  Presets aus dem Bundle werden nicht angezeigt.
 - CLAP: kein Preset-Browser, kein MPE, keine Note Expressions.
 - Alte Windows-Projekte: Patterns, Events, Spuren und Marker werden geladen; Instanzen mit Windows-Plugins
   bleiben leer – dort die Linux-Version des Plugins laden (die Einstellungen müssen neu gemacht werden).

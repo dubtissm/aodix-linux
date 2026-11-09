@@ -1,5 +1,21 @@
 # Changelog
 
+## 4.2.1.8 (2026-11-09)
+
+- The configuration `~/.config/aodix/Aodix.cfg` is now a text file with one `name = value` entry per line and
+  English names (e.g. `keyboard_layout = qwertz`, `ui_scale = 150`, `vst3_path_1 = ~/.vst3`). It can be edited by
+  hand while Aodix is not running. Missing entries keep their defaults; invalid values and unknown names are
+  reported in the terminal. The binary file of older versions is converted at the first start and kept as
+  `Aodix.cfg.old`.
+- Faster start: the plugin scan is stored in `~/.config/aodix/plugins.cfg` (a readable list, one plugin per line)
+  and read at the next start instead of scanning every plugin again, which was slow above all with yabridge. A
+  new scan is made by *Rescan Plugins* at the end of the plugin library menu, after changing the plugin folders in
+  the configuration, or when `plugins.cfg` is missing.
+- A changed skin is loaded when the configuration dialog is closed with *Apply Changes*, without a restart. If the
+  skin folder cannot be loaded, the current skin stays.
+- F10 opens the plugin editor of the current instance.
+- Ctrl+F12 reloads the skin bitmaps and the color theme from disk (for creating skins and themes).
+
 ## 4.2.1.7 (2026-11-06)
 
 Editing
