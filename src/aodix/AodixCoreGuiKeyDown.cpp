@@ -68,6 +68,16 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 	// shift no pressed, control pressed
 	if(!shift && control)
 	{
+		// linux port: reload skin bitmaps and color theme from disk (for skin and theme authors)
+		if(keycode==VK_F12)
+		{
+			adx_theme_load(cfg.theme_path);
+			adx_skin_load(cfg.skin_path,hwnd,NULL,NULL);
+			fprintf(stderr,"aodix: skin '%s' and theme '%s' reloaded\n",cfg.skin_path,cfg.theme_path);
+			InvalidateRect(hwnd,NULL,FALSE);
+			gui_is_dirty=1;
+		}
+
 		// return to previous pattern
 		if(keycode==VK_RETURN)
 		{
