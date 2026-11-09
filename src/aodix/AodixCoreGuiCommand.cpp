@@ -155,6 +155,13 @@ void CAodixCore::gui_command(HWND const hwnd,int const id)
 		gui_is_dirty=1;
 	}
 
+	// linux port: scan the plugin folders again (writes plugins.cfg)
+	if(id==IDM_VST_RESCAN)
+	{
+		gui_vst_build_lib(true);
+		gui_is_dirty=1;
+	}
+
 	// vst lib instance menu
 	if(id>=IDM_VST_LIB && id<(IDM_VST_LIB+vst_lib.num_dlls))
 	{

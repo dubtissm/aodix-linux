@@ -268,6 +268,33 @@ int audio_pw_rate_index(unsigned char stored)
 	return (i>=0 && i<(int)(sizeof(g_pw_sample_rates)/sizeof(int)))?i:2;
 }
 
+// samples / hz of a stored value (0 = server default) and the stored value of samples / hz (-1: not offered)
+int audio_pw_buffer_frames(unsigned char stored)
+{
+	return g_pw_buffer_sizes[audio_pw_buffer_index(stored)];
+}
+
+int audio_pw_rate_hz(unsigned char stored)
+{
+	return g_pw_sample_rates[audio_pw_rate_index(stored)];
+}
+
+int audio_pw_buffer_stored(int frames)
+{
+	for(int i=0;i<(int)(sizeof(g_pw_buffer_sizes)/sizeof(int));i++)
+		if(g_pw_buffer_sizes[i]==frames)
+			return i+1;
+	return -1;
+}
+
+int audio_pw_rate_stored(int hz)
+{
+	for(int i=0;i<(int)(sizeof(g_pw_sample_rates)/sizeof(int));i++)
+		if(g_pw_sample_rates[i]==hz)
+			return i+1;
+	return -1;
+}
+
 static void audio_set_pipewire_env(ADX_CONFIG const* pcfg)
 {
 	int const frames=g_pw_buffer_sizes[audio_pw_buffer_index(pcfg->pw_buffer_size)];

@@ -68,7 +68,14 @@ JACK-Server (jack2) benötigt. LV2-Plugins brauchen `liblilv-0-0`.
 
 ![Konfigurationsdialog](docs/screenshots/extended_configuration_dialog.png)
 
-Die Einstellungen liegen in `~/.config/aodix/Aodix.cfg`.
+Die Einstellungen liegen in `~/.config/aodix/Aodix.cfg`, einer Textdatei mit einem Eintrag `name = wert` pro
+Zeile, die man bei beendetem Aodix von Hand bearbeiten kann (die binäre Datei älterer Versionen wird einmal
+umgewandelt und als `Aodix.cfg.old` behalten). Ein geänderter Skin wird geladen, sobald der Dialog mit
+*Apply Changes* geschlossen wird.
+
+Das Ergebnis des Plugin-Scans liegt in `~/.config/aodix/plugins.cfg` und wird beim nächsten Start gelesen, statt
+erneut zu scannen (mit yabridge dauert der Scan lange). *Rescan Plugins* am Ende des Plugin-Menüs scannt neu;
+geänderte Plugin-Ordner in der Konfiguration oder das Löschen von `plugins.cfg` ebenso.
 
 ### Farbthemen
 

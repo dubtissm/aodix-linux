@@ -65,7 +65,13 @@ systems) or a JACK server (jack2). LV2 plugins need `liblilv-0-0`.
 
 ![Configuration dialog](docs/screenshots/extended_configuration_dialog.png)
 
-Settings are stored in `~/.config/aodix/Aodix.cfg`.
+Settings are stored in `~/.config/aodix/Aodix.cfg`, a text file with one `name = value` entry per line that can
+be edited by hand while Aodix is not running (the binary file of older versions is converted once and kept as
+`Aodix.cfg.old`). A changed skin is loaded as soon as the dialog is closed with *Apply Changes*.
+
+The plugin scan is stored in `~/.config/aodix/plugins.cfg` and read at the next start instead of scanning again
+(scanning is slow with yabridge). *Rescan Plugins* at the end of the plugin library menu scans again; changed
+plugin folders in the configuration, or deleting `plugins.cfg`, do the same.
 
 ### Color themes
 

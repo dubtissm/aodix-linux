@@ -374,6 +374,12 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			}
 
 			// set new vst paths
+			// linux port: plugin folders before the change (the library is scanned again only when they changed)
+			char old_vst[MAX_VST_FOLDERS][_MAX_PATH];
+			char old_clap[MAX_CLAP_FOLDERS][_MAX_PATH];
+			memcpy(old_vst,gl_padx->cfg.vst_path,sizeof(old_vst));
+			memcpy(old_clap,gl_padx->cfg.clap_path,sizeof(old_clap));
+
 			GetDlgItemText(hdlg,IDC_VST_PATH_EDIT1,gl_padx->cfg.vst_path[0],_MAX_PATH);
 			GetDlgItemText(hdlg,IDC_VST_PATH_EDIT2,gl_padx->cfg.vst_path[1],_MAX_PATH);
 			GetDlgItemText(hdlg,IDC_VST_PATH_EDIT3,gl_padx->cfg.vst_path[2],_MAX_PATH);
@@ -385,8 +391,13 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			GetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT3,gl_padx->cfg.clap_path[2],_MAX_PATH);
 			GetDlgItemText(hdlg,IDC_CLAP_PATH_EDIT4,gl_padx->cfg.clap_path[3],_MAX_PATH);
 
-			// set new skin path
+			// set new skin path (linux port: a changed skin is loaded right away; if it cannot be loaded, the current
+			// skin stays)
+			char old_skin[_MAX_PATH];
+			strcpy(old_skin,gl_padx->cfg.skin_path);
 			GetDlgItemText(hdlg,IDC_SKIN_PATH_EDIT,gl_padx->cfg.skin_path,_MAX_PATH);
+			if(strcmp(old_skin,gl_padx->cfg.skin_path)!=0 && !adx_skin_load(gl_padx->cfg.skin_path,hdlg,NULL,NULL))
+				strcpy(gl_padx->cfg.skin_path,old_skin);
 
 			// linux port: project folder (empty: the documents folder)
 			GetDlgItemText(hdlg,IDC_PROJECT_PATH_EDIT,gl_padx->cfg.project_path,_MAX_PATH);
@@ -398,8 +409,11 @@ LRESULT CALLBACK conf_dlg_proc(HWND hdlg,UINT message,WPARAM wparam,LPARAM lpara
 			adx_theme_load(gl_padx->cfg.theme_path);
 			InvalidateRect(gl_hwnd_main,NULL,FALSE);
 
-			// refresh library
-			gl_padx->gui_vst_build_lib();
+			// refresh library (linux port: scan again only if the plugin folders changed; otherwise "Rescan Plugins"
+			// in the library menu)
+			bool const folders_changed=memcmp(old_vst,gl_padx->cfg.vst_path,sizeof(old_vst))!=0 || memcmp(old_clap,gl_padx->cfg.clap_path,sizeof(old_clap))!=0;
+			if(folders_changed)
+				gl_padx->gui_vst_build_lib(true);
 
 			// get kbd layout combo pointer
 			HWND const hwnd_kbd_comb=GetDlgItem(hdlg,IDC_KBD_LAYOUT_COMBO);

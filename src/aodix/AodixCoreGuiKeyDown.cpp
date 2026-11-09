@@ -626,6 +626,13 @@ void CAodixCore::gui_key_down(HWND const hwnd,int const keycode,int const flags)
 			gui_is_dirty=1;
 		}
 
+		// linux port: open the plugin editor of the current instance
+		if(keycode==VK_F10 && instance[user_instance].peffect!=NULL)
+		{
+			instance_open_editor(&instance[user_instance],hwnd);
+			gui_is_dirty=1;
+		}
+
 		// master transport switch
 		if(keycode==VK_SPACE)
 		{

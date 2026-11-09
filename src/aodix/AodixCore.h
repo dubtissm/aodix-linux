@@ -24,6 +24,7 @@
 #define MASTER_INSTANCE		256
 #define INPUT_INSTANCE		258
 #define IDM_VST_LIB			8192
+#define IDM_VST_RESCAN		9300	// linux port: "Rescan Plugins" at the end of the plugin library menu
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // maximum number of midi events queued per instance and processing block
@@ -352,6 +353,12 @@ extern thread_local ADX_MIDI_CAPTURE* g_dsp_midi_capture;
 // linux port: combo index of the stored pipewire buffer size / sample rate (AodixCoreAudio.cpp)
 int audio_pw_buffer_index(unsigned char stored);
 int audio_pw_rate_index(unsigned char stored);
+int audio_pw_buffer_frames(unsigned char stored);
+int audio_pw_rate_hz(unsigned char stored);
+int audio_pw_buffer_stored(int frames);
+int audio_pw_rate_stored(int hz);
+int adx_flash_time_stored(int ms);
+bool adx_skin_load(char const* skin_path,HWND hwnd_err,HBITMAP* gfx_obm,HBITMAP* knb_obm);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 class CAodixCore : public AdxPluginHost
@@ -392,11 +399,12 @@ public:
 	void gui_key_pc_piano(int const keycode,int* pkeyval);
 	void gui_delete_current_instance(HWND const hwnd);
 	void gui_scroll_to_instance(void);
-	void gui_vst_build_lib(void);
+	// linux port: plugin library. the scan result is kept in plugins.cfg next to Aodix.cfg and read at start instead
+	// of scanning again (slow with yabridge); rescan = scan the plugin folders and rewrite plugins.cfg
+	void gui_vst_build_lib(bool const rescan=false);
 	void gui_scroll_iterate(HWND const hwnd,int const ym,int const seq_area_y,int const h);
 
 public:
-	int gui_vst_search(HMENU const pa_hmenu,char* pfolder,int mode=0);	// mode: 0 = vst3, 1 = ladspa, 2 = clap
 	int	gui_get_event_height(ADX_EVENT* pe);
 
 public:

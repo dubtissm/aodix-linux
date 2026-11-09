@@ -13,6 +13,66 @@ CAodixCore*	gl_padx=NULL;
 HWND		gl_hwnd_main=NULL;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// linux port: load the skin bitmaps (gfx.bmp, knb.bmp, gui.bmp) of a skin folder into the gui device contexts. at the
+// start (*gfx_obm/*knb_obm get the default bitmaps of the device contexts) and when the skin is changed in the
+// configuration (gfx_obm/knb_obm NULL: the bitmaps of the previous skin are deleted). if the skin cannot be loaded,
+// the current skin stays and false is returned (after an error message, parent hwnd_err)
+static int g_gui_w=2048;
+
+bool adx_skin_load(char const* skin_path,HWND hwnd_err,HBITMAP* gfx_obm,HBITMAP* knb_obm)
+{
+	// relative skin paths are resolved against the program directory
+	char skin_dir[_MAX_PATH];
+	adx_resolve_resource_path(skin_path,skin_dir);
+
+	char gfx_path[_MAX_PATH*2], knb_path[_MAX_PATH*2], gui_path[_MAX_PATH*2];
+	sprintf(gfx_path, "%s/gfx.bmp", skin_dir);
+	sprintf(knb_path, "%s/knb.bmp", skin_dir);
+	sprintf(gui_path, "%s/gui.bmp", skin_dir);
+
+	HINSTANCE const hinst=gl_padx->hinstance_app;
+	HBITMAP const hbitmap_gfx=(HBITMAP)LoadImage(hinst,gfx_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+	HBITMAP const hbitmap_knb=(HBITMAP)LoadImage(hinst,knb_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+
+	// without skin bitmaps aodix cannot draw anything
+	if(hbitmap_gfx==NULL || hbitmap_knb==NULL)
+	{
+		if(hbitmap_gfx)	DeleteObject(hbitmap_gfx);
+		if(hbitmap_knb)	DeleteObject(hbitmap_knb);
+		char buf[_MAX_PATH*2+64];
+		snprintf(buf,sizeof(buf),"Error: Skin Bitmaps Not Found\n\n%s",skin_dir);
+		MessageBox(hwnd_err,buf,"Aodix",MB_OK | MB_ICONERROR);
+		return false;
+	}
+
+	// select gfx/knb bitmap(s) in their device context(s), delete those of the previous skin
+	HBITMAP const old_gfx=(HBITMAP)SelectObject(gl_padx->hdc_gfx,(HBITMAP)hbitmap_gfx);
+	HBITMAP const old_knb=(HBITMAP)SelectObject(gl_padx->hdc_knb,(HBITMAP)hbitmap_knb);
+	if(gfx_obm)	*gfx_obm=old_gfx;	else DeleteObject(old_gfx);
+	if(knb_obm)	*knb_obm=old_knb;	else DeleteObject(old_knb);
+
+	// blit GUI gfx into gui bitmap
+	HDC const hdc_frm=CreateCompatibleDC(gl_padx->hdc_gui);
+	HBITMAP const hbitmap_frm=(HBITMAP)LoadImage(hinst,gui_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
+	HBITMAP const hbitmap_frm_obm=(HBITMAP)SelectObject(hdc_frm,hbitmap_frm);
+	BitBlt(gl_padx->hdc_gui,0,0,2048,276,hdc_frm,0,0,SRCCOPY);
+
+	// linux port: extend the skin header to the right by repeating its last pixel column
+	for(int x=2048;x<g_gui_w;x++)
+		BitBlt(gl_padx->hdc_gui,x,0,1,276,hdc_frm,2047,0,SRCCOPY);
+	SelectObject(hdc_frm,hbitmap_frm_obm);
+	if(hbitmap_frm)
+		DeleteObject((HBITMAP)hbitmap_frm);
+	DeleteDC(hdc_frm);
+
+	// edit brush (color of the skin)
+	if(gl_padx->hbrush_edit)
+		DeleteObject(gl_padx->hbrush_edit);
+	gl_padx->hbrush_edit=CreateSolidBrush(GetPixel(gl_padx->hdc_gfx,321,321));
+	return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // the root of all evil
 int main(int argc,char** argv)
 {
@@ -48,65 +108,32 @@ int main(int argc,char** argv)
 	// linux port: color theme (event, block and menu colors)
 	adx_theme_load(gl_padx->cfg.theme_path);
 
-	// linux port: relative skin paths are resolved against the program directory
-	char skin_dir[_MAX_PATH];
-	adx_resolve_resource_path(gl_padx->cfg.skin_path,skin_dir);
-
-	char gfx_path[_MAX_PATH*2], knb_path[_MAX_PATH*2], gui_path[_MAX_PATH*2];
-	sprintf(gfx_path, "%s/gfx.bmp", skin_dir);
-	sprintf(knb_path, "%s/knb.bmp", skin_dir);
-	sprintf(gui_path, "%s/gui.bmp", skin_dir);
-
 	// create gui/gfx device context(s)
 	gl_padx->hdc_gui=CreateCompatibleDC(hdc_desktop);
 	gl_padx->hdc_gfx=CreateCompatibleDC(hdc_desktop);
 	gl_padx->hdc_knb=CreateCompatibleDC(hdc_desktop);
 
-	// load gui/gfx bitmap(s)
+	// gui back buffer
 	// linux port: the original used a fixed 2048x2049 back buffer, which cut off the view on screens wider
 	// than 2048 pixels. the buffer is now at least as large as the screen.
 	RECT desktop_rect;
 	GetClientRect(hwnd_desktop,&desktop_rect);
 	int const gui_w=max(2048,(int)desktop_rect.right);
 	int const gui_h=max(2049,(int)desktop_rect.bottom+1);
-
 	HBITMAP const hbitmap_gui=CreateCompatibleBitmap(hdc_desktop,gui_w,gui_h);
-	HBITMAP const hbitmap_gfx=(HBITMAP)LoadImage(hInstance,gfx_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-	HBITMAP const hbitmap_knb=(HBITMAP)LoadImage(hInstance,knb_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-
-	// linux port: without skin bitmaps aodix cannot draw anything
-	if(hbitmap_gfx==NULL || hbitmap_knb==NULL)
-	{
-		char buf[_MAX_PATH*2+64];
-		snprintf(buf,sizeof(buf),"Error: Skin Bitmaps Not Found\n\n%s",skin_dir);
-		MessageBox(NULL,buf,"Aodix",MB_OK | MB_ICONERROR);
-		return 1;
-	}
-
-	// select gui/gfx bitmap(s) in gui/gfx device context(s)
 	HBITMAP const hbitmap_gui_obm=(HBITMAP)SelectObject(gl_padx->hdc_gui,(HBITMAP)hbitmap_gui);
-	HBITMAP const hbitmap_gfx_obm=(HBITMAP)SelectObject(gl_padx->hdc_gfx,(HBITMAP)hbitmap_gfx);
-	HBITMAP const hbitmap_knb_obm=(HBITMAP)SelectObject(gl_padx->hdc_knb,(HBITMAP)hbitmap_knb);
+	g_gui_w=gui_w;
 
-	// blit GUI gfx into gui bitmap
-	HDC const hdc_frm=CreateCompatibleDC(hdc_desktop);
-	HBITMAP const hbitmap_frm=(HBITMAP)LoadImage(hInstance,gui_path,IMAGE_BITMAP,0,0,LR_LOADFROMFILE);
-	HBITMAP const hbitmap_frm_obm=(HBITMAP)SelectObject(hdc_frm,hbitmap_frm);
-	BitBlt(gl_padx->hdc_gui,0,0,2048,276,hdc_frm,0,0,SRCCOPY);
-
-	// linux port: extend the skin header to the right by repeating its last pixel column
-	for(int x=2048;x<gui_w;x++)
-		BitBlt(gl_padx->hdc_gui,x,0,1,276,hdc_frm,2047,0,SRCCOPY);
-	SelectObject(hdc_frm,hbitmap_frm_obm);
-	DeleteObject((HBITMAP)hbitmap_frm);
-	DeleteDC(hdc_frm);
+	// load the skin bitmaps (linux port: also done again when the skin is changed in the configuration)
+	HBITMAP hbitmap_gfx_obm=NULL;
+	HBITMAP hbitmap_knb_obm=NULL;
+	gl_padx->hbrush_edit=NULL;
+	if(!adx_skin_load(gl_padx->cfg.skin_path,NULL,&hbitmap_gfx_obm,&hbitmap_knb_obm))
+		return 1;
 
 	// release desktop device context
 	ReleaseDC(hwnd_desktop,hdc_desktop);
 	
-	// create edit brush
-	gl_padx->hbrush_edit=CreateSolidBrush(GetPixel(gl_padx->hdc_gfx,321,321));
-
 	// register vst plugin editor window class
 	WNDCLASS wndcl_vst;	
 	wndcl_vst.style=0;
@@ -213,8 +240,8 @@ int main(int argc,char** argv)
 
 	// select default bitmap(s) in gui/gfx device context(s)
 	SelectObject(gl_padx->hdc_gui,hbitmap_gui_obm);
-	SelectObject(gl_padx->hdc_gfx,hbitmap_gfx_obm);
-	SelectObject(gl_padx->hdc_knb,hbitmap_knb_obm);
+	HBITMAP const hbitmap_gfx=(HBITMAP)SelectObject(gl_padx->hdc_gfx,hbitmap_gfx_obm);
+	HBITMAP const hbitmap_knb=(HBITMAP)SelectObject(gl_padx->hdc_knb,hbitmap_knb_obm);
 
 	// delete gui/gfx device context(s)
 	DeleteDC(gl_padx->hdc_gui);
